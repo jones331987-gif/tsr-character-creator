@@ -905,6 +905,12 @@ function App() {
   const armorParryB   = char.equipment.armor?.parry||0;
   const shieldParryB  = (char.equipment.offhand?.parry)||0;
   const finalParry    = baseParry + armorParryB + shieldParryB + trainBonuses.Parry + (char.boon?.name==="Blessing of Power"?1:0) + sizeB.parry;
+
+  // Movement Speed — base 6, +Improved Movement, +Disciplined Movement (doesn't stack), +Bodyglove armor bonus
+  const maTechs = Object.values(char.techniques["martial_arts"]||{}).flat();
+  const moveTechBonus = maTechs.includes("Disciplined Movement") ? 2 : maTechs.includes("Improved Movement") ? 1 : 0;
+  const armorMoveBonus = (char.equipment.armor?.bonus||"").includes("Move+1") ? 1 : 0;
+  const finalMove = 6 + moveTechBonus + armorMoveBonus;
   const finalWard     = calcWard(char.stats.Willpower) + (char.boon?.name==="Blessing of Power"?1:0);
   const armorBonus    = char.equipment.armor?.armor||0;
   const finalArmor    = calcArmor(char.stats.Vigor) + armorBonus + sizeB.armor;
@@ -1058,7 +1064,7 @@ function App() {
     return true;
   };
 
-  const derived = {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects};
+  const derived = {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove};
 
   return (
     <div style={{minHeight:"100vh",background:"linear-gradient(170deg,#f0ecf8 0%,#ede8f5 45%,#f4f0f8 100%)",color:"#1e1430",fontFamily:"'Palatino Linotype',Palatino,Georgia,serif",display:"flex",flexDirection:"column"}}>
@@ -1901,7 +1907,7 @@ function StepEquipment({char,setChar,moneyLeft}){
 
 // ─── STEP SUMMARY ─────────────────────────────────────────────────────────────
 function StepSummary({char,setChar,derived,totalSP}){
-  const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects}=derived;
+  const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove}=derived;
   const fmt = ({die,bonus}) => bonus>0?`${die} (+${bonus})`:bonus<0?`${die} (${bonus})`:die;
   const RANK_LABELS=["","Novice","Adept","Master"];
   const TIERS=["novice","adept","master"];
@@ -1918,7 +1924,7 @@ function StepSummary({char,setChar,derived,totalSP}){
       ``,`DERIVED:`,
       `  Melee Accuracy: ${finalMeleeAcc.die}${finalMeleeAcc.bonus!==0?" (+"+ finalMeleeAcc.bonus+")":""}  |  Primary Damage: ${finalMeleeDmg.die}${finalMeleeDmg.bonus!==0?" (+"+finalMeleeDmg.bonus+")":""}`,
       `  Parry: ${finalParry}  |  Armor: ${finalArmor}  |  Ward: ${finalWard}`,
-      `  Movement: 6  |  Carry Cap: ${finalStamina}  |  Tech Slots: ${finalStamina}  |  Spell Slots: ${finalMana}`,
+      `  Movement: ${finalMove}  |  Carry Cap: ${finalStamina}  |  Tech Slots: ${finalStamina}  |  Spell Slots: ${finalMana}`,
       ``,`SKILLS:`,
       ...SKILL_TREES.filter(t=>char.skills[t.id]>0).map(t=>{
         const rank=char.skills[t.id];
@@ -2019,7 +2025,7 @@ function StepSummary({char,setChar,derived,totalSP}){
         <Card title="General">
           {[
             ["Size", size],
-            ["Movement","6 Spaces"],
+            ["Movement",`${finalMove} Space${finalMove!==1?"s":""}${finalMove!==6?" [base 6 +"+(finalMove-6)+"]":""}`],
             ["Carry Cap", `${finalStamina} wt`],
             ["Money Left", `${moneyLeft} Silver`, true],
           ].map(([k,v,h])=><Row key={k} label={k} val={v} hi={h}/>)}
