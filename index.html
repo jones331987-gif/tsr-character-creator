@@ -802,6 +802,10 @@ function App() {
   const dmgBonus  = trainBonuses.PrimDmg + boonOffensive + weaponDmgBonus + jewelryDmgBonus + sizeB.primDmg;
   const finalMeleeAcc = { die: char.stats.Dexterity, bonus: accBonus };
   const finalMeleeDmg = { die: char.stats.Strength,  bonus: dmgBonus };
+  // Spell attack: Accuracy = Mind die. Spell Power = Mind die + spell's own dice (spell dice shown at cast time).
+  // Blessing of Power grants +1 to Spell Power via Primary Damage bonus.
+  const finalSpellAcc = { die: char.stats.Mind };
+  const finalSpellPower = { die: char.stats.Mind, bonus: boonOffensive };
 
   // equipment + skill money
   const moneySpent = [
@@ -823,7 +827,7 @@ function App() {
     return true;
   };
 
-  const derived = {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalReach,size,sizeB,trainBonuses,moneyLeft};
+  const derived = {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft};
 
   return (
     <div style={{minHeight:"100vh",background:"linear-gradient(170deg,#f0ecf8 0%,#ede8f5 45%,#f4f0f8 100%)",color:"#1e1430",fontFamily:"'Palatino Linotype',Palatino,Georgia,serif",display:"flex",flexDirection:"column"}}>
@@ -1477,7 +1481,8 @@ function StepEquipment({char,setChar,moneyLeft}){
 
 // ─── STEP SUMMARY ─────────────────────────────────────────────────────────────
 function StepSummary({char,derived,totalSP}){
-  const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalReach,size,sizeB,trainBonuses,moneyLeft}=derived;
+  const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft}=derived;
+  const fmt = ({die,bonus}) => bonus>0?`${die} (+${bonus})`:bonus<0?`${die} (${bonus})`:die;
   const RANK_LABELS=["","Novice","Adept","Master"];
   const TIERS=["novice","adept","master"];
 
@@ -1529,20 +1534,32 @@ function StepSummary({char,derived,totalSP}){
         <Card title="Stats">
           {STATS.map(s=><Row key={s} label={s} val={char.stats[s]} hi/>)}
         </Card>
-        <Card title="Combat Reference">
+        <Card title="Melee Attack">
           {[
-            ["Size", size, true],
-            ["Melee Reach", `${finalReach} space${finalReach>1?"s":""}${size>=2?" (size bonus)":""}`, true],
-            ["Melee Accuracy", `${finalMeleeAcc.die}${finalMeleeAcc.bonus>0?" (+"+finalMeleeAcc.bonus+")":finalMeleeAcc.bonus<0?" ("+finalMeleeAcc.bonus+")":""}`, true],
-            ["Primary Damage", `${finalMeleeDmg.die}${finalMeleeDmg.bonus>0?" (+"+finalMeleeDmg.bonus+")":finalMeleeDmg.bonus<0?" ("+finalMeleeDmg.bonus+")":""}${size>1?" [incl. +"+sizeB.primDmg+" size]":""}`, true],
-            ["Parry", `${finalParry}${size>1?" [incl. "+sizeB.parry+" size]":""}`, true],
-            ["Armor", `${finalArmor}${size>1?" [incl. +"+sizeB.armor+" size]":""}`, true],
+            ["Reach", `${finalReach} space${finalReach>1?"s":""}${size>=2?" (size 2+)":""}`],
+            ["Accuracy", fmt(finalMeleeAcc), true],
+            ["Primary Damage", fmt(finalMeleeDmg)+(size>1?` [+${sizeB.primDmg} size]`:""), true],
+            ["Parry", `${finalParry}`+(size>1?` [${sizeB.parry} size]`:""), true],
+            ["Armor", `${finalArmor}`+(size>1?` [+${sizeB.armor} size]`:""), true],
             ["Ward", finalWard, true],
             ["Dmg Shield Cap", finalDmgShield, true],
-            ["Spell Range", finalSpellRange, true],
+          ].map(([k,v,h])=><Row key={k} label={k} val={v} hi={h}/>)}
+        </Card>
+        <Card title="Spell Attack">
+          {[
+            ["Spell Accuracy", fmt(finalSpellAcc), true],
+            ["Spell Power", `${finalSpellPower.die} + Spell Dice${finalSpellPower.bonus>0?" (+"+finalSpellPower.bonus+")":""}`, true],
+            ["Spell Range", `${finalSpellRange} spaces (2 + ${dieValue(char.stats.Mind)} Mind + ${dieValue(char.stats.Willpower)} WIL)`, true],
+            ["Ward (vs spells)", finalWard, true],
+            ["Spell Slots", finalMana],
+          ].map(([k,v,h])=><Row key={k} label={k} val={v} hi={h}/>)}
+        </Card>
+        <Card title="General">
+          {[
+            ["Size", size],
             ["Movement","6 Spaces"],
-            ["Carry Cap", finalStamina+" wt"],
-            ["Money left", moneyLeft+" Silver", true],
+            ["Carry Cap", `${finalStamina} wt`],
+            ["Money Left", `${moneyLeft} Silver`, true],
           ].map(([k,v,h])=><Row key={k} label={k} val={v} hi={h}/>)}
         </Card>
       </div>
