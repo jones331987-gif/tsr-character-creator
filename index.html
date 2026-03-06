@@ -4,24 +4,15 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>TSR 5.0 — Character Creator</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #f0ecf8; }
-    #root { min-height: 100vh; }
-  </style>
+  <style>* { margin:0; padding:0; box-sizing:border-box; } body { background:#f0ecf8; } #root { min-height:100vh; }</style>
 </head>
 <body>
   <div id="root"></div>
-
-  <!-- React + Babel via CDN — no build step needed -->
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
   <script type="text/babel">
     const { useState } = React;
-
-    // ─── PASTE YOUR APP CODE BELOW ───────────────────────────────────────────
 
 // ─── STAT HELPERS ────────────────────────────────────────────────────────────
 const STAT_CHAIN = ["d4","d6","d8","d10","d12","d12+1","d12+2","d12+3","d12+4","d12+5"];
@@ -30,9 +21,20 @@ const STATS = ["Strength","Dexterity","Vigor","Mind","Willpower"];
 const ROLES = ["Warrior","Assassin","Destroyer","Support","Disabler"];
 const statPointsUsed = (s) => Object.values(s).reduce((t,d)=>t+STAT_COSTS[d],0);
 const dieValue = (d) => { const m={d4:4,d6:6,d8:8,d10:10,d12:12}; if(m[d])return m[d]; if(d.startsWith("d12+"))return 12+parseInt(d.slice(4)); return 4; };
-const calcParry = (dex) => Math.floor(dieValue(dex)/2)+2;
-const calcWard  = (wil) => Math.max(0,Math.floor(dieValue(wil)/2)-2);
-const calcArmor = (vig) => Math.max(0,Math.floor((dieValue(vig)-2)/2));
+// Vigor tier: 0 at d4, +1 per step. Each tier grants +5 HP and +5 Damage Shield cap.
+const vigorTier     = (vig) => STAT_CHAIN.indexOf(vig);
+// Parry = half DEX + 2
+const calcParry     = (dex) => Math.floor(dieValue(dex)/2)+2;
+// Ward = half WIL − 2 (minimum 0). Mind does NOT affect Ward per the rules.
+const calcWard      = (wil) => Math.max(0,Math.floor(dieValue(wil)/2)-2);
+// Armor = half VIG − 2 (minimum 0)
+const calcArmor     = (vig) => Math.max(0,Math.floor((dieValue(vig)-2)/2));
+// HP bonus from Vigor: +5 per tier above d4 (base 20 HP already includes d4)
+const calcVigorHP   = (vig) => vigorTier(vig) * 5;
+// Damage Shield cap: +5 per tier above d4 (0 at d4)
+const calcDmgShield = (vig) => vigorTier(vig) * 5;
+// Spell Range: base 2 + Mind die value + Willpower die value (each "point" = face value of die)
+const calcSpellRange = (mind, wil) => 2 + dieValue(mind) + dieValue(wil);
 
 // ─── BOONS ───────────────────────────────────────────────────────────────────
 const BOONS = [
@@ -732,16 +734,19 @@ function App() {
   const spLeft = totalSP - spUsed;
 
   // derived stats with bonuses
-  const finalHP      = char.attrs.HP + trainBonuses.HP;
-  const finalStamina = char.attrs.Stamina + trainBonuses.Stamina;
-  const finalMana    = char.attrs.Mana + (trainBonuses.Mana||0);
-  const baseParry    = calcParry(char.stats.Dexterity);
-  const armorParryB  = char.equipment.armor?.parry||0;
-  const shieldParryB = (char.equipment.offhand?.parry)||0;
-  const finalParry   = baseParry + armorParryB + shieldParryB + trainBonuses.Parry + (char.boon?.name==="Blessing of Power"?1:0);
-  const finalWard    = calcWard(char.stats.Willpower) + (char.boon?.name==="Blessing of Power"?1:0);
-  const armorBonus   = char.equipment.armor?.armor||0;
-  const finalArmor   = calcArmor(char.stats.Vigor) + armorBonus;
+  const vigorHPBonus  = calcVigorHP(char.stats.Vigor);
+  const finalHP       = char.attrs.HP + trainBonuses.HP + vigorHPBonus;
+  const finalStamina  = char.attrs.Stamina + trainBonuses.Stamina;
+  const finalMana     = char.attrs.Mana + (trainBonuses.Mana||0);
+  const finalDmgShield= calcDmgShield(char.stats.Vigor);
+  const baseParry     = calcParry(char.stats.Dexterity);
+  const armorParryB   = char.equipment.armor?.parry||0;
+  const shieldParryB  = (char.equipment.offhand?.parry)||0;
+  const finalParry    = baseParry + armorParryB + shieldParryB + trainBonuses.Parry + (char.boon?.name==="Blessing of Power"?1:0);
+  const finalWard     = calcWard(char.stats.Willpower) + (char.boon?.name==="Blessing of Power"?1:0);
+  const armorBonus    = char.equipment.armor?.armor||0;
+  const finalArmor    = calcArmor(char.stats.Vigor) + armorBonus;
+  const finalSpellRange = calcSpellRange(char.stats.Mind, char.stats.Willpower);
 
   // Weapon bonuses (parse Acc+N and Dmg+N from props string)
   const weaponAccBonus = (() => {
@@ -784,7 +789,7 @@ function App() {
     return true;
   };
 
-  const derived = {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalMeleeAcc,finalMeleeDmg,trainBonuses,moneyLeft};
+  const derived = {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,trainBonuses,moneyLeft};
 
   return (
     <div style={{minHeight:"100vh",background:"linear-gradient(170deg,#f0ecf8 0%,#ede8f5 45%,#f4f0f8 100%)",color:"#1e1430",fontFamily:"'Palatino Linotype',Palatino,Georgia,serif",display:"flex",flexDirection:"column"}}>
@@ -932,7 +937,13 @@ function StepAttributes({char,setChar,stLeft,apLeft,totalAP,trainBonuses,derived
     if(newUsed>totalAP)return c;
     return{...c,attrs:{...c.attrs,[key]:val},attrPointsUsed:newUsed};
   });
-  const STAT_DESC={Strength:"Damage for unarmed/weapon attacks and Grab checks.",Dexterity:"Accuracy for attacks. Parry = ½DEX + 2.",Vigor:"Durability. +5 HP per tier cap. Armor = ½VIG−2.",Mind:"Spell accuracy and damage.",Willpower:"Magic resistance. Ward = ½WIL−2."};
+  const STAT_DESC={
+    Strength:   "Damage for unarmed & weapon attacks. Required to wield heavier weapons. Used in Grab checks.",
+    Dexterity:  "Accuracy for attacks. Parry = ½ DEX + 2.",
+    Vigor:      "+5 Max HP & +5 Damage Shield cap per tier above d4. Armor = ½ VIG − 2. Resists physical crowd control.",
+    Mind:       "Accuracy & damage of spells. Spell Range +1 per point of Mind (base 2).",
+    Willpower:  "Ward = ½ WIL − 2. Spell Range +1 per point of Willpower. Used to apply & resist magical crowd control.",
+  };
 
   return(
     <div>
@@ -983,13 +994,16 @@ function StepAttributes({char,setChar,stLeft,apLeft,totalAP,trainBonuses,derived
           ))}
           {/* Derived block */}
           <div style={{marginTop:12,padding:"12px",background:"rgba(255,255,255,0.82)",border:"1px solid #cebee8",borderRadius:3}}>
-            <div style={{fontSize:10,color:"#c8a84a",letterSpacing:"0.12em",marginBottom:8}}>DERIVED STATS (base only — training bonuses not yet active)</div>
+            <div style={{fontSize:10,color:"#c8a84a",letterSpacing:"0.12em",marginBottom:8}}>DERIVED STATS (base — training bonuses apply later)</div>
             {[
-              ["Parry",`${calcParry(char.stats.Dexterity)} (base)`],
-              ["Ward",`${calcWard(char.stats.Willpower)} (base)`],
-              ["Armor",`${calcArmor(char.stats.Vigor)} (base)`],
+              ["Max HP",`${char.attrs.HP + calcVigorHP(char.stats.Vigor)} (${char.attrs.HP} base + ${calcVigorHP(char.stats.Vigor)} from Vigor)`],
+              ["Dmg Shield Cap",`${calcDmgShield(char.stats.Vigor)} (${vigorTier(char.stats.Vigor)} × 5 from Vigor)`],
+              ["Parry",`${calcParry(char.stats.Dexterity)} (½ DEX + 2)`],
+              ["Armor",`${calcArmor(char.stats.Vigor)} (½ VIG − 2)`],
+              ["Ward",`${calcWard(char.stats.Willpower)} (½ WIL − 2)`],
+              ["Spell Range",`${calcSpellRange(char.stats.Mind,char.stats.Willpower)} (2 + ${dieValue(char.stats.Mind)} Mind + ${dieValue(char.stats.Willpower)} WIL)`],
               ["Carry Cap",`${char.attrs.Stamina} (= Stamina)`],
-              ["Technique Slots",`${char.attrs.Stamina} (= Stamina)`],
+              ["Tech Slots",`${char.attrs.Stamina} (= Stamina)`],
               ["Spell Slots",`${char.attrs.Mana} (= Mana)`],
             ].map(([k,v])=>(
               <div key={k} style={{display:"flex",justifyContent:"space-between",fontSize:11,marginBottom:4,paddingBottom:4,borderBottom:"1px solid rgba(200,180,230,0.4)"}}>
@@ -1399,7 +1413,7 @@ function StepEquipment({char,setChar,moneyLeft}){
 
 // ─── STEP SUMMARY ─────────────────────────────────────────────────────────────
 function StepSummary({char,derived,totalSP}){
-  const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalMeleeAcc,finalMeleeDmg,trainBonuses,moneyLeft}=derived;
+  const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,trainBonuses,moneyLeft}=derived;
   const RANK_LABELS=["","Novice","Adept","Master"];
   const TIERS=["novice","adept","master"];
 
@@ -1445,8 +1459,8 @@ function StepSummary({char,derived,totalSP}){
         <Card title="Identity">
           {[["Name",char.name||"—"],["Race",char.race||"—"],["Level","1 (0/10 EXP)"],["Role",char.role||"—"],["Boon",char.boon?.name||"—"]].map(([k,v])=><Row key={k} label={k} val={v}/>)}
         </Card>
-        <Card title="Attributes (with training)">
-          {[["HP",finalHP,true],["Stamina",finalStamina,true],["Mana",finalMana,true],["Tech Slots",finalStamina+""],["Spell Slots",finalMana+""]].map(([k,v,h])=><Row key={k} label={k} val={v} hi={h}/>)}
+        <Card title="Attributes">
+          {[["HP",finalHP,true],["Stamina",finalStamina,true],["Mana",finalMana,true],["Dmg Shield Cap",finalDmgShield,true],["Tech Slots",finalStamina+""],["Spell Slots",finalMana+""]].map(([k,v,h])=><Row key={k} label={k} val={v} hi={h}/>)}
         </Card>
         <Card title="Stats">
           {STATS.map(s=><Row key={s} label={s} val={char.stats[s]} hi/>)}
@@ -1456,6 +1470,8 @@ function StepSummary({char,derived,totalSP}){
             ["Melee Accuracy", `${finalMeleeAcc.die}${finalMeleeAcc.bonus>0?" (+"+finalMeleeAcc.bonus+")":finalMeleeAcc.bonus<0?" ("+finalMeleeAcc.bonus+")":""}`, true],
             ["Primary Damage",  `${finalMeleeDmg.die}${finalMeleeDmg.bonus>0?" (+"+finalMeleeDmg.bonus+")":finalMeleeDmg.bonus<0?" ("+finalMeleeDmg.bonus+")":""}`, true],
             ["Parry",finalParry,true],["Armor",finalArmor,true],["Ward",finalWard,true],
+            ["Dmg Shield Cap",finalDmgShield,true],
+            ["Spell Range",finalSpellRange,true],
             ["Movement","6 Spaces"],["Carry Cap",finalStamina+" wt"],["Money left",moneyLeft+" Silver",true],
           ].map(([k,v,h])=><Row key={k} label={k} val={v} hi={h}/>)}
         </Card>
@@ -1552,7 +1568,6 @@ const btnS=(t)=>({
   fontWeight:t==="pri"?600:400,
   textTransform:"uppercase",
 });
-    // ─────────────────────────────────────────────────────────────────────────
 
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
