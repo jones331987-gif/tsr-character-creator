@@ -877,18 +877,20 @@ function App() {
   const skillSilverSpent = calcSkillSilverSpent(char.skills, char.purchasedTrainings, char.techniques);
 
   // stat point budget — Gigantic gets STR & VIG d6 free (they're mandatory minimums)
-  const stUsed = statPointsUsed(char.stats) - (char.boon?.name==="Gigantic" ? 2 : 0);
+  // stUsed = total stats spent minus free gigantic points minus level-up stats spent separately
+  const stUsed = statPointsUsed(char.stats) - (char.boon?.name==="Gigantic" ? 2 : 0) - (char.levelStatPointsSpent||0);
   const stLeft = 6 - stUsed;
 
-  // attribute budget
+  // attribute budget — attrPointsUsed tracks ALL spending (base + level-up combined)
+  // apLeft = base budget + unspent level points - base-only spending
   const boonAP = char.boon?.name==="History of Discipline" ? 10 : 0;
   const totalAP = 20 + boonAP;
-  const apLeft = totalAP - char.attrPointsUsed;
+  const apLeft = totalAP - char.attrPointsUsed + (char.levelAttrPoints||0);
 
-  // skill point budget
+  // skill point budget — subtract level-up skills from total used
   const boonSP = char.boon?.name==="History of Discipline" ? 2 : 0;
   const totalSP = 3 + boonSP;
-  const spUsed = Object.values(char.skills).reduce((t,v)=>t+v,0);
+  const spUsed = Object.values(char.skills).reduce((t,v)=>t+v,0) - (char.levelSkillPointsSpent||0);
   const spLeft = totalSP - spUsed;
 
   // derived stats with bonuses
@@ -925,8 +927,33 @@ function App() {
     const m = j.bonus?.match(/Primary Damage\+(\d+)/); return t + (m ? parseInt(m[1]) : 0);
   }, 0);
   const boonOffensive = char.boon?.name==="Blessing of Power" ? 1 : 0;
+
+  // Savage Fighting: Parry bonuses from Unarmored techniques also add to Primary Damage
+  const hasSavageFighting = (() => {
+    const perks = char.masterPerks["savagery"];
+    if(!perks) return false;
+    const arr = Array.isArray(perks) ? perks : [perks];
+    return arr.includes("Savage Fighting");
+  })();
+  const isUnarmored = !char.equipment.armor || char.equipment.armor.name === "Clothes";
+  const unarmoredParryBonus = (() => {
+    if(!isUnarmored) return 0;
+    const savTechs = char.techniques["savagery"] || {};
+    const allTechs = Object.values(savTechs).flat();
+    if(allTechs.includes("Raging Barbarism")) return 3;
+    if(allTechs.includes("Barbarism")) return 2;
+    if(allTechs.includes("Crude Barbarism")) return 1;
+    // Also check Martial Arts unarmored styles
+    const maTechs = Object.values(char.techniques["martial_arts"] || {}).flat();
+    if(maTechs.includes("Perfected Unarmored Style")) return 3;
+    if(maTechs.includes("Unarmored Style")) return 2;
+    if(maTechs.includes("Crude Unarmored Style")) return 1;
+    return 0;
+  })();
+  const savageFightingBonus = hasSavageFighting ? unarmoredParryBonus : 0;
+
   const accBonus  = trainBonuses.Acc + boonOffensive + weaponAccBonus + jewelryAccBonus;
-  const dmgBonus  = trainBonuses.PrimDmg + boonOffensive + weaponDmgBonus + jewelryDmgBonus + sizeB.primDmg;
+  const dmgBonus  = trainBonuses.PrimDmg + boonOffensive + weaponDmgBonus + jewelryDmgBonus + sizeB.primDmg + savageFightingBonus;
   const finalMeleeAcc = { die: char.stats.Dexterity, bonus: accBonus };
   const finalMeleeDmg = { die: char.stats.Strength,  bonus: dmgBonus };
   // Spell attack: Accuracy = Mind die. Spell Power = Mind die + spell's own dice (spell dice shown at cast time).
@@ -950,7 +977,7 @@ function App() {
     if(step===1) return char.role!=="";
     if(step===2) return char.boon!==null;
     if(step===3) return stLeft>=0 && apLeft>=0;
-    if(step===4) return spUsed<=totalSP;
+    if(step===4) return spLeft>=0;
     return true;
   };
 
@@ -1227,7 +1254,8 @@ function StepAttributes({char,setChar,stLeft,apLeft,totalAP,trainBonuses,derived
     if(next<min||next>=chain.length)return c;
     const ns={...c.stats,[stat]:chain[next]};
     const freePoints = c.boon?.name==="Gigantic" ? 2 : 0;
-    if(statPointsUsed(ns) - freePoints > 6) return c;
+    const budget = 6 + (c.levelStatPointsSpent||0);
+    if(statPointsUsed(ns) - freePoints > budget) return c;
     return{...c,stats:ns};
   });
   const isVoA = char.boon?.name==="Vow of Ash";
@@ -1242,7 +1270,11 @@ function StepAttributes({char,setChar,stLeft,apLeft,totalAP,trainBonuses,derived
     if(val<base[key])return c;
     const diff=val-c.attrs[key];
     const newUsed=c.attrPointsUsed+diff;
-    if(newUsed>totalAP)return c;
+    const boonAP2 = c.boon?.name==="History of Discipline" ? 10 : 0;
+    const totalBudget = 20 + boonAP2;
+    // attrPointsUsed now tracks both base and level-up spending combined
+    const baseOnlyUsed = newUsed - (c.levelAttrPoints !== undefined ? 0 : 0);
+    if(newUsed > totalBudget + (c.levelAttrPoints||0)) return c;
     return{...c,attrs:{...c.attrs,[key]:val},attrPointsUsed:newUsed};
   });
   const STAT_DESC={
@@ -1366,7 +1398,7 @@ function StepSkills({char,setChar,spLeft,totalSP,moneyLeft,skillSilverSpent}){
     const cur=c.skills[id]||0,diff=rank-cur;
     const newUsed=Object.values(c.skills).reduce((t,v)=>t+v,0)+diff;
     const bSP=c.boon?.name==="History of Discipline"?2:0;
-    if(newUsed>3+bSP)return c;
+    if(newUsed - (c.levelSkillPointsSpent||0) > 3+bSP) return c;
     const tree=SKILL_TREES.find(s=>s.id===id);
     if(isVoA&&tree?.type==="magic"&&rank>0)return c;
     if(isRoE&&tree?.type==="physical"&&rank>0)return c;
@@ -2018,16 +2050,17 @@ function StepLevelUp({char,setChar}){
     const cur = chain.indexOf(c.stats[stat]);
     const next = cur+dir;
     if(next<0||next>=chain.length) return c;
-    return {...c, stats:{...c.stats,[stat]:chain[next]}, levelStatPoints:(c.levelStatPoints||0)-dir};
+    return {...c, stats:{...c.stats,[stat]:chain[next]}, levelStatPoints:(c.levelStatPoints||0)-dir, levelStatPointsSpent:(c.levelStatPointsSpent||0)+dir};
   });
 
   const spendAttr = (key,val) => setChar(c=>{
-    if((c.levelAttrPoints||0)<=0) return c;
+    if((c.levelAttrPoints||0)<=0 && val > c.attrs[key]) return c;
     if(key==="Mana"&&isVoA) return c;
     if(key==="Stamina"&&isRoE) return c;
     const diff = val - c.attrs[key];
     if(diff>0 && diff>(c.levelAttrPoints||0)) return c;
     if(diff<0 && (c.attrs[key]+diff) < {HP:20,Stamina:10,Mana:0}[key]) return c;
+    // Only decrement levelAttrPoints — do NOT touch attrPointsUsed (free HP on level-up already incremented it)
     return {...c, attrs:{...c.attrs,[key]:val}, levelAttrPoints:(c.levelAttrPoints||0)-diff};
   });
 
@@ -2040,7 +2073,7 @@ function StepLevelUp({char,setChar}){
     const tree = SKILL_TREES.find(t=>t.id===id);
     if(isVoA && tree?.type==="magic") return c;
     if(isRoE && ["cqc","savagery","endurance","marksmanship","tactics","martialarts"].includes(id)) return c;
-    return {...c, skills:{...c.skills,[id]:next}, levelSkillPoints:(c.levelSkillPoints||0)-dir};
+    return {...c, skills:{...c.skills,[id]:next}, levelSkillPoints:(c.levelSkillPoints||0)-dir, levelSkillPointsSpent:(c.levelSkillPointsSpent||0)+dir};
   });
 
   const doAwakenRound = () => setChar(c=>{
