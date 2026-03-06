@@ -713,13 +713,36 @@ function App() {
     money:500,
   });
 
-  const setC = (field, val) => setChar(c=>({...c,[field]:val}));
+  const setC = (field, val) => {
+    if(field === "boon") {
+      setChar(c => {
+        const base = {...c, boon: val};
+        // Gigantic: STR & VIG floor to d6
+        if(val?.name === "Gigantic") {
+          const newStats = {...c.stats};
+          if(STAT_CHAIN.indexOf(newStats.Strength) < 1) newStats.Strength = "d6";
+          if(STAT_CHAIN.indexOf(newStats.Vigor)    < 1) newStats.Vigor    = "d6";
+          return {...base, stats: newStats};
+        }
+        // Switching away from Gigantic — reset STR/VIG if they were only at d6 minimum
+        if(c.boon?.name === "Gigantic") {
+          const newStats = {...c.stats};
+          if(newStats.Strength === "d6") newStats.Strength = "d4";
+          if(newStats.Vigor    === "d6") newStats.Vigor    = "d4";
+          return {...base, stats: newStats};
+        }
+        return base;
+      });
+    } else {
+      setChar(c=>({...c,[field]:val}));
+    }
+  };
 
   const trainBonuses = getTrainingBonuses(char.purchasedTrainings);
   const skillSilverSpent = calcSkillSilverSpent(char.skills, char.purchasedTrainings, char.techniques);
 
-  // stat point budget
-  const stUsed = statPointsUsed(char.stats);
+  // stat point budget — Gigantic gets STR & VIG d6 free (they're mandatory minimums)
+  const stUsed = statPointsUsed(char.stats) - (char.boon?.name==="Gigantic" ? 2 : 0);
   const stLeft = 6 - stUsed;
 
   // attribute budget
@@ -922,11 +945,21 @@ function StepBoon({char,setC}){
 }
 
 function StepAttributes({char,setChar,stLeft,apLeft,totalAP,trainBonuses,derived}){
+  const isGigantic = char.boon?.name==="Gigantic";
+  // Gigantic: STR & VIG start at d6 and can reach d12+6
+  const GIGANTIC_CHAIN = ["d4","d6","d8","d10","d12","d12+1","d12+2","d12+3","d12+4","d12+5","d12+6"];
+  const statChainFor = (stat) => (isGigantic && (stat==="Strength"||stat==="Vigor")) ? GIGANTIC_CHAIN : STAT_CHAIN;
+  const minDieFor    = (stat) => (isGigantic && (stat==="Strength"||stat==="Vigor")) ? 1 : 0; // index 1 = d6
+
   const updStat=(stat,dir)=>setChar(c=>{
-    const cur=STAT_CHAIN.indexOf(c.stats[stat]),next=cur+dir;
-    if(next<0||next>=STAT_CHAIN.length)return c;
-    const ns={...c.stats,[stat]:STAT_CHAIN[next]};
-    if(statPointsUsed(ns)>6)return c;
+    const chain = statChainFor(stat);
+    const cur=chain.indexOf(c.stats[stat]);
+    const next=cur+dir;
+    const min=minDieFor(stat);
+    if(next<min||next>=chain.length)return c;
+    const ns={...c.stats,[stat]:chain[next]};
+    const freePoints = c.boon?.name==="Gigantic" ? 2 : 0;
+    if(statPointsUsed(ns) - freePoints > 6) return c;
     return{...c,stats:ns};
   });
   const updAttr=(key,val)=>setChar(c=>{
@@ -949,25 +982,36 @@ function StepAttributes({char,setChar,stLeft,apLeft,totalAP,trainBonuses,derived
     <div>
       <ST>Stats & Attributes</ST>
       {char.boon?.name==="History of Discipline"&&<Banner>History of Discipline: +10 Attribute Points added!</Banner>}
+      {isGigantic&&<Banner>Gigantic: STR & VIG start at d6 and can reach d12+6. You occupy a 2×2 space and have Melee Reach +1.</Banner>}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:28,marginTop:20}}>
         <div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
             <span style={{fontSize:12,color:"#c8a84a",letterSpacing:"0.12em"}}>STATS</span>
             <span style={{fontSize:11,color:stLeft<0?"#c94a4c":"#6a5a3a"}}>{stLeft} / 6 pts left</span>
           </div>
-          {STATS.map(s=>(
+          {STATS.map(s=>{
+            const chain=statChainFor(s);
+            const curIdx=chain.indexOf(char.stats[s]);
+            const minIdx=minDieFor(s);
+            const atCap=curIdx>=chain.length-1;
+            const atMin=curIdx<=minIdx;
+            return(
             <div key={s} style={{marginBottom:10,padding:"10px 12px",background:"rgba(255,255,255,0.82)",border:"1px solid #cebee8",borderRadius:3}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:3}}>
-                <span style={{fontSize:12,fontWeight:600,color:"#1e1430"}}>{s}</span>
+                <span style={{fontSize:12,fontWeight:600,color:"#1e1430"}}>
+                  {s}
+                  {isGigantic&&(s==="Strength"||s==="Vigor")&&<span style={{fontSize:9,color:"#c8a84a",marginLeft:6,letterSpacing:"0.08em"}}>GIGANTIC</span>}
+                </span>
                 <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <button onClick={()=>updStat(s,-1)} style={sm}>−</button>
+                  <button onClick={()=>updStat(s,-1)} disabled={atMin} style={{...sm,opacity:atMin?0.3:1}}>−</button>
                   <span style={{fontSize:14,color:"#c8a84a",minWidth:50,textAlign:"center",fontWeight:700}}>{char.stats[s]}</span>
-                  <button onClick={()=>updStat(s,1)} style={sm}>+</button>
+                  <button onClick={()=>updStat(s,1)} disabled={atCap} style={{...sm,opacity:atCap?0.3:1}}>+</button>
                 </div>
               </div>
               <div style={{fontSize:10,color:"#6a50a0"}}>{STAT_DESC[s]}</div>
             </div>
-          ))}
+            );
+          })}
         </div>
         <div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
