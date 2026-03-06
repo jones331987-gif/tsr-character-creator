@@ -725,6 +725,16 @@ function App() {
     if(field === "boon") {
       setChar(c => {
         const base = {...c, boon: val};
+        // Vow of Ash: lock Mana to 0, refund any spent Mana points
+        if(val?.name === "Vow of Ash") {
+          const manaSpent = c.attrs.Mana - 0;
+          return {...base, attrs:{...c.attrs, Mana:0}, attrPointsUsed: c.attrPointsUsed - manaSpent};
+        }
+        // Rite of Embers: lock Stamina to 10, refund any extra Stamina points
+        if(val?.name === "Rite of Embers") {
+          const staminaSpent = c.attrs.Stamina - 10;
+          return {...base, attrs:{...c.attrs, Stamina:10}, attrPointsUsed: c.attrPointsUsed - staminaSpent};
+        }
         // Gigantic: STR & VIG floor to d6, size becomes 2
         if(val?.name === "Gigantic") {
           const newStats = {...c.stats};
@@ -977,7 +987,14 @@ function StepAttributes({char,setChar,stLeft,apLeft,totalAP,trainBonuses,derived
     if(statPointsUsed(ns) - freePoints > 6) return c;
     return{...c,stats:ns};
   });
+  const isVoA = char.boon?.name==="Vow of Ash";
+  const isRoE = char.boon?.name==="Rite of Embers";
+
   const updAttr=(key,val)=>setChar(c=>{
+    // Vow of Ash: Mana is permanently locked at 0
+    if(key==="Mana" && c.boon?.name==="Vow of Ash") return c;
+    // Rite of Embers: Stamina is permanently locked at 10
+    if(key==="Stamina" && c.boon?.name==="Rite of Embers") return c;
     const base={HP:20,Stamina:10,Mana:0};
     if(val<base[key])return c;
     const diff=val-c.attrs[key];
@@ -998,6 +1015,8 @@ function StepAttributes({char,setChar,stLeft,apLeft,totalAP,trainBonuses,derived
       <ST>Stats & Attributes</ST>
       {char.boon?.name==="History of Discipline"&&<Banner>History of Discipline: +10 Attribute Points added!</Banner>}
       {isGigantic&&<Banner>Gigantic: STR & VIG start at d6 and can reach d12+6. You occupy a 2×2 space and have Melee Reach +1.</Banner>}
+      {isVoA&&<Banner>Vow of Ash: Mana is permanently locked at 0. Cannot invest in Magic Skills or Spellcrafting. Gain an extra mastery perk for Physical skills.</Banner>}
+      {isRoE&&<Banner>Rite of Embers: Stamina is permanently locked at 10. Cannot invest in Physical Skills. Gain an extra mastery perk for Magic skills and Spellcrafting.</Banner>}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:28,marginTop:20}}>
         <div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
@@ -1035,22 +1054,28 @@ function StepAttributes({char,setChar,stLeft,apLeft,totalAP,trainBonuses,derived
           </div>
           <div style={{fontSize:10,color:"#a090c0",marginBottom:10}}>Base: 20 HP / 10 Stamina / 0 Mana. Each point = +1 to one attribute.</div>
           {[
-            {key:"HP",label:"Health (HP)",base:20,desc:"0 HP = Downed. Wounds reduce max HP by 5."},
-            {key:"Stamina",label:"Stamina",base:10,desc:"Fuels Techniques. 0 = risk Unconscious."},
-            {key:"Mana",label:"Mana",base:0,desc:"Fuels Spells. 0 = Manashock risk."},
-          ].map(({key,label,desc})=>(
-            <div key={key} style={{marginBottom:10,padding:"10px 12px",background:"rgba(255,255,255,0.82)",border:"1px solid #cebee8",borderRadius:3}}>
+            {key:"HP",label:"Health (HP)",desc:"0 HP = Downed. Wounds reduce max HP by 5."},
+            {key:"Stamina",label:"Stamina",desc:isRoE?"🔒 Locked at 10 by Rite of Embers.":"Fuels Techniques. 0 = risk Unconscious."},
+            {key:"Mana",label:"Mana",desc:isVoA?"🔒 Locked at 0 by Vow of Ash.":"Fuels Spells. 0 = Manashock risk."},
+          ].map(({key,label,desc})=>{
+            const locked = (key==="Mana"&&isVoA)||(key==="Stamina"&&isRoE);
+            return(
+            <div key={key} style={{marginBottom:10,padding:"10px 12px",background:locked?"rgba(240,230,255,0.5)":"rgba(255,255,255,0.82)",border:`1px solid ${locked?"#c8a84a":"#cebee8"}`,borderRadius:3,opacity:locked?0.75:1}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:3}}>
-                <span style={{fontSize:12,fontWeight:600,color:"#1e1430"}}>{label}</span>
+                <span style={{fontSize:12,fontWeight:600,color:"#1e1430"}}>
+                  {label}
+                  {locked&&<span style={{fontSize:9,color:"#c8a84a",marginLeft:6,letterSpacing:"0.08em"}}>LOCKED</span>}
+                </span>
                 <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <button onClick={()=>updAttr(key,char.attrs[key]-1)} style={sm}>−</button>
-                  <span style={{fontSize:14,color:"#c8a84a",minWidth:36,textAlign:"center",fontWeight:700}}>{char.attrs[key]}</span>
-                  <button onClick={()=>updAttr(key,char.attrs[key]+1)} style={sm}>+</button>
+                  <button onClick={()=>updAttr(key,char.attrs[key]-1)} disabled={locked} style={{...sm,opacity:locked?0.3:1}}>−</button>
+                  <span style={{fontSize:14,color:locked?"#a090c0":"#c8a84a",minWidth:36,textAlign:"center",fontWeight:700}}>{char.attrs[key]}</span>
+                  <button onClick={()=>updAttr(key,char.attrs[key]+1)} disabled={locked} style={{...sm,opacity:locked?0.3:1}}>+</button>
                 </div>
               </div>
-              <div style={{fontSize:10,color:"#6a50a0"}}>{desc}</div>
+              <div style={{fontSize:10,color:locked?"#c8a84a":"#6a50a0"}}>{desc}</div>
             </div>
-          ))}
+            );
+          })}
           {/* Derived block */}
           <div style={{marginTop:12,padding:"12px",background:"rgba(255,255,255,0.82)",border:"1px solid #cebee8",borderRadius:3}}>
             <div style={{fontSize:10,color:"#c8a84a",letterSpacing:"0.12em",marginBottom:8}}>DERIVED STATS (base — training bonuses apply later)</div>
