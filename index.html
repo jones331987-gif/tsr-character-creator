@@ -899,7 +899,7 @@ function App() {
   const vigorHPBonus  = calcVigorHP(char.stats.Vigor);
   const finalHP       = char.attrs.HP + trainBonuses.HP + vigorHPBonus;
   const finalStamina  = char.attrs.Stamina + trainBonuses.Stamina;
-  const finalMana     = char.attrs.Mana + (trainBonuses.Mana||0);
+  const finalMana     = char.attrs.Mana + (trainBonuses.Mana||0) + manaPlus5;
   const finalDmgShield= calcDmgShield(char.stats.Vigor);
   const baseParry     = calcParry(char.stats.Dexterity);
   const armorParryB   = char.equipment.armor?.parry||0;
@@ -928,6 +928,80 @@ function App() {
   }, 0);
   const boonOffensive = char.boon?.name==="Blessing of Power" ? 1 : 0;
 
+  // ── Passive On-Hit Effects ───────────────────────────────────────────────
+  // Returns a list of always-on effect strings derived from perks, techniques, equipment
+  const passiveOnHitEffects = (() => {
+    const fx = [];
+    const allTechs = (skillId) => Object.values(char.techniques[skillId]||{}).flat();
+    const hasTech = (skillId, name) => allTechs(skillId).includes(name);
+    const perkIs = (skillId, name) => {
+      const v = char.masterPerks[skillId];
+      return Array.isArray(v) ? v.includes(name) : v === name;
+    };
+
+    // CQC master perks
+    if(perkIs("cqc","Lethality"))       fx.push("Lethality: melee HP dmg → 2 Bleed (Aggravate on crit)");
+    if(perkIs("cqc","Crush Armor"))     fx.push("Crush Armor: 1st melee attack AP=½STR; crits apply Rend");
+    // Marksmanship master perks
+    if(perkIs("marksmanship","Barbed Shots")) fx.push("Barbed Shots: ranged HP dmg → 2 Bleed (Aggravate on crit)");
+    // Savagery weapon enchants (only highest applies)
+    if(hasTech("savagery","Crimson Steel"))    fx.push("Crimson Steel: weapon HP dmg → 3 Bleed");
+    else if(hasTech("savagery","Sanguine Edge")) fx.push("Sanguine Edge: weapon HP dmg → 2 Bleed");
+    else if(hasTech("savagery","Red Rust"))    fx.push("Red Rust: weapon HP dmg → 1 Bleed");
+    // Tactics training passives
+    const tacRank = char.skills["tactics"]||0;
+    if(tacRank>=2) fx.push("Tactics Adept: CC landing inflicts Rend");
+    if(tacRank>=3) fx.push("Tactics Master: CC landing deals STR dmg to Stamina");
+    // Catalyst on-hit props
+    const cat = char.equipment.catalyst;
+    if(cat?.props) {
+      const catProps = cat.props;
+      if(catProps.includes("Searing"))       fx.push(`Catalyst: ${cat.name} — ${catProps.match(/Searing\(\d+\)/)?.[0]||"Searing"}`);
+      if(catProps.includes("Stamina Drain")) fx.push(`Catalyst: ${cat.name} — Stamina Drain`);
+      if(catProps.includes("Health Drain"))  fx.push(`Catalyst: ${cat.name} — Health Drain`);
+      if(catProps.includes("Cloak"))         fx.push(`Catalyst: ${cat.name} — Cloak(5ft) AoE`);
+    }
+    // Weapon props
+    const wpn = char.equipment.weapon;
+    if(wpn?.props) {
+      if(wpn.props.includes("Deadly"))    fx.push(`${wpn.name}: Deadly (crits deal max dmg)`);
+      const apMatch = wpn.props.match(/AP (\d+)/);
+      if(apMatch) fx.push(`${wpn.name}: AP ${apMatch[1]} (ignores ${apMatch[1]} Armor)`);
+    }
+    // Alchemical poison applied to weapon
+    if((char.equipment.items||[]).some(i=>i.name==="Poison")) fx.push("Poison (item): apply Poison(4) to weapon for 2 rounds");
+
+    return fx;
+  })();
+
+  // ── Master Perk helpers ──────────────────────────────────────────────────
+  const hasPerk = (skillId, perkName) => {
+    const val = char.masterPerks[skillId];
+    if(!val) return false;
+    const arr = Array.isArray(val) ? val : [val];
+    return arr.includes(perkName);
+  };
+
+  // Brute: STR replaces DEX for melee accuracy
+  const hasBrute = hasPerk("cqc", "Brute");
+  // Eagle Eye: DEX replaces STR for ranged damage
+  const hasEagleEye = hasPerk("marksmanship", "Eagle Eye");
+  // Primal Mass: VIG replaces STR for melee damage
+  const hasPrimalMass = hasPerk("savagery", "Primal Mass");
+  // Punishing Draw: +2 Acc & Dmg on initiating attack (show as flat bonus on sheet)
+  const hasPunishingDraw = hasPerk("endurance", "Punishing Draw");
+  // Mana +5 perks
+  const manaPlus5 =
+    (hasPerk("spellcrafting","Blessing of Mana") ? 5 : 0) +
+    (hasPerk("anima","Energy") ? 5 : 0) +
+    (hasPerk("void","Arcane Spirit") ? 5 : 0) +
+    (hasPerk("holy","Holy Might") ? 5 : 0) +
+    (hasPerk("dark","Sorcerer") ? 5 : 0) +
+    (hasPerk("figment","Shadow Thief") ? 5 : 0) +
+    (hasPerk("thaumaturgy","Thaumic Battery") ? 5 : 0) +
+    (hasPerk("nature","Druidcraft") ? 5 : 0);
+
+
   // Savage Fighting: Parry bonuses from Unarmored techniques also add to Primary Damage
   const hasSavageFighting = (() => {
     const perks = char.masterPerks["savagery"];
@@ -952,10 +1026,13 @@ function App() {
   })();
   const savageFightingBonus = hasSavageFighting ? unarmoredParryBonus : 0;
 
-  const accBonus  = trainBonuses.Acc + boonOffensive + weaponAccBonus + jewelryAccBonus;
-  const dmgBonus  = trainBonuses.PrimDmg + boonOffensive + weaponDmgBonus + jewelryDmgBonus + sizeB.primDmg + savageFightingBonus;
-  const finalMeleeAcc = { die: char.stats.Dexterity, bonus: accBonus };
-  const finalMeleeDmg = { die: char.stats.Strength,  bonus: dmgBonus };
+  const accBonus  = trainBonuses.Acc + boonOffensive + weaponAccBonus + jewelryAccBonus + (hasPunishingDraw ? 2 : 0);
+  const dmgBonus  = trainBonuses.PrimDmg + boonOffensive + weaponDmgBonus + jewelryDmgBonus + sizeB.primDmg + savageFightingBonus + (hasPunishingDraw ? 2 : 0);
+  // Brute: use STR for melee accuracy die. Eagle Eye: use DEX for ranged dmg die. Primal Mass: use VIG for melee dmg die.
+  const meleeAccDie = hasBrute ? char.stats.Strength : char.stats.Dexterity;
+  const meleeDmgDie = hasPrimalMass ? char.stats.Vigor : char.stats.Strength;
+  const finalMeleeAcc = { die: meleeAccDie, bonus: accBonus };
+  const finalMeleeDmg = { die: meleeDmgDie, bonus: dmgBonus };
   // Spell attack: Accuracy = Mind die. Spell Power = Mind die + spell's own dice (spell dice shown at cast time).
   // Blessing of Power grants +1 to Spell Power via Primary Damage bonus.
   const finalSpellAcc = { die: char.stats.Mind };
@@ -981,7 +1058,7 @@ function App() {
     return true;
   };
 
-  const derived = {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus};
+  const derived = {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects};
 
   return (
     <div style={{minHeight:"100vh",background:"linear-gradient(170deg,#f0ecf8 0%,#ede8f5 45%,#f4f0f8 100%)",color:"#1e1430",fontFamily:"'Palatino Linotype',Palatino,Georgia,serif",display:"flex",flexDirection:"column"}}>
@@ -1824,7 +1901,7 @@ function StepEquipment({char,setChar,moneyLeft}){
 
 // ─── STEP SUMMARY ─────────────────────────────────────────────────────────────
 function StepSummary({char,setChar,derived,totalSP}){
-  const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus}=derived;
+  const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects}=derived;
   const fmt = ({die,bonus}) => bonus>0?`${die} (+${bonus})`:bonus<0?`${die} (${bonus})`:die;
   const RANK_LABELS=["","Novice","Adept","Master"];
   const TIERS=["novice","adept","master"];
@@ -1887,13 +1964,14 @@ function StepSummary({char,setChar,derived,totalSP}){
         <Card title="Melee Attack">
           {[
             ["Reach", `${finalReach} space${finalReach>1?"s":""}${size>=2?" (size 2+)":""}`],
-            ["Accuracy", fmt(finalMeleeAcc), true],
+            ["Accuracy", fmt(finalMeleeAcc)+(hasBrute?" [Brute: STR die]":""), true],
+            ["Perk Notes", [hasBrute?"Brute: STR→Acc":null, hasPrimalMass?"Primal Mass: VIG→Dmg":null, hasEagleEye?"Eagle Eye: DEX→Ranged Dmg":null, hasPunishingDraw?"Punishing Draw: +2 Acc&Dmg on initiate":null].filter(Boolean).join(", ")||"—"],
             ["Primary Damage", (()=>{
               const w = char.equipment.weapon;
               const bonus = dmgBonus;
               const bonusStr = bonus>0?` (+${bonus})`:bonus<0?` (${bonus})`:"";
               const sizeStr = size>1?` [+${sizeB.primDmg} size]`:"";
-              if(!w) return `${char.stats.Strength}${bonusStr}${sizeStr}`;
+              if(!w) return `${meleeDmgDie}${bonusStr}${sizeStr}`;
               const raw = w.dmg;
               const elemMatch = raw.match(/^(.+?)\s+([A-Z][a-z]+)$/);
               const dmgCore = elemMatch ? elemMatch[1] : raw;
@@ -1901,10 +1979,10 @@ function StepSummary({char,setChar,derived,totalSP}){
               const statPlusMatch = dmgCore.match(/^(Str|Mind)\+(.+)$/);
               const statOnlyMatch = dmgCore.match(/^(Str|Mind)$/);
               if(statPlusMatch) {
-                const statDie = statPlusMatch[1]==="Str" ? char.stats.Strength : char.stats.Mind;
+                const statDie = statPlusMatch[1]==="Str" ? meleeDmgDie : char.stats.Mind;
                 return `${statDie} + ${statPlusMatch[2]}${elem}${bonusStr}${sizeStr}`;
               } else if(statOnlyMatch) {
-                const statDie = statOnlyMatch[1]==="Str" ? char.stats.Strength : char.stats.Mind;
+                const statDie = statOnlyMatch[1]==="Str" ? meleeDmgDie : char.stats.Mind;
                 return `${statDie}${elem}${bonusStr}${sizeStr}`;
               } else {
                 return `${dmgCore}${elem}${bonusStr}${sizeStr}`;
@@ -1915,6 +1993,14 @@ function StepSummary({char,setChar,derived,totalSP}){
             ["Ward", finalWard, true],
             ["Dmg Shield Cap", finalDmgShield, true],
           ].map(([k,v,h])=><Row key={k} label={k} val={v} hi={h}/>)}
+          {passiveOnHitEffects.length>0&&(
+            <div style={{marginTop:8,borderTop:"1px solid #e8d8f0",paddingTop:8}}>
+              <div style={{fontSize:10,color:"#c8a84a",letterSpacing:"0.1em",marginBottom:4}}>ON-HIT EFFECTS</div>
+              {passiveOnHitEffects.map((fx,i)=>(
+                <div key={i} style={{fontSize:11,color:"#3a2a5a",padding:"2px 0",borderBottom:"1px solid #f0e8f8"}}>{fx}</div>
+              ))}
+            </div>
+          )}
         </Card>
         <Card title="Spell Attack">
           {[
