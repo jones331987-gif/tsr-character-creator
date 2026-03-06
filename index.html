@@ -4,7 +4,157 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>TSR 5.0 — Character Creator</title>
-  <style>* { margin:0; padding:0; box-sizing:border-box; } body { background:#1e1630; } #root { min-height:100vh; }</style>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    #root { min-height:100vh; }
+
+    /* ── Light theme (default) ── */
+    :root {
+      --bg-page:        #f2ede8;
+      --bg-page-grad:   linear-gradient(170deg,#f2ede8 0%,#ede5dc 45%,#f5f0ea 100%);
+      --bg-header:      linear-gradient(180deg,#2a1848 0%,#1e1038 100%);
+      --bg-nav:         rgba(248,244,238,0.95);
+      --bg-toolbar:     rgba(245,240,233,0.95);
+      --bg-footer:      rgba(245,240,233,0.95);
+      --bg-card:        rgba(255,252,248,0.96);
+      --bg-card-border: #d8c8b0;
+      --bg-card-top:    #b89860;
+      --bg-panel:       rgba(255,252,246,0.92);
+      --bg-panel-alt:   rgba(248,243,235,0.85);
+      --bg-input:       #fff8f0;
+      --bg-modal:       #fdf8f0;
+      --bg-overlay:     rgba(30,16,56,0.55);
+      --bg-sel:         linear-gradient(135deg,#ede0ff,#ddd0f5);
+      --bg-sel-border:  #b898d8;
+      --bg-pip-on:      #8060c0;
+      --bg-pip-off:     #ddd0f0;
+      --bg-btn-sec:     rgba(248,244,238,0.9);
+      --bg-table-hi:    rgba(42,24,72,0.05);
+      --bg-tag:         rgba(200,168,74,0.12);
+
+      --text-body:      #2a1e3a;
+      --text-muted:     #6a5880;
+      --text-label:     #8a7098;
+      --text-head:      #c8b8e8;
+      --text-value:     #1e1430;
+      --text-value-hi:  #2a1848;
+      --text-gold:      #c8a84a;
+      --text-teal:      #1a7a98;
+      --text-danger:    #8b1a2a;
+      --text-row-label: #7a6890;
+      --text-row-val:   #1e1430;
+      --text-row-hi:    #1e1430;
+      --text-nav-done:  #7a5a9a;
+      --text-nav-lock:  #b8a8d0;
+      --text-td:        #2e2448;
+      --text-desc:      #5a4870;
+      --text-th:        #8a7898;
+      --text-sm-btn:    #8870b0;
+      --text-pts-ok:    #5a4830;
+      --text-pts-bad:   #8b1a2a;
+      --text-banner:    #5a1a22;
+      --text-sub:       #7a68a0;
+
+      --border-main:    #d4c4a8;
+      --border-nav:     #d0c0d8;
+      --border-soft:    #e4d8c8;
+      --border-row:     rgba(180,160,200,0.35);
+      --border-modal:   #2a1848;
+
+      --shadow-card:    0 2px 16px rgba(80,50,20,0.08);
+      --shadow-header:  0 4px 20px rgba(30,16,56,0.3);
+
+      --accent-gold:    #c8a84a;
+      --accent-teal:    #4cc8e0;
+      --accent-crimson: #8b1a2a;
+
+      --banner-bg:      rgba(139,26,42,0.07);
+      --banner-border:  #e0a8a0;
+      --banner-left:    #8b1a2a;
+
+      --training-bought: linear-gradient(135deg,rgba(76,200,224,0.12),rgba(200,180,240,0.5));
+      --training-locked: rgba(240,235,250,0.8);
+      --training-normal: rgba(255,252,248,0.92);
+    }
+
+    /* ── Dark theme ── */
+    [data-theme="dark"] {
+      --bg-page:        #16111f;
+      --bg-page-grad:   linear-gradient(170deg,#16111f 0%,#1c1530 45%,#130f1c 100%);
+      --bg-header:      linear-gradient(180deg,#1e1230 0%,#130c20 100%);
+      --bg-nav:         rgba(20,14,32,0.97);
+      --bg-toolbar:     rgba(18,12,28,0.97);
+      --bg-footer:      rgba(18,12,28,0.97);
+      --bg-card:        rgba(28,20,44,0.97);
+      --bg-card-border: #3a2858;
+      --bg-card-top:    #2a1848;
+      --bg-panel:       rgba(30,22,46,0.95);
+      --bg-panel-alt:   rgba(25,18,40,0.90);
+      --bg-input:       rgba(24,16,38,0.98);
+      --bg-modal:       #1c1530;
+      --bg-overlay:     rgba(10,6,20,0.75);
+      --bg-sel:         linear-gradient(135deg,#32205a,#261848);
+      --bg-sel-border:  #6a4898;
+      --bg-pip-on:      #7050b0;
+      --bg-pip-off:     #2a1f48;
+      --bg-btn-sec:     rgba(28,20,44,0.97);
+      --bg-table-hi:    rgba(76,200,224,0.06);
+      --bg-tag:         rgba(200,168,74,0.12);
+
+      --text-body:      #ddd5ee;
+      --text-muted:     #9888b8;
+      --text-label:     #a090c0;
+      --text-head:      #c8b8e8;
+      --text-value:     #e0d8f0;
+      --text-value-hi:  #e8dea8;
+      --text-gold:      #c8a84a;
+      --text-teal:      #4cc8e0;
+      --text-danger:    #e05a6a;
+      --text-row-label: #9080b0;
+      --text-row-val:   #c8c0de;
+      --text-row-hi:    #e8dea8;
+      --text-nav-done:  #9878c8;
+      --text-nav-lock:  #6858a0;
+      --text-td:        #b8a8d0;
+      --text-desc:      #a090b8;
+      --text-th:        #7868a0;
+      --text-sm-btn:    #a888d0;
+      --text-pts-ok:    #a898a8;
+      --text-pts-bad:   #e05a6a;
+      --text-banner:    #f0a0a8;
+      --text-sub:       #9080b0;
+
+      --border-main:    #3a2858;
+      --border-nav:     #2e2050;
+      --border-soft:    #2e2248;
+      --border-row:     rgba(100,80,140,0.28);
+      --border-modal:   #3a2858;
+
+      --shadow-card:    0 2px 16px rgba(10,6,20,0.4);
+      --shadow-header:  0 4px 20px rgba(10,6,20,0.6);
+
+      --accent-gold:    #c8a84a;
+      --accent-teal:    #4cc8e0;
+      --accent-crimson: #c84a5a;
+
+      --banner-bg:      rgba(139,26,42,0.22);
+      --banner-border:  #7a3a42;
+      --banner-left:    #c84a5a;
+
+      --training-bought: linear-gradient(135deg,rgba(76,200,224,0.12),rgba(20,12,38,0.98));
+      --training-locked: rgba(24,16,38,0.80);
+      --training-normal: rgba(28,20,44,0.92);
+    }
+
+    body { background:var(--bg-page); }
+
+    /* Smooth theme transition */
+    *, *::before, *::after {
+      transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+    }
+    /* But don't transition transforms/opacity (causes lag on interactions) */
+    button, input, select, textarea { transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease; }
+  </style>
 </head>
 <body>
   <div id="root"></div>
@@ -730,6 +880,8 @@ function App() {
   const [char, setChar] = useState({...EMPTY_CHAR, purchasedTrainings: new Set()});
   const [saves, setSaves] = useState({slot_1:null,slot_2:null,slot_3:null});
   const [saveMsg, setSaveMsg] = useState("");
+  const [darkMode, setDarkMode] = useState(false);
+  useEffect(()=>{ document.documentElement.setAttribute("data-theme", darkMode ? "dark" : "light"); },[darkMode]);
   const [showManager, setShowManager] = useState(false);
   const [confirmModal, setConfirmModal] = useState(null); // {message, onConfirm}
 
@@ -1067,9 +1219,9 @@ function App() {
   const derived = {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove};
 
   return (
-    <div style={{minHeight:"100vh",background:"linear-gradient(170deg,#1e1630 0%,#221a38 45%,#1a1228 100%)",color:"#e8e0f0",fontFamily:"'Palatino Linotype',Palatino,Georgia,serif",display:"flex",flexDirection:"column"}}>
+    <div style={{minHeight:"100vh",background:"var(--bg-page-grad)",color:"var(--text-body)",fontFamily:"'Palatino Linotype',Palatino,Georgia,serif",display:"flex",flexDirection:"column"}}>
       <div style={{height:3,background:"linear-gradient(90deg,#3a1a5a,#4cc8e0 15%,#8b1a2a 35%,#c8a84a 50%,#8b1a2a 65%,#4cc8e0 85%,#3a1a5a)"}}/>
-      <header style={{borderBottom:"1px solid #c8b8e0",padding:"16px 32px",background:"linear-gradient(180deg,#2a1848 0%,#1e1038 100%)",display:"flex",alignItems:"center",gap:18,boxShadow:"0 4px 20px rgba(30,16,56,0.3)"}}>
+      <header style={{borderBottom:"1px solid var(--border-nav)",padding:"16px 32px",background:"var(--bg-header)",display:"flex",alignItems:"center",gap:18,boxShadow:"var(--shadow-header)"}}>
         <div style={{width:46,height:46,borderRadius:"50%",background:"linear-gradient(135deg,#2e1a52,#1e1038)",border:"1px solid rgba(76,200,224,0.4)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 0 14px rgba(76,200,224,0.2)",position:"relative"}}>
           <div style={{position:"absolute",inset:4,borderRadius:"50%",border:"1px solid rgba(76,200,224,0.2)"}}/>
           <span style={{fontSize:20,filter:"drop-shadow(0 0 5px rgba(76,200,224,0.6))"}}>⚙</span>
@@ -1084,28 +1236,41 @@ function App() {
           <div style={{fontSize:13,color:"#c8a84a",fontStyle:"italic",letterSpacing:"0.06em"}}>✦ {char.name}</div>
         </div>}
         <div style={{width:1,height:30,background:"rgba(76,200,224,0.2)",margin:"0 4px"}}/>
+        <button onClick={()=>setDarkMode(d=>!d)} title={darkMode?"Switch to Light Mode":"Switch to Dark Mode"} style={{
+          background: darkMode ? "rgba(76,200,224,0.12)" : "rgba(200,168,74,0.12)",
+          border: darkMode ? "1px solid rgba(76,200,224,0.4)" : "1px solid rgba(200,168,74,0.4)",
+          borderRadius:20, padding:"6px 12px", cursor:"pointer",
+          display:"flex", alignItems:"center", gap:6,
+          color: darkMode ? "#4cc8e0" : "#c8a84a",
+          fontSize:11, fontFamily:"inherit", letterSpacing:"0.05em",
+          transition:"all 0.25s ease",
+        }}>
+          <span style={{fontSize:14}}>{darkMode ? "☀" : "🌙"}</span>
+          <span>{darkMode ? "Light" : "Dark"}</span>
+        </button>
+        <div style={{width:1,height:30,background:"rgba(76,200,224,0.2)",margin:"0 4px"}}/>
         <div style={{textAlign:"right",opacity:0.7}}>
           <div style={{fontSize:8,color:"#4cc8e0",letterSpacing:"0.2em"}}>CLEARANCE</div>
-          <div style={{fontSize:10,color:"#e05a6a",letterSpacing:"0.1em",fontWeight:700}}>LEVEL I</div>
+          <div style={{fontSize:10,color:"var(--text-danger)",letterSpacing:"0.1em",fontWeight:700}}>LEVEL I</div>
         </div>
       </header>
 
       {/* ── Character Manager bar ── */}
-      <div style={{borderBottom:"1px solid #3a2860",background:"rgba(30,20,50,0.75)",backdropFilter:"blur(4px)",padding:"6px 16px",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-        <span style={{fontSize:9,color:"#9080b0",letterSpacing:"0.15em",marginRight:4}}>CHARACTER:</span>
-        <button onClick={newChar} style={{...mic,background:"rgba(139,26,42,0.06)",border:"1px solid #e0b0b8",color:"#f0a0a8"}}>✦ New</button>
-        <button onClick={exportChar} style={{...mic,background:"rgba(76,200,224,0.06)",border:"1px solid #4cc8e0",color:"#2a7a9a"}}>↓ Export .txt</button>
-        <button onClick={importChar} style={{...mic,background:"rgba(76,200,224,0.06)",border:"1px solid #4cc8e0",color:"#2a7a9a"}}>↑ Import .txt</button>
-        <button onClick={()=>setJsonModal("export")} style={{...mic,color:"#9080b0"}}>📋 Copy</button>
-        <div style={{width:1,height:16,background:"rgba(200,180,230,0.5)",margin:"0 4px"}}/>
+      <div style={{borderBottom:"1px solid var(--border-nav)",background:"var(--bg-toolbar)",backdropFilter:"blur(4px)",padding:"6px 16px",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+        <span style={{fontSize:9,color:"var(--text-row-label)",letterSpacing:"0.15em",marginRight:4}}>CHARACTER:</span>
+        <button onClick={newChar} style={{...mic,background:"rgba(139,26,42,0.06)",border:"1px solid #e0b0b8",color:"var(--text-banner)"}}>✦ New</button>
+        <button onClick={exportChar} style={{...mic,background:"var(--bg-table-hi)",border:"1px solid #4cc8e0",color:"var(--text-teal)"}}>↓ Export .txt</button>
+        <button onClick={importChar} style={{...mic,background:"var(--bg-table-hi)",border:"1px solid #4cc8e0",color:"var(--text-teal)"}}>↑ Import .txt</button>
+        <button onClick={()=>setJsonModal("export")} style={{...mic,color:"var(--text-row-label)"}}>📋 Copy</button>
+        <div style={{width:1,height:16,background:"var(--border-main)",margin:"0 4px"}}/>
         {SAVE_SLOTS.map((slot,i)=>{
           const saved = saves[slot];
           return(
             <div key={slot} style={{display:"flex",gap:3,alignItems:"center"}}>
-              <button onClick={()=>saveToSlot(slot,i)} style={{...mic,background:"rgba(200,168,74,0.08)",border:"1px solid #c8a84a",color:"#c8b8e8",minWidth:52}}>
+              <button onClick={()=>saveToSlot(slot,i)} style={{...mic,background:"rgba(200,168,74,0.08)",border:"1px solid #c8a84a",color:"var(--text-head)",minWidth:52}}>
                 💾 {saved?saved.name||`Slot ${i+1}`:`Slot ${i+1}`}
               </button>
-              {saved&&<button onClick={()=>loadFromSlot(slot)} style={{...mic,color:"#a888d0"}}>Load</button>}
+              {saved&&<button onClick={()=>loadFromSlot(slot)} style={{...mic,color:"var(--text-sm-btn)"}}>Load</button>}
               {saved&&<button onClick={()=>deleteSlot(slot,i)} style={{...mic,color:"#8b1a2a",border:"1px solid #e0b0b8"}}>✕</button>}
             </div>
           );
@@ -1113,13 +1278,13 @@ function App() {
         {saveMsg&&<span style={{fontSize:10,color:"#4cc8e0",marginLeft:8,fontStyle:"italic"}}>{saveMsg}</span>}
       </div>
 
-      <nav style={{display:"flex",borderBottom:"2px solid #3a2860",background:"rgba(30,20,50,0.85)",backdropFilter:"blur(6px)",overflowX:"auto",boxShadow:"0 2px 10px rgba(30,16,56,0.08)"}}>
+      <nav style={{display:"flex",borderBottom:"2px solid var(--border-nav)",background:"var(--bg-nav)",backdropFilter:"blur(6px)",overflowX:"auto",boxShadow:"0 2px 10px rgba(30,16,56,0.08)"}}>
         {STEPS.map((s,i)=>(
           <button key={s.id} onClick={()=>i<=step&&setStep(i)} style={{
             flex:1,minWidth:72,padding:"10px 6px",border:"none",
             background:i===step?"rgba(76,200,224,0.08)":"transparent",
-            borderBottom:i===step?"3px solid #4cc8e0":"3px solid transparent",
-            color:i===step?"#2a7a9a":i<step?"#7a5a9a":"#b8a8cc",
+            borderBottom:i===step?"3px solid var(--accent-teal)":"3px solid transparent",
+            color:i===step?"var(--accent-teal)":i<step?"var(--text-nav-done)":"var(--text-nav-lock)",
             cursor:i<=step?"pointer":"default",
             fontSize:10,letterSpacing:"0.1em",fontFamily:"inherit",
             display:"flex",flexDirection:"column",alignItems:"center",gap:3,
@@ -1144,9 +1309,9 @@ function App() {
       </main>
 
       {step<7&&(
-        <footer style={{borderTop:"2px solid #3a2860",padding:"14px 32px",display:"flex",justifyContent:"space-between",alignItems:"center",background:"rgba(30,20,50,0.85)",backdropFilter:"blur(6px)"}}>
+        <footer style={{borderTop:"2px solid var(--border-nav)",padding:"14px 32px",display:"flex",justifyContent:"space-between",alignItems:"center",background:"var(--bg-footer)",backdropFilter:"blur(6px)"}}>
           <button onClick={()=>setStep(s=>Math.max(0,s-1))} disabled={step===0} style={btnS("sec")}>← Back</button>
-          <span style={{fontSize:9,color:"#a898c0",letterSpacing:"0.2em"}}>STEP {step+1} OF {STEPS.length}</span>
+          <span style={{fontSize:9,color:"var(--text-label)",letterSpacing:"0.2em"}}>STEP {step+1} OF {STEPS.length}</span>
           <button onClick={()=>setStep(s=>s+1)} disabled={!canContinue()} style={btnS("pri")}>{step===5?"View Summary →":step===6?"Level Up →":"Continue →"}</button>
         </footer>
       )}
@@ -1155,8 +1320,8 @@ function App() {
       {/* ── Confirm Modal ── */}
       {confirmModal&&(
         <div style={{position:"fixed",inset:0,background:"rgba(30,16,56,0.7)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1001}}>
-          <div style={{background:"#221a36",border:"2px solid #2a1848",borderRadius:4,padding:28,width:"min(380px,90vw)",boxShadow:"0 8px 40px rgba(30,16,56,0.4)",display:"flex",flexDirection:"column",gap:18}}>
-            <div style={{fontSize:13,color:"#c8b8e8",lineHeight:1.6}}>{confirmModal.message}</div>
+          <div style={{background:"var(--bg-modal)",border:"2px solid var(--border-modal)",borderRadius:4,padding:28,width:"min(380px,90vw)",boxShadow:"0 8px 40px rgba(30,16,56,0.4)",display:"flex",flexDirection:"column",gap:18}}>
+            <div style={{fontSize:13,color:"var(--text-head)",lineHeight:1.6}}>{confirmModal.message}</div>
             <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
               <button onClick={()=>setConfirmModal(null)} style={btnS("sec")}>Cancel</button>
               <button onClick={()=>{confirmModal.onConfirm();setConfirmModal(null);}} style={btnS("pri")}>Confirm</button>
@@ -1168,14 +1333,14 @@ function App() {
       {/* ── JSON Export/Import Modal ── */}
       {jsonModal&&(
         <div style={{position:"fixed",inset:0,background:"rgba(30,16,56,0.7)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setJsonModal(null)}>
-          <div style={{background:"#221a36",border:"2px solid #2a1848",borderRadius:4,padding:28,width:"min(560px,95vw)",maxHeight:"80vh",display:"flex",flexDirection:"column",gap:14,boxShadow:"0 8px 40px rgba(30,16,56,0.4)"}} onClick={e=>e.stopPropagation()}>
-            <div style={{fontSize:13,fontWeight:700,color:"#c8b8e8",letterSpacing:"0.1em"}}>
+          <div style={{background:"var(--bg-modal)",border:"2px solid var(--border-modal)",borderRadius:4,padding:28,width:"min(560px,95vw)",maxHeight:"80vh",display:"flex",flexDirection:"column",gap:14,boxShadow:"0 8px 40px rgba(30,16,56,0.4)"}} onClick={e=>e.stopPropagation()}>
+            <div style={{fontSize:13,fontWeight:700,color:"var(--text-head)",letterSpacing:"0.1em"}}>
               {jsonModal==="export"?"↓ EXPORT CHARACTER":"↑ IMPORT CHARACTER"}
             </div>
             {jsonModal==="export"&&(
               <>
-                <div style={{fontSize:11,color:"#9080b0"}}>Copy the text below and save it to a <code>.json</code> file, or paste it directly into the Import box on another device.</div>
-                <textarea id="tsr-export-ta" readOnly value={JSON.stringify(charToJSON(char),null,2)} style={{flex:1,minHeight:220,fontFamily:"monospace",fontSize:10,background:"#1a1230",border:"1px solid #4a3870",borderRadius:2,padding:10,color:"#e0d8ee",resize:"vertical"}} onClick={e=>e.target.select()}/>
+                <div style={{fontSize:11,color:"var(--text-row-label)"}}>Copy the text below and save it to a <code>.json</code> file, or paste it directly into the Import box on another device.</div>
+                <textarea id="tsr-export-ta" readOnly value={JSON.stringify(charToJSON(char),null,2)} style={{flex:1,minHeight:220,fontFamily:"monospace",fontSize:10,background:"var(--bg-input)",border:"1px solid var(--border-main)",borderRadius:2,padding:10,color:"var(--text-body)",resize:"vertical"}} onClick={e=>e.target.select()}/>
                 <div style={{display:"flex",gap:8}}>
                   <button onClick={()=>{
                     const ta=document.querySelector("#tsr-export-ta");
@@ -1189,8 +1354,8 @@ function App() {
             )}
             {jsonModal==="import"&&(
               <>
-                <div style={{fontSize:11,color:"#9080b0"}}>Paste your exported character JSON below, then click Import.</div>
-                <textarea value={importText} onChange={e=>setImportText(e.target.value)} placeholder='Paste JSON here...' style={{flex:1,minHeight:220,fontFamily:"monospace",fontSize:10,background:"#1a1230",border:"1px solid #4a3870",borderRadius:2,padding:10,color:"#e0d8ee",resize:"vertical"}}/>
+                <div style={{fontSize:11,color:"var(--text-row-label)"}}>Paste your exported character JSON below, then click Import.</div>
+                <textarea value={importText} onChange={e=>setImportText(e.target.value)} placeholder='Paste JSON here...' style={{flex:1,minHeight:220,fontFamily:"monospace",fontSize:10,background:"var(--bg-input)",border:"1px solid var(--border-main)",borderRadius:2,padding:10,color:"var(--text-body)",resize:"vertical"}}/>
                 <div style={{display:"flex",gap:8}}>
                   <button onClick={doImport} disabled={!importText.trim()} style={{...btnS("pri"),flex:1,opacity:importText.trim()?1:0.5}}>↑ Import Character</button>
                   <button onClick={()=>setJsonModal(null)} style={{...btnS("sec")}}>Cancel</button>
@@ -1223,13 +1388,13 @@ function StepIdentity({char,setC}){
               overflow:"hidden",position:"relative",transition:"border-color 0.2s",
             }}
             onMouseEnter={e=>e.currentTarget.style.borderColor="#4cc8e0"}
-            onMouseLeave={e=>e.currentTarget.style.borderColor="#c8b8e0"}
+            onMouseLeave={e=>e.currentTarget.style.borderColor="var(--text-head)"}
           >
             {char.portrait
               ? <img src={char.portrait} alt="Character portrait" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
               : <>
-                  <div style={{fontSize:32,marginBottom:8,color:"#c8b8e0"}}>🖼</div>
-                  <div style={{fontSize:10,color:"#a898c0",textAlign:"center",padding:"0 12px",lineHeight:1.5}}>Click to upload character art</div>
+                  <div style={{fontSize:32,marginBottom:8,color:"var(--text-head)"}}>🖼</div>
+                  <div style={{fontSize:10,color:"var(--text-label)",textAlign:"center",padding:"0 12px",lineHeight:1.5}}>Click to upload character art</div>
                 </>
             }
             {char.portrait&&(
@@ -1290,7 +1455,7 @@ function StepRole({char,setC}){
         {ROLES.map(r=>{
           const d=ROLE_INFO[r]; const sel=char.role===r;
           return(
-            <button key={r} onClick={()=>setC("role",r)} style={{border:sel?"1px solid #c8a84a":"1px solid #cebee8",background:sel?"linear-gradient(135deg,#3a2060,#2e1850)":"rgba(38,28,58,0.85)",color:"inherit",padding:"18px",cursor:"pointer",textAlign:"left",fontFamily:"inherit",borderRadius:3,transition:"all 0.2s"}}>
+            <button key={r} onClick={()=>setC("role",r)} style={{border:sel?"1px solid #c8a84a":"1px solid #cebee8",background:sel?"var(--bg-sel)":"rgba(38,28,58,0.85)",color:"inherit",padding:"18px",cursor:"pointer",textAlign:"left",fontFamily:"inherit",borderRadius:3,transition:"all 0.2s"}}>
               <div style={{fontSize:22,marginBottom:6}}>{d.icon}</div>
               <div style={{fontWeight:700,fontSize:14,color:sel?"#2a1848":"#6a50a0",marginBottom:6,letterSpacing:"0.05em"}}>{r.toUpperCase()}</div>
               <div style={{fontSize:11,color:sel?"#c8bca0":"#3a2a5a",lineHeight:1.5}}>{d.desc}</div>
@@ -1311,7 +1476,7 @@ function StepBoon({char,setC}){
         {BOONS.map(b=>{
           const sel=char.boon?.name===b.name;
           return(
-            <button key={b.name} onClick={()=>setC("boon",b)} style={{border:sel?"1px solid #c8a84a":"1px solid #cebee8",background:sel?"linear-gradient(135deg,#3a2060,#2e1850)":"rgba(38,28,58,0.85)",color:"inherit",padding:"16px",cursor:"pointer",textAlign:"left",fontFamily:"inherit",borderRadius:3,transition:"all 0.2s"}}>
+            <button key={b.name} onClick={()=>setC("boon",b)} style={{border:sel?"1px solid #c8a84a":"1px solid #cebee8",background:sel?"var(--bg-sel)":"rgba(38,28,58,0.85)",color:"inherit",padding:"16px",cursor:"pointer",textAlign:"left",fontFamily:"inherit",borderRadius:3,transition:"all 0.2s"}}>
               <div style={{fontWeight:700,fontSize:13,color:sel?"#2a1848":"#6a50a0",marginBottom:6}}>{b.name}</div>
               <div style={{fontSize:11,color:sel?"#c8bca0":"#3a2a5a",lineHeight:1.5}}>{b.desc}</div>
             </button>
@@ -1379,7 +1544,7 @@ function StepAttributes({char,setChar,stLeft,apLeft,totalAP,trainBonuses,derived
         <div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
             <span style={{fontSize:12,color:"#c8a84a",letterSpacing:"0.12em"}}>STATS</span>
-            <span style={{fontSize:11,color:stLeft<0?"#c94a4c":"#6a5a3a"}}>{stLeft} / 6 pts left</span>
+            <span style={{fontSize:11,color:stLeft<0?"var(--text-danger)":"#6a5a3a"}}>{stLeft} / 6 pts left</span>
           </div>
           {STATS.map(s=>{
             const chain=statChainFor(s);
@@ -1388,9 +1553,9 @@ function StepAttributes({char,setChar,stLeft,apLeft,totalAP,trainBonuses,derived
             const atCap=curIdx>=chain.length-1;
             const atMin=curIdx<=minIdx;
             return(
-            <div key={s} style={{marginBottom:10,padding:"10px 12px",background:"rgba(38,28,58,0.92)",border:"1px solid #4a3870",borderRadius:3}}>
+            <div key={s} style={{marginBottom:10,padding:"10px 12px",background:"var(--bg-card)",border:"1px solid var(--border-main)",borderRadius:3}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:3}}>
-                <span style={{fontSize:12,fontWeight:600,color:"#d8d0e8"}}>
+                <span style={{fontSize:12,fontWeight:600,color:"var(--text-body)"}}>
                   {s}
                   {isGigantic&&(s==="Strength"||s==="Vigor")&&<span style={{fontSize:9,color:"#c8a84a",marginLeft:6,letterSpacing:"0.08em"}}>GIGANTIC</span>}
                 </span>
@@ -1400,7 +1565,7 @@ function StepAttributes({char,setChar,stLeft,apLeft,totalAP,trainBonuses,derived
                   <button onClick={()=>updStat(s,1)} disabled={atCap} style={{...sm,opacity:atCap?0.3:1}}>+</button>
                 </div>
               </div>
-              <div style={{fontSize:10,color:"#a888d0"}}>{STAT_DESC[s]}</div>
+              <div style={{fontSize:10,color:"var(--text-sm-btn)"}}>{STAT_DESC[s]}</div>
             </div>
             );
           })}
@@ -1408,9 +1573,9 @@ function StepAttributes({char,setChar,stLeft,apLeft,totalAP,trainBonuses,derived
         <div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
             <span style={{fontSize:12,color:"#c8a84a",letterSpacing:"0.12em"}}>ATTRIBUTES</span>
-            <span style={{fontSize:11,color:apLeft<0?"#c94a4c":"#6a5a3a"}}>{apLeft} / {totalAP} pts left</span>
+            <span style={{fontSize:11,color:apLeft<0?"var(--text-danger)":"#6a5a3a"}}>{apLeft} / {totalAP} pts left</span>
           </div>
-          <div style={{fontSize:10,color:"#8878a8",marginBottom:10}}>Base: 20 HP / 10 Stamina / 0 Mana. Each point = +1 to one attribute.</div>
+          <div style={{fontSize:10,color:"var(--text-muted)",marginBottom:10}}>Base: 20 HP / 10 Stamina / 0 Mana. Each point = +1 to one attribute.</div>
           {[
             {key:"HP",label:"Health (HP)",desc:"0 HP = Downed. Wounds reduce max HP by 5."},
             {key:"Stamina",label:"Stamina",desc:isRoE?"🔒 Locked at 10 by Rite of Embers.":"Fuels Techniques. 0 = risk Unconscious."},
@@ -1418,15 +1583,15 @@ function StepAttributes({char,setChar,stLeft,apLeft,totalAP,trainBonuses,derived
           ].map(({key,label,desc})=>{
             const locked = (key==="Mana"&&isVoA)||(key==="Stamina"&&isRoE);
             return(
-            <div key={key} style={{marginBottom:10,padding:"10px 12px",background:locked?"rgba(50,35,75,0.7)":"rgba(38,28,58,0.92)",border:`1px solid ${locked?"#c8a84a":"#cebee8"}`,borderRadius:3,opacity:locked?0.75:1}}>
+            <div key={key} style={{marginBottom:10,padding:"10px 12px",background:locked?"var(--bg-panel-alt)":"var(--bg-card)",border:`1px solid ${locked?"#c8a84a":"#cebee8"}`,borderRadius:3,opacity:locked?0.75:1}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:3}}>
-                <span style={{fontSize:12,fontWeight:600,color:"#d8d0e8"}}>
+                <span style={{fontSize:12,fontWeight:600,color:"var(--text-body)"}}>
                   {label}
                   {locked&&<span style={{fontSize:9,color:"#c8a84a",marginLeft:6,letterSpacing:"0.08em"}}>LOCKED</span>}
                 </span>
                 <div style={{display:"flex",alignItems:"center",gap:6}}>
                   <button onClick={()=>updAttr(key,char.attrs[key]-1)} disabled={locked} style={{...sm,opacity:locked?0.3:1}}>−</button>
-                  <span style={{fontSize:14,color:locked?"#a090c0":"#c8a84a",minWidth:36,textAlign:"center",fontWeight:700}}>{char.attrs[key]}</span>
+                  <span style={{fontSize:14,color:locked?"var(--text-label)":"#c8a84a",minWidth:36,textAlign:"center",fontWeight:700}}>{char.attrs[key]}</span>
                   <button onClick={()=>updAttr(key,char.attrs[key]+1)} disabled={locked} style={{...sm,opacity:locked?0.3:1}}>+</button>
                 </div>
               </div>
@@ -1435,7 +1600,7 @@ function StepAttributes({char,setChar,stLeft,apLeft,totalAP,trainBonuses,derived
             );
           })}
           {/* Derived block */}
-          <div style={{marginTop:12,padding:"12px",background:"rgba(38,28,58,0.92)",border:"1px solid #4a3870",borderRadius:3}}>
+          <div style={{marginTop:12,padding:"12px",background:"var(--bg-card)",border:"1px solid var(--border-main)",borderRadius:3}}>
             <div style={{fontSize:10,color:"#c8a84a",letterSpacing:"0.12em",marginBottom:8}}>DERIVED STATS (base — training bonuses apply later)</div>
             {(()=>{
               const sz = char.size||1;
@@ -1457,8 +1622,8 @@ function StepAttributes({char,setChar,stLeft,apLeft,totalAP,trainBonuses,derived
               ];
               return rows.map(([k,v])=>(
                 <div key={k} style={{display:"flex",justifyContent:"space-between",fontSize:11,marginBottom:4,paddingBottom:4,borderBottom:"1px solid rgba(100,80,140,0.3)"}}>
-                  <span style={{color:"#9080b0"}}>{k}</span>
-                  <span style={{color:"#b0a0d0"}}>{v}</span>
+                  <span style={{color:"var(--text-row-label)"}}>{k}</span>
+                  <span style={{color:"var(--text-muted)"}}>{v}</span>
                 </div>
               ));
             })()}
@@ -1582,18 +1747,18 @@ function StepSkills({char,setChar,spLeft,totalSP,moneyLeft,skillSilverSpent}){
       <ST>Skill Trees & Techniques</ST>
       {/* Budget bar */}
       <div style={{display:"flex",gap:10,marginBottom:10,flexWrap:"wrap",alignItems:"center"}}>
-        <div style={{padding:"6px 12px",background:"rgba(38,28,58,0.92)",border:"1px solid #4a3870",borderRadius:3,fontSize:11}}>
+        <div style={{padding:"6px 12px",background:"var(--bg-card)",border:"1px solid var(--border-main)",borderRadius:3,fontSize:11}}>
           🎯 <span style={{color:"#c8a84a",fontWeight:700}}>{spLeft}</span> / {totalSP} Skill Points
         </div>
-        <div style={{padding:"6px 12px",background:"rgba(38,28,58,0.92)",border:moneyLeft<0?"1px solid #c94a4c":"1px solid #cebee8",borderRadius:3,fontSize:11}}>
+        <div style={{padding:"6px 12px",background:"var(--bg-card)",border:moneyLeft<0?"1px solid #c94a4c":"1px solid #cebee8",borderRadius:3,fontSize:11}}>
           💰 <span style={{color:moneyLeft<0?"#c05040":"#c8a84a",fontWeight:700}}>{moneyLeft}</span> Silver left
-          {skillSilverSpent>0&&<span style={{color:"#9080b0",marginLeft:6}}>(spent {skillSilverSpent}s on skills)</span>}
+          {skillSilverSpent>0&&<span style={{color:"var(--text-row-label)",marginLeft:6}}>(spent {skillSilverSpent}s on skills)</span>}
         </div>
-        <span style={{fontSize:10,color:"#a888d0"}}>Novice=50s · Adept=100s · Master=150s per training or technique</span>
+        <span style={{fontSize:10,color:"var(--text-sm-btn)"}}>Novice=50s · Adept=100s · Master=150s per training or technique</span>
       </div>
       {isVoA&&<Banner>Vow of Ash: Cannot invest in Magic skills.</Banner>}
       {isRoE&&<Banner>Rite of Embers: Cannot invest in Physical skills.</Banner>}
-      {trainingTreeId&&<Banner style={{borderColor:"#4a9a30",background:"rgba(45,30,72,0.95)",color:"#2a7010"}}>Training line locked to: <strong>{SKILL_TREES.find(t=>t.id===trainingTreeId)?.name}</strong>. Refund its trainings to switch trees.</Banner>}
+      {trainingTreeId&&<Banner style={{borderColor:"#4a9a30",background:"var(--bg-panel-alt)",color:"var(--text-teal)"}}>Training line locked to: <strong>{SKILL_TREES.find(t=>t.id===trainingTreeId)?.name}</strong>. Refund its trainings to switch trees.</Banner>}
 
       {[["Physical Skills",phys],["Magic Skills",magic]].map(([title,trees])=>(
         <div key={title} style={{marginTop:18}}>
@@ -1603,29 +1768,29 @@ function StepSkills({char,setChar,spLeft,totalSP,moneyLeft,skillSilverSpent}){
             const locked=(isVoA&&tree.type==="magic")||(isRoE&&tree.type==="physical");
             const isOpen=openTree===tree.id;
             return(
-              <div key={tree.id} style={{marginBottom:8,border:rank>0?"1px solid #b8a8d8":"1px solid #3a2860",borderRadius:3,background:"rgba(30,20,50,0.85)",opacity:locked?0.4:1}}>
+              <div key={tree.id} style={{marginBottom:8,border:rank>0?"1px solid #b8a8d8":"1px solid var(--border-soft)",borderRadius:3,background:"rgba(30,20,50,0.85)",opacity:locked?0.4:1}}>
                 {/* Tree header */}
                 <div style={{padding:"10px 14px",display:"flex",alignItems:"center",gap:10}}>
                   <div style={{flex:1}}>
                     <div style={{display:"flex",alignItems:"center",gap:8}}>
-                      <span style={{fontSize:13,fontWeight:600,color:rank>0?"#c8a84a":"#6a5888"}}>{tree.name}</span>
-                      <span style={{fontSize:10,color:rank>0?"#c8a84a":"#6a5888",padding:"1px 6px",background:"rgba(200,168,74,0.15)",borderRadius:3}}>{RANK_LABELS[rank]}</span>
+                      <span style={{fontSize:13,fontWeight:600,color:rank>0?"#c8a84a":"var(--text-nav-lock)"}}>{tree.name}</span>
+                      <span style={{fontSize:10,color:rank>0?"#c8a84a":"var(--text-nav-lock)",padding:"1px 6px",background:"var(--bg-tag)",borderRadius:3}}>{RANK_LABELS[rank]}</span>
                     </div>
-                    <div style={{fontSize:10,color:"#8878a8",marginTop:2}}>{tree.desc}</div>
+                    <div style={{fontSize:10,color:"var(--text-muted)",marginTop:2}}>{tree.desc}</div>
                   </div>
                   {/* Rank buttons (skill point cost shown) */}
                   <div style={{display:"flex",gap:3}}>
                     {[0,1,2,3].map(r=>(
                       <button key={r} onClick={()=>!locked&&setRank(tree.id,r)} style={{
                         padding:"3px 8px",border:"none",cursor:locked?"default":"pointer",
-                        background:rank>=r&&r>0?"#5a3a90":"#2a1f48",
+                        background:rank>=r&&r>0?"var(--bg-pip-on)":"var(--bg-pip-off)",
                         color:rank>=r&&r>0?"#2a1848":"#b0a0c8",
                         fontSize:9,fontFamily:"inherit",borderRadius:3,
                       }}>{RANK_LABELS[r]}{r>0?` (${r}pt)`:""}</button>
                     ))}
                   </div>
                   {rank>0&&(
-                    <button onClick={()=>setOpenTree(isOpen?null:tree.id)} style={{padding:"4px 10px",border:"1px solid #4a3870",background:"transparent",color:"#9080b0",cursor:"pointer",fontSize:10,fontFamily:"inherit",borderRadius:3,whiteSpace:"nowrap"}}>
+                    <button onClick={()=>setOpenTree(isOpen?null:tree.id)} style={{padding:"4px 10px",border:"1px solid var(--border-main)",background:"transparent",color:"var(--text-row-label)",cursor:"pointer",fontSize:10,fontFamily:"inherit",borderRadius:3,whiteSpace:"nowrap"}}>
                       {isOpen?"▲ Hide":"▼ Buy"}
                     </button>
                   )}
@@ -1649,14 +1814,14 @@ function StepSkills({char,setChar,spLeft,totalSP,moneyLeft,skillSilverSpent}){
                           {/* Tier label */}
                           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
                             <span style={{fontSize:10,color:"#c8a84a",letterSpacing:"0.1em"}}>{tier.toUpperCase()} TIER</span>
-                            <span style={{fontSize:9,color:"#9080b0"}}>— each item costs {silverCost}s</span>
+                            <span style={{fontSize:9,color:"var(--text-row-label)"}}>— each item costs {silverCost}s</span>
                           </div>
 
                           {/* Training — purchasable, locked if another tree owns the training line */}
                           <button onClick={()=>!trainingLocked&&toggleTraining(tree.id,tier)} style={{
                             width:"100%",
                             border:trainingBought?"1px solid #c8a84a":trainingLocked?"1px solid #cebee8":"1px solid #cebee8",
-                            background:trainingBought?"linear-gradient(135deg,rgba(76,200,224,0.15),rgba(20,10,40,0.98))":trainingLocked?"rgba(30,22,48,0.7)":"rgba(35,25,52,0.80)",
+                            background:trainingBought?"linear-gradient(135deg,rgba(76,200,224,0.15),rgba(20,10,40,0.98))":trainingLocked?"rgba(30,22,48,0.7)":"var(--bg-panel)",
                             color:"inherit",padding:"9px 12px",
                             cursor:trainingLocked?"not-allowed":"pointer",
                             textAlign:"left",fontFamily:"inherit",borderRadius:3,marginBottom:8,
@@ -1665,7 +1830,7 @@ function StepSkills({char,setChar,spLeft,totalSP,moneyLeft,skillSilverSpent}){
                           }}>
                             <span style={{fontSize:10,color:trainingBought?"#2a1848":trainingLocked?"#c0b0d8":"#8a78a8",whiteSpace:"nowrap",marginTop:1}}>⚡ TRAINING</span>
                             <div style={{flex:1}}>
-                              <span style={{fontSize:11,color:trainingBought?"#1e1430":trainingLocked?"#c8b8e0":"#7a68a0",fontWeight:600}}>{training.name}</span>
+                              <span style={{fontSize:11,color:trainingBought?"#1e1430":trainingLocked?"var(--text-head)":"var(--text-sub)",fontWeight:600}}>{training.name}</span>
                               <span style={{fontSize:10,color:trainingBought?"#3a2858":trainingLocked?"#c0b0d8":"#8a78a8",marginLeft:6}}>{training.desc}</span>
                             </div>
                             <span style={{fontSize:10,color:trainingBought?"#2a1848":trainingLocked?"#c0b0d8":"#8a78a8",whiteSpace:"nowrap",marginLeft:8}}>
@@ -1680,8 +1845,8 @@ function StepSkills({char,setChar,spLeft,totalSP,moneyLeft,skillSilverSpent}){
                                 const sel=selTechs.includes(tech.name);
                                 return(
                                   <button key={tech.name} onClick={()=>toggleTechnique(tree.id,tier,tech.name)} style={{
-                                    border:sel?"1px solid #c8a84a":"1px solid #3a2860",
-                                    background:sel?"linear-gradient(135deg,#3a2060,#2e1850)":"rgba(38,28,58,0.85)",
+                                    border:sel?"1px solid #c8a84a":"1px solid var(--border-soft)",
+                                    background:sel?"var(--bg-sel)":"rgba(38,28,58,0.85)",
                                     color:"inherit",padding:"8px 10px",cursor:"pointer",
                                     textAlign:"left",fontFamily:"inherit",borderRadius:3,
                                   }}>
@@ -1689,7 +1854,7 @@ function StepSkills({char,setChar,spLeft,totalSP,moneyLeft,skillSilverSpent}){
                                       <span style={{fontSize:11,fontWeight:600,color:sel?"#2a1848":"#6a50a0"}}>{tech.name}</span>
                                       <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2,marginLeft:4,flexShrink:0}}>
                                         <span style={{fontSize:9,color:sel?"#c9a84c":"#3a2a5a"}}>{sel?"✓":silverCost+"s"}</span>
-                                        <span style={{fontSize:8,color:"#a888d0"}}>{tech.cost}</span>
+                                        <span style={{fontSize:8,color:"var(--text-sm-btn)"}}>{tech.cost}</span>
                                       </div>
                                     </div>
                                     <div style={{fontSize:10,color:sel?"#c8bca0":"#2e2248",lineHeight:1.4}}>{tech.desc}</div>
@@ -1720,7 +1885,7 @@ function StepSkills({char,setChar,spLeft,totalSP,moneyLeft,skillSilverSpent}){
                                         return(
                                           <button key={p.name} onClick={()=>!takenOther&&setMasterPerk(tree.id,p.name,slotIdx)} style={{
                                             border:sel?"1px solid #c8a84a":takenOther?"1px solid #d0c0e8":"1px solid #cebee8",
-                                            background:sel?"rgba(200,168,74,0.2)":takenOther?"rgba(200,180,230,0.1)":"rgba(38,28,58,0.92)",
+                                            background:sel?"rgba(200,168,74,0.2)":takenOther?"rgba(200,180,230,0.1)":"var(--bg-card)",
                                             color:"inherit",padding:"8px 10px",
                                             cursor:takenOther?"default":"pointer",
                                             textAlign:"left",fontFamily:"inherit",borderRadius:3,
@@ -1765,19 +1930,19 @@ function StepEquipment({char,setChar,moneyLeft}){
     <div>
       <ST>Equipment</ST>
       <div style={{display:"flex",gap:12,marginBottom:16,alignItems:"center",flexWrap:"wrap"}}>
-        <div style={{padding:"8px 14px",background:"rgba(38,28,58,0.95)",border:"1px solid #5a4880",borderRadius:3,fontSize:12}}>
+        <div style={{padding:"8px 14px",background:"var(--bg-card)",border:"1px solid var(--border-main)",borderRadius:3,fontSize:12}}>
           💰 <span style={{color:"#c8a84a",fontWeight:700}}>{moneyLeft}</span> Silver remaining
         </div>
-        <div style={{padding:"8px 14px",background:"rgba(38,28,58,0.95)",border:"1px solid #5a4880",borderRadius:3,fontSize:12}}>
+        <div style={{padding:"8px 14px",background:"var(--bg-card)",border:"1px solid var(--border-main)",borderRadius:3,fontSize:12}}>
           {char.equipment.weapon?"🗡 "+char.equipment.weapon.name:"No weapon selected"}
         </div>
-        <div style={{padding:"8px 14px",background:"rgba(38,28,58,0.95)",border:"1px solid #5a4880",borderRadius:3,fontSize:12}}>
+        <div style={{padding:"8px 14px",background:"var(--bg-card)",border:"1px solid var(--border-main)",borderRadius:3,fontSize:12}}>
           {char.equipment.armor?"🛡 "+char.equipment.armor.name:"No armor"}
         </div>
       </div>
       <div style={{display:"flex",gap:0,marginBottom:16,borderBottom:"1px solid #cebee8"}}>
         {TABS.map(t=>(
-          <button key={t} onClick={()=>setTab(t)} style={{padding:"7px 12px",border:"none",cursor:"pointer",background:"transparent",borderBottom:tab===t?"1px solid #c8a84a":"2px solid transparent",color:tab===t?"#c9a84c":"#a090c8",fontSize:11,fontFamily:"inherit",textTransform:"capitalize"}}>
+          <button key={t} onClick={()=>setTab(t)} style={{padding:"7px 12px",border:"none",cursor:"pointer",background:"transparent",borderBottom:tab===t?"1px solid #c8a84a":"2px solid transparent",color:tab===t?"var(--accent-gold)":"var(--text-muted)",fontSize:11,fontFamily:"inherit",textTransform:"capitalize"}}>
             {t}
           </button>
         ))}
@@ -1787,9 +1952,9 @@ function StepEquipment({char,setChar,moneyLeft}){
         <div>
           {Object.entries(WEAPONS_DATA).map(([cat,items])=>(
             <div key={cat} style={{marginBottom:20}}>
-              <div style={{fontSize:10,color:"#9080b0",letterSpacing:"0.12em",marginBottom:6}}>{cat.toUpperCase()}</div>
+              <div style={{fontSize:10,color:"var(--text-row-label)",letterSpacing:"0.12em",marginBottom:6}}>{cat.toUpperCase()}</div>
               <table style={{width:"100%",borderCollapse:"collapse",fontSize:10}}>
-                <thead><tr style={{color:"#8878a8",borderBottom:"1px solid #cebee8"}}>
+                <thead><tr style={{color:"var(--text-muted)",borderBottom:"1px solid #cebee8"}}>
                   {["Name","Damage","Properties","Min STR","Wt","Cost",""].map(h=><th key={h} style={thS}>{h}</th>)}
                 </tr></thead>
                 <tbody>
@@ -1800,7 +1965,7 @@ function StepEquipment({char,setChar,moneyLeft}){
                       <tr key={w.name} style={{borderBottom:"1px solid rgba(100,80,140,0.3)",background:isMW||isOH?"rgba(76,200,224,0.08)":"transparent"}}>
                         <td style={tdS}>{w.name}</td>
                         <td style={{...tdS,color:"#c8a84a"}}>{w.dmg}</td>
-                        <td style={{...tdS,color:"#9080b0"}}>{w.props}</td>
+                        <td style={{...tdS,color:"var(--text-row-label)"}}>{w.props}</td>
                         <td style={tdS}>{w.minStr}</td>
                         <td style={tdS}>{w.wt}</td>
                         <td style={tdS}>{w.cost}s</td>
@@ -1821,9 +1986,9 @@ function StepEquipment({char,setChar,moneyLeft}){
       )}
       {tab==="armor"&&(
         <div>
-          <div style={{fontSize:10,color:"#9080b0",letterSpacing:"0.12em",marginBottom:6}}>ARMOR</div>
+          <div style={{fontSize:10,color:"var(--text-row-label)",letterSpacing:"0.12em",marginBottom:6}}>ARMOR</div>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:10,marginBottom:16}}>
-            <thead><tr style={{color:"#8878a8",borderBottom:"1px solid #cebee8"}}>
+            <thead><tr style={{color:"var(--text-muted)",borderBottom:"1px solid #cebee8"}}>
               {["Name","Bonus","Type","Min STR","Wt","Cost",""].map(h=><th key={h} style={thS}>{h}</th>)}
             </tr></thead>
             <tbody>{ARMORS_DATA.map(a=>{
@@ -1831,7 +1996,7 @@ function StepEquipment({char,setChar,moneyLeft}){
               return(<tr key={a.name} style={{borderBottom:"1px solid rgba(100,80,140,0.3)",background:sel?"rgba(42,24,72,0.06)":"transparent"}}>
                 <td style={tdS}>{a.name}</td>
                 <td style={{...tdS,color:"#c8a84a"}}>{a.bonus}</td>
-                <td style={{...tdS,color:"#9080b0"}}>{a.type}</td>
+                <td style={{...tdS,color:"var(--text-row-label)"}}>{a.type}</td>
                 <td style={tdS}>{a.minStr}</td>
                 <td style={tdS}>{a.wt}</td>
                 <td style={tdS}>{a.cost}s</td>
@@ -1839,9 +2004,9 @@ function StepEquipment({char,setChar,moneyLeft}){
               </tr>);
             })}</tbody>
           </table>
-          <div style={{fontSize:10,color:"#9080b0",letterSpacing:"0.12em",marginBottom:6}}>SHIELDS</div>
+          <div style={{fontSize:10,color:"var(--text-row-label)",letterSpacing:"0.12em",marginBottom:6}}>SHIELDS</div>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:10}}>
-            <thead><tr style={{color:"#8878a8",borderBottom:"1px solid #cebee8"}}>
+            <thead><tr style={{color:"var(--text-muted)",borderBottom:"1px solid #cebee8"}}>
               {["Name","Bonus","Min STR","Wt","Cost",""].map(h=><th key={h} style={thS}>{h}</th>)}
             </tr></thead>
             <tbody>{SHIELDS_DATA.map(s=>{
@@ -1862,7 +2027,7 @@ function StepEquipment({char,setChar,moneyLeft}){
         <div>
           <p style={{...sub,marginBottom:10}}>Require Spellcrafting or relevant magic skill.</p>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:10}}>
-            <thead><tr style={{color:"#8878a8",borderBottom:"1px solid #cebee8"}}>
+            <thead><tr style={{color:"var(--text-muted)",borderBottom:"1px solid #cebee8"}}>
               {["Name","Damage","Properties","Min Mind","Cost",""].map(h=><th key={h} style={thS}>{h}</th>)}
             </tr></thead>
             <tbody>{CATALYSTS_DATA.map(c=>{
@@ -1870,7 +2035,7 @@ function StepEquipment({char,setChar,moneyLeft}){
               return(<tr key={c.name} style={{borderBottom:"1px solid rgba(100,80,140,0.3)",background:sel?"rgba(42,24,72,0.06)":"transparent"}}>
                 <td style={tdS}>{c.name}</td>
                 <td style={{...tdS,color:"#c8a84a"}}>{c.dmg}</td>
-                <td style={{...tdS,color:"#9080b0"}}>{c.props}</td>
+                <td style={{...tdS,color:"var(--text-row-label)"}}>{c.props}</td>
                 <td style={tdS}>{c.minMind}</td>
                 <td style={tdS}>{c.cost}s</td>
                 <td style={tdS}><button onClick={()=>setEq("catalyst",sel?null:c)} style={{...mic,background:sel?"#e8d8ff":"transparent",color:sel?"#c9a84c":"#2e2248"}}>{sel?"Equipped":"Equip"}</button></td>
@@ -1883,7 +2048,7 @@ function StepEquipment({char,setChar,moneyLeft}){
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
           {JEWELRY_DATA.map(j=>{
             const sel=char.equipment.jewelry.find(x=>x.name===j.name);
-            return(<button key={j.name} onClick={()=>toggleList("jewelry",j)} style={{border:sel?"1px solid #c8a84a":"1px solid #cebee8",background:sel?"linear-gradient(135deg,#3a2060,#2e1850)":"rgba(38,28,58,0.85)",color:"inherit",padding:"14px",cursor:"pointer",textAlign:"left",fontFamily:"inherit",borderRadius:3}}>
+            return(<button key={j.name} onClick={()=>toggleList("jewelry",j)} style={{border:sel?"1px solid #c8a84a":"1px solid #cebee8",background:sel?"var(--bg-sel)":"rgba(38,28,58,0.85)",color:"inherit",padding:"14px",cursor:"pointer",textAlign:"left",fontFamily:"inherit",borderRadius:3}}>
               <div style={{fontWeight:600,color:sel?"#c9a84c":"#3a2a5a",marginBottom:4}}>{j.name}</div>
               <div style={{fontSize:10,color:sel?"#c8b898":"#4a6a4a"}}>{j.bonus} — {j.cost}s</div>
             </button>);
@@ -1894,7 +2059,7 @@ function StepEquipment({char,setChar,moneyLeft}){
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
           {ALCHEMICAL_DATA.map(a=>{
             const sel=char.equipment.items.find(x=>x.name===a.name);
-            return(<button key={a.name} onClick={()=>toggleList("items",a)} style={{border:sel?"1px solid #c8a84a":"1px solid #cebee8",background:sel?"linear-gradient(135deg,#3a2060,#2e1850)":"rgba(38,28,58,0.85)",color:"inherit",padding:"14px",cursor:"pointer",textAlign:"left",fontFamily:"inherit",borderRadius:3}}>
+            return(<button key={a.name} onClick={()=>toggleList("items",a)} style={{border:sel?"1px solid #c8a84a":"1px solid #cebee8",background:sel?"var(--bg-sel)":"rgba(38,28,58,0.85)",color:"inherit",padding:"14px",cursor:"pointer",textAlign:"left",fontFamily:"inherit",borderRadius:3}}>
               <div style={{fontWeight:600,color:sel?"#c9a84c":"#3a2a5a",marginBottom:4}}>{a.name}</div>
               <div style={{fontSize:10,color:sel?"#c8b898":"#4a6a4a"}}>{a.desc} — {a.cost}s</div>
             </button>);
@@ -2003,7 +2168,7 @@ function StepSummary({char,setChar,derived,totalSP}){
             <div style={{marginTop:8,borderTop:"1px solid #e8d8f0",paddingTop:8}}>
               <div style={{fontSize:10,color:"#c8a84a",letterSpacing:"0.1em",marginBottom:4}}>ON-HIT EFFECTS</div>
               {passiveOnHitEffects.map((fx,i)=>(
-                <div key={i} style={{fontSize:11,color:"#a898c8",padding:"2px 0",borderBottom:"1px solid #2a1f42"}}>{fx}</div>
+                <div key={i} style={{fontSize:11,color:"var(--text-label)",padding:"2px 0",borderBottom:"1px solid #2a1f42"}}>{fx}</div>
               ))}
             </div>
           )}
@@ -2018,7 +2183,7 @@ function StepSummary({char,setChar,derived,totalSP}){
             ["Spell Slots (Mana)", finalMana],
             ["Ward (vs spells)", finalWard, true],
           ].map(([k,v,h])=><Row key={k} label={k} val={v} hi={h}/>)}
-          <div style={{fontSize:10,color:"#9080b0",marginTop:8,lineHeight:1.6,borderTop:"1px solid rgba(100,80,140,0.3)",paddingTop:8}}>
+          <div style={{fontSize:10,color:"var(--text-row-label)",marginTop:8,lineHeight:1.6,borderTop:"1px solid rgba(100,80,140,0.3)",paddingTop:8}}>
             Attack spells: Mind for Accuracy &amp; Damage. CC/Save spells: auto-hit if in range, resisted by target using Willpower. Hybrid spells require both a hit and a failed save.
           </div>
         </Card>
@@ -2034,7 +2199,7 @@ function StepSummary({char,setChar,derived,totalSP}){
       {/* Skills with techniques */}
       <Card title="Skills, Techniques & Master Perks">
         {SKILL_TREES.filter(t=>char.skills[t.id]>0).length===0
-          ?<span style={{fontSize:11,color:"#a888d0"}}>No skills selected.</span>
+          ?<span style={{fontSize:11,color:"var(--text-sm-btn)"}}>No skills selected.</span>
           :SKILL_TREES.filter(t=>char.skills[t.id]>0).map(tree=>{
             const rank=char.skills[tree.id];
             const perkVal=char.masterPerks[tree.id];
@@ -2043,7 +2208,7 @@ function StepSummary({char,setChar,derived,totalSP}){
               <div key={tree.id} style={{marginBottom:12,paddingBottom:12,borderBottom:"1px solid rgba(100,80,140,0.3)"}}>
                 <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:4}}>
                   <span style={{fontSize:12,fontWeight:600,color:"#c8a84a"}}>{tree.name}</span>
-                  <span style={{fontSize:10,color:"#c8a84a",padding:"1px 5px",background:"rgba(200,168,74,0.15)",borderRadius:3}}>{RANK_LABELS[rank]}</span>
+                  <span style={{fontSize:10,color:"#c8a84a",padding:"1px 5px",background:"var(--bg-tag)",borderRadius:3}}>{RANK_LABELS[rank]}</span>
                 </div>
                 {TIERS.slice(0,rank).filter(tier=>char.purchasedTrainings.has(`${tree.id}:${tier}`)).map(tier=>(
                   <div key={tier} style={{fontSize:10,color:"#4cc8e0",marginBottom:2}}>
@@ -2052,7 +2217,7 @@ function StepSummary({char,setChar,derived,totalSP}){
                 ))}
                 {Object.entries(char.techniques[tree.id]||{}).map(([tier,techs])=>
                   techs.map(t=>(
-                    <div key={t} style={{fontSize:10,color:"#b0a0d0",marginBottom:2}}>• {t}</div>
+                    <div key={t} style={{fontSize:10,color:"var(--text-muted)",marginBottom:2}}>• {t}</div>
                   ))
                 )}
                 {perkArr.filter(Boolean).map((p,i)=>(
@@ -2072,27 +2237,27 @@ function StepSummary({char,setChar,derived,totalSP}){
         {char.boon&&(
           <Card title="Boon Details">
             <div style={{fontSize:12,fontWeight:600,color:"#c8a84a",marginBottom:6}}>{char.boon.name}</div>
-            <div style={{fontSize:11,color:"#9080b0",lineHeight:1.5}}>{char.boon.desc}</div>
+            <div style={{fontSize:11,color:"var(--text-row-label)",lineHeight:1.5}}>{char.boon.desc}</div>
           </Card>
         )}
       </div>
       {/* Silver management */}
       <Card title="Silver Management">
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
-          <span style={{fontSize:12,color:"#9080b0"}}>Current Silver:</span>
+          <span style={{fontSize:12,color:"var(--text-row-label)"}}>Current Silver:</span>
           <span style={{fontSize:16,fontWeight:700,color:"#c8a84a"}}>{moneyLeft}</span>
         </div>
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
           {[10,50,100,250,500].map(amt=>(
-            <button key={amt} onClick={()=>setChar(c=>({...c,money:c.money+amt}))} style={{...mic,background:"rgba(200,168,74,0.08)",border:"1px solid #c8a84a",color:"#c8b8e8",padding:"5px 12px",fontSize:10}}>+{amt}s</button>
+            <button key={amt} onClick={()=>setChar(c=>({...c,money:c.money+amt}))} style={{...mic,background:"rgba(200,168,74,0.08)",border:"1px solid #c8a84a",color:"var(--text-head)",padding:"5px 12px",fontSize:10}}>+{amt}s</button>
           ))}
           {[10,50,100,250,500].map(amt=>(
-            <button key={-amt} onClick={()=>setChar(c=>({...c,money:Math.max(0,c.money-amt)}))} style={{...mic,background:"rgba(139,26,42,0.06)",border:"1px solid #e0b0b8",color:"#f0a0a8",padding:"5px 12px",fontSize:10}}>−{amt}s</button>
+            <button key={-amt} onClick={()=>setChar(c=>({...c,money:Math.max(0,c.money-amt)}))} style={{...mic,background:"rgba(139,26,42,0.06)",border:"1px solid #e0b0b8",color:"var(--text-banner)",padding:"5px 12px",fontSize:10}}>−{amt}s</button>
           ))}
         </div>
-        <div style={{marginTop:8,fontSize:10,color:"#a898c0"}}>Use + to add earned silver. Use − to record purchases not tracked by the equipment step.</div>
+        <div style={{marginTop:8,fontSize:10,color:"var(--text-label)"}}>Use + to add earned silver. Use − to record purchases not tracked by the equipment step.</div>
       </Card>
-      <div style={{marginTop:12,padding:"10px 14px",background:"rgba(32,22,50,0.80)",border:"1px solid #4a3870",borderRadius:3,fontSize:10,color:"#9080b0",textAlign:"center"}}>
+      <div style={{marginTop:12,padding:"10px 14px",background:"var(--bg-panel)",border:"1px solid var(--border-main)",borderRadius:3,fontSize:10,color:"var(--text-row-label)",textAlign:"center"}}>
         Character complete! Submit to an Admin for approval. Use "Copy Sheet" to get your formatted sheet. Head to the Level Up tab to grow your character.
       </div>
     </div>
@@ -2192,12 +2357,12 @@ function StepLevelUp({char,setChar}){
         <Card title="Level & Experience">
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
             <div>
-              <div style={{fontSize:28,fontWeight:700,color:"#c8b8e8",lineHeight:1}}>{level}</div>
-              <div style={{fontSize:9,color:"#9080b0",letterSpacing:"0.15em"}}>LEVEL · TIER {tier}</div>
+              <div style={{fontSize:28,fontWeight:700,color:"var(--text-head)",lineHeight:1}}>{level}</div>
+              <div style={{fontSize:9,color:"var(--text-row-label)",letterSpacing:"0.15em"}}>LEVEL · TIER {tier}</div>
             </div>
             <div style={{textAlign:"right"}}>
-              <div style={{fontSize:20,fontWeight:700,color:"#c8a84a"}}>{exp}<span style={{fontSize:11,color:"#9080b0",fontWeight:400}}> / 10</span></div>
-              <div style={{fontSize:9,color:"#9080b0",letterSpacing:"0.15em"}}>EXPERIENCE</div>
+              <div style={{fontSize:20,fontWeight:700,color:"#c8a84a"}}>{exp}<span style={{fontSize:11,color:"var(--text-row-label)",fontWeight:400}}> / 10</span></div>
+              <div style={{fontSize:9,color:"var(--text-row-label)",letterSpacing:"0.15em"}}>EXPERIENCE</div>
             </div>
           </div>
           {/* EXP bar */}
@@ -2206,7 +2371,7 @@ function StepLevelUp({char,setChar}){
           </div>
           <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
             {[1,2,3,5].map(amt=>(
-              <button key={amt} onClick={()=>addExp(amt)} disabled={level>=MAX_LEVEL} style={{...mic,background:"rgba(76,200,224,0.08)",border:"1px solid #4cc8e0",color:"#2a7a9a",padding:"5px 14px",fontSize:10,opacity:level>=MAX_LEVEL?0.4:1}}>+{amt} EXP</button>
+              <button key={amt} onClick={()=>addExp(amt)} disabled={level>=MAX_LEVEL} style={{...mic,background:"rgba(76,200,224,0.08)",border:"1px solid #4cc8e0",color:"var(--text-teal)",padding:"5px 14px",fontSize:10,opacity:level>=MAX_LEVEL?0.4:1}}>+{amt} EXP</button>
             ))}
           </div>
           {needsTrial&&<Banner>Level {level} reached — must pass a Tier {parseInt(tier)+1} Trial before gaining more EXP!</Banner>}
@@ -2216,7 +2381,7 @@ function StepLevelUp({char,setChar}){
               <button onClick={doAwakenRound} style={{...btnS("pri"),width:"100%",marginTop:8}}>✦ Confirm Awakening</button>
             </div>
           )}
-          {awakened&&<div style={{marginTop:8,padding:"8px 12px",background:"rgba(200,168,74,0.15)",border:"1px solid #c8a84a",borderRadius:2,fontSize:11,color:"#c8a84a",textAlign:"center",letterSpacing:"0.1em"}}>✦ AWAKENED</div>}
+          {awakened&&<div style={{marginTop:8,padding:"8px 12px",background:"var(--bg-tag)",border:"1px solid #c8a84a",borderRadius:2,fontSize:11,color:"#c8a84a",textAlign:"center",letterSpacing:"0.1em"}}>✦ AWAKENED</div>}
         </Card>
 
         <Card title="Unspent Points">
@@ -2226,11 +2391,11 @@ function StepLevelUp({char,setChar}){
             ["Skill Points",char.levelSkillPoints||0,"#2a1848"],
           ].map(([k,v,c])=>(
             <div key={k} style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:8,paddingBottom:8,borderBottom:"1px solid rgba(100,80,140,0.3)"}}>
-              <span style={{color:"#9080b0"}}>{k}</span>
+              <span style={{color:"var(--text-row-label)"}}>{k}</span>
               <span style={{fontWeight:700,color:v>0?"#8b1a2a":c,fontSize:14}}>{v}</span>
             </div>
           ))}
-          <div style={{fontSize:10,color:"#a898c0",lineHeight:1.6,marginTop:4}}>
+          <div style={{fontSize:10,color:"var(--text-label)",lineHeight:1.6,marginTop:4}}>
             Each level: +1 SP, +1 Stat Pt, +5 HP, +5 AP.<br/>
             Levels 4/7/10: +2 Stat Pts instead of +1.<br/>
             Awakening: +2 Stat Pts, +5 HP, +5 AP (no other bonuses).
@@ -2248,8 +2413,8 @@ function StepLevelUp({char,setChar}){
                 const cur=chain.indexOf(char.stats[s]);
                 const atCap=cur>=chain.length-1;
                 return(
-                  <div key={s} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 12px",background:"rgba(38,28,58,0.92)",border:"1px solid #4a3870",borderRadius:3}}>
-                    <span style={{fontSize:12,color:"#d8d0e8"}}>{s}</span>
+                  <div key={s} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 12px",background:"var(--bg-card)",border:"1px solid var(--border-main)",borderRadius:3}}>
+                    <span style={{fontSize:12,color:"var(--text-body)"}}>{s}</span>
                     <div style={{display:"flex",alignItems:"center",gap:6}}>
                       <span style={{fontSize:12,color:"#c8a84a",minWidth:40,textAlign:"center",fontWeight:700}}>{char.stats[s]}</span>
                       <button onClick={()=>spendStat(s,1)} disabled={atCap||(char.levelStatPoints||0)<=0} style={{...sm,opacity:(atCap||(char.levelStatPoints||0)<=0)?0.3:1}}>+</button>
@@ -2270,8 +2435,8 @@ function StepLevelUp({char,setChar}){
               {[{key:"HP",label:"Health"},{key:"Stamina",label:"Stamina"},{key:"Mana",label:"Mana"}].map(({key,label})=>{
                 const locked=(key==="Mana"&&isVoA)||(key==="Stamina"&&isRoE);
                 return(
-                  <div key={key} style={{padding:"10px 12px",background:locked?"rgba(50,35,75,0.7)":"rgba(38,28,58,0.92)",border:`1px solid ${locked?"#c8a84a":"#cebee8"}`,borderRadius:3,textAlign:"center",opacity:locked?0.6:1}}>
-                    <div style={{fontSize:9,color:"#9080b0",letterSpacing:"0.1em",marginBottom:4}}>{label.toUpperCase()}{locked&&" 🔒"}</div>
+                  <div key={key} style={{padding:"10px 12px",background:locked?"var(--bg-panel-alt)":"var(--bg-card)",border:`1px solid ${locked?"#c8a84a":"#cebee8"}`,borderRadius:3,textAlign:"center",opacity:locked?0.6:1}}>
+                    <div style={{fontSize:9,color:"var(--text-row-label)",letterSpacing:"0.1em",marginBottom:4}}>{label.toUpperCase()}{locked&&" 🔒"}</div>
                     <div style={{fontSize:18,fontWeight:700,color:"#c8a84a",marginBottom:6}}>{char.attrs[key]}</div>
                     <div style={{display:"flex",gap:4,justifyContent:"center"}}>
                       <button onClick={()=>spendAttr(key,char.attrs[key]-1)} disabled={locked} style={{...sm,opacity:locked?0.3:1}}>−</button>
@@ -2296,10 +2461,10 @@ function StepLevelUp({char,setChar}){
                 const cur=char.skills[tree.id]||0;
                 const RANK_LABELS=["None","Novice","Adept","Master"];
                 return(
-                  <div key={tree.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 12px",background:locked?"rgba(240,230,255,0.4)":"rgba(38,28,58,0.92)",border:"1px solid #4a3870",borderRadius:3,opacity:locked?0.5:1}}>
+                  <div key={tree.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 12px",background:locked?"rgba(240,230,255,0.4)":"var(--bg-card)",border:"1px solid var(--border-main)",borderRadius:3,opacity:locked?0.5:1}}>
                     <div>
-                      <div style={{fontSize:11,color:"#d8d0e8",fontWeight:600}}>{tree.name}</div>
-                      <div style={{fontSize:9,color:"#9080b0"}}>{RANK_LABELS[cur]}</div>
+                      <div style={{fontSize:11,color:"var(--text-body)",fontWeight:600}}>{tree.name}</div>
+                      <div style={{fontSize:9,color:"var(--text-row-label)"}}>{RANK_LABELS[cur]}</div>
                     </div>
                     <div style={{display:"flex",gap:4}}>
                       <button onClick={()=>spendSkill(tree.id,-1)} disabled={cur<=0} style={{...sm,opacity:cur<=0?0.3:1}}>−</button>
@@ -2321,9 +2486,9 @@ function StepLevelUp({char,setChar}){
             const current=level===lvl;
             const isTrial=trialLevels.includes(lvl);
             return(
-              <div key={lvl} style={{padding:"8px 4px",background:current?"rgba(42,24,72,0.08)":"rgba(35,25,52,0.80)",border:`1px solid ${current?"#2a1848":"#cebee8"}`,borderRadius:3,textAlign:"center"}}>
+              <div key={lvl} style={{padding:"8px 4px",background:current?"rgba(42,24,72,0.08)":"var(--bg-panel)",border:`1px solid ${current?"#2a1848":"#cebee8"}`,borderRadius:3,textAlign:"center"}}>
                 <div style={{fontSize:14,fontWeight:700,color:done?"#2a1848":"#b0a0c8"}}>Lv{lvl}</div>
-                <div style={{fontSize:8,color:"#9080b0",marginTop:2}}>+1SP +{[4,7,10].includes(lvl)?2:1}Stat +5AP</div>
+                <div style={{fontSize:8,color:"var(--text-row-label)",marginTop:2}}>+1SP +{[4,7,10].includes(lvl)?2:1}Stat +5AP</div>
                 {isTrial&&<div style={{fontSize:8,color:"#8b1a2a",marginTop:2}}>⚑ Trial</div>}
                 {lvl===10&&<div style={{fontSize:8,color:"#c8a84a",marginTop:2}}>✦ Awakening</div>}
               </div>
@@ -2338,18 +2503,18 @@ function StepLevelUp({char,setChar}){
 // ─── SHARED UI ───────────────────────────────────────────────────────────────
 function ST({children}){return(
   <div style={{marginBottom:16}}>
-    <h2 style={{fontSize:17,fontWeight:700,letterSpacing:"0.1em",color:"#c8b8e8",marginBottom:0,paddingBottom:10,fontFamily:"'Palatino Linotype',Palatino,Georgia,serif",borderBottom:"1px solid #3a2860",display:"flex",alignItems:"center",gap:10}}>
+    <h2 style={{fontSize:17,fontWeight:700,letterSpacing:"0.1em",color:"var(--text-head)",marginBottom:0,paddingBottom:10,fontFamily:"'Palatino Linotype',Palatino,Georgia,serif",borderBottom:"1px solid var(--border-nav)",display:"flex",alignItems:"center",gap:10}}>
       <span style={{color:"#4cc8e0",fontSize:12}}>◆</span>
       {children}
       <span style={{flex:1,height:1,background:"linear-gradient(90deg,rgba(76,200,224,0.2),transparent)",display:"inline-block",marginLeft:8,verticalAlign:"middle"}}/>
     </h2>
   </div>
 );}
-function Lbl({children}){return <div style={{fontSize:9,color:"#9080b0",letterSpacing:"0.15em",marginBottom:5,fontWeight:700,textTransform:"uppercase"}}>{children}</div>;}
-function Banner({children}){return <div style={{padding:"8px 14px",background:"rgba(139,26,42,0.25)",border:"1px solid #8b4a52",borderLeft:"3px solid #c84a5a",borderRadius:2,fontSize:11,color:"#f0a0a8",marginBottom:10,letterSpacing:"0.02em"}}>⚠ {children}</div>;}
+function Lbl({children}){return <div style={{fontSize:9,color:"var(--text-label)",letterSpacing:"0.15em",marginBottom:5,fontWeight:700,textTransform:"uppercase"}}>{children}</div>;}
+function Banner({children}){return <div style={{padding:"8px 14px",background:"var(--banner-bg)",border:"1px solid var(--banner-border)",borderLeft:"3px solid var(--banner-left)",borderRadius:2,fontSize:11,color:"var(--text-banner)",marginBottom:10,letterSpacing:"0.02em"}}>⚠ {children}</div>;}
 function Card({title,children}){return(
-  <div style={{background:"rgba(38,28,58,0.88)",border:"1px solid #4a3870",borderTop:"2px solid #2a1848",borderRadius:3,padding:"16px",boxShadow:"0 2px 16px rgba(30,16,56,0.08)"}}>
-    <div style={{fontSize:9,color:"#a888d0",letterSpacing:"0.22em",marginBottom:12,fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
+  <div style={{background:"var(--bg-card)",border:"1px solid var(--bg-card-border)",borderTop:"2px solid var(--border-modal)",borderRadius:3,padding:"16px",boxShadow:"var(--shadow-card)"}}>
+    <div style={{fontSize:9,color:"var(--text-label)",letterSpacing:"0.22em",marginBottom:12,fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
       <span style={{display:"inline-block",width:12,height:1,background:"rgba(76,200,224,0.5)"}}/>
       {title.toUpperCase()}
       <span style={{display:"inline-block",flex:1,height:1,background:"linear-gradient(90deg,rgba(76,200,224,0.3),transparent)"}}/>
@@ -2357,18 +2522,18 @@ function Card({title,children}){return(
     {children}
   </div>
 );}
-function Row({label,val,hi}){return <div style={{display:"flex",justifyContent:"space-between",fontSize:11,marginBottom:5,paddingBottom:5,borderBottom:"1px solid rgba(100,80,140,0.3)"}}><span style={{color:"#9080b0"}}>{label}</span><span style={{color:hi?"#e8d8a0":"#c8b8e0",fontWeight:hi?700:400}}>{val}</span></div>;}
-const sub={fontSize:12,color:"#9080b0",lineHeight:1.6,marginBottom:0};
-const inp={width:"100%",background:"rgba(42,30,62,0.95)",border:"1px solid #4a3870",borderBottom:"2px solid #6a58a0",color:"#d8d0e8",padding:"9px 12px",fontSize:12,fontFamily:"'Palatino Linotype',Palatino,Georgia,serif",outline:"none",boxSizing:"border-box",borderRadius:2,boxShadow:"0 1px 4px rgba(30,16,56,0.07)"};
-const sm={width:26,height:26,border:"1px solid #4a3870",background:"rgba(38,28,58,0.92)",color:"#a888d0",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"inherit",borderRadius:2,padding:0,boxShadow:"0 1px 3px rgba(30,16,56,0.1)"};
-const mic={padding:"3px 8px",border:"1px solid #4a3870",cursor:"pointer",fontSize:9,fontFamily:"inherit",borderRadius:2,background:"rgba(38,28,58,0.88)",color:"#9080b0"};
-const thS={padding:"6px 8px",textAlign:"left",fontWeight:700,fontSize:9,letterSpacing:"0.12em",color:"#9080b0",borderBottom:"1px solid #3a2860"};
-const tdS={padding:"7px 8px",fontSize:10,color:"#b0a0d0"};
+function Row({label,val,hi}){return <div style={{display:"flex",justifyContent:"space-between",fontSize:11,marginBottom:5,paddingBottom:5,borderBottom:"1px solid var(--border-row)"}}><span style={{color:"var(--text-row-label)"}}>{label}</span><span style={{color:hi?"var(--text-value-hi)":"var(--text-row-val)",fontWeight:hi?700:400}}>{val}</span></div>;}
+const sub={fontSize:12,color:"var(--text-sub)",lineHeight:1.6,marginBottom:0};
+const inp={width:"100%",background:"var(--bg-input)",border:"1px solid var(--border-main)",borderBottom:"2px solid var(--text-label)",color:"var(--text-body)",padding:"9px 12px",fontSize:12,fontFamily:"'Palatino Linotype',Palatino,Georgia,serif",outline:"none",boxSizing:"border-box",borderRadius:2,boxShadow:"0 1px 4px rgba(30,16,56,0.07)"};
+const sm={width:26,height:26,border:"1px solid var(--border-main)",background:"var(--bg-panel)",color:"var(--text-sm-btn)",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"inherit",borderRadius:2,padding:0,boxShadow:"0 1px 3px rgba(30,16,56,0.1)"};
+const mic={padding:"3px 8px",border:"1px solid var(--border-main)",cursor:"pointer",fontSize:9,fontFamily:"inherit",borderRadius:2,background:"var(--bg-card)",color:"var(--text-row-label)"};
+const thS={padding:"6px 8px",textAlign:"left",fontWeight:700,fontSize:9,letterSpacing:"0.12em",color:"var(--text-th)",borderBottom:"1px solid var(--border-main)"};
+const tdS={padding:"7px 8px",fontSize:10,color:"var(--text-td)"};
 const btnS=(t)=>({
   padding:"9px 22px",
-  border:t==="pri"?"1px solid #6a1828":"1px solid #cebee8",
-  background:t==="pri"?"linear-gradient(135deg,#3a0e1a,#5a1828,#3a0e1a)":"rgba(35,25,52,0.80)",
-  color:t==="pri"?"#e8c060":"#7a68a0",
+  border:t==="pri"?"1px solid var(--accent-crimson)":"1px solid var(--border-main)",
+  background:t==="pri"?"linear-gradient(135deg,#3a0e1a,#5a1828,#3a0e1a)":"var(--bg-btn-sec)",
+  color:t==="pri"?"#e8c060":"var(--text-muted)",
   cursor:"pointer",fontSize:11,letterSpacing:"0.14em",
   fontFamily:"'Palatino Linotype',Palatino,Georgia,serif",
   borderRadius:2,
