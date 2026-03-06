@@ -645,6 +645,7 @@ const STEPS=[
   {id:"skills",     label:"Skills",     icon:"📖"},
   {id:"equipment",  label:"Equipment",  icon:"🗡"},
   {id:"summary",    label:"Summary",    icon:"📜"},
+  {id:"levelup",    label:"Level Up",   icon:"⬆"},
 ];
 
 const ROLE_INFO={
@@ -703,23 +704,138 @@ function calcSkillSilverSpent(skills, purchasedTrainings, techniques) {
 }
 
 // ─── MAIN APP ────────────────────────────────────────────────────────────────
+const EMPTY_CHAR = {
+  name:"", race:"", age:"", location:"", appearance:"", personality:"", history:"",
+  role:"", boon:null, size:1,
+  level:1, exp:0, awakened:false,
+  levelStatPoints:0, levelAttrPoints:0, levelSkillPoints:0,
+  stats:{Strength:"d4",Dexterity:"d4",Vigor:"d4",Mind:"d4",Willpower:"d4"},
+  attrs:{HP:20,Stamina:10,Mana:0},
+  attrPointsUsed:0,
+  skills:{}, techniques:{}, purchasedTrainings:new Set(), masterPerks:{},
+  equipment:{weapon:null,offhand:null,armor:null,items:[],catalyst:null,jewelry:[]},
+  money:500,
+};
+
+// Serialize Set → array for storage/export
+const charToJSON = (c) => ({...c, purchasedTrainings: [...(c.purchasedTrainings||[])]});
+// Restore array → Set on load
+const charFromJSON = (obj) => ({...EMPTY_CHAR, ...obj, purchasedTrainings: new Set(obj.purchasedTrainings||[])});
+
+const SAVE_SLOTS = ["slot_1","slot_2","slot_3"];
+
 function App() {
   const [step, setStep] = useState(0);
-  const [char, setChar] = useState({
-    name:"", race:"", age:"", location:"", appearance:"", personality:"", history:"",
-    role:"",
-    boon:null,
-    size:1,
-    stats:{Strength:"d4",Dexterity:"d4",Vigor:"d4",Mind:"d4",Willpower:"d4"},
-    attrs:{HP:20,Stamina:10,Mana:0},
-    attrPointsUsed:0,
-    skills:{},             // {id: 0|1|2|3}
-    techniques:{},         // {skillId: {tier: [techName, ...]}}
-    purchasedTrainings:new Set(), // Set of "skillId:tier" strings
-    masterPerks:{},        // {skillId: perkName}
-    equipment:{weapon:null,offhand:null,armor:null,items:[],catalyst:null,jewelry:[]},
-    money:500,
+  const [char, setChar] = useState({...EMPTY_CHAR, purchasedTrainings: new Set()});
+  const [saves, setSaves] = useState({slot_1:null,slot_2:null,slot_3:null});
+  const [saveMsg, setSaveMsg] = useState("");
+  const [showManager, setShowManager] = useState(false);
+  const [confirmModal, setConfirmModal] = useState(null); // {message, onConfirm}
+
+  const confirm = (message, onConfirm) => setConfirmModal({message, onConfirm});
+
+  // Load saves from localStorage on mount
+  useState(()=>{
+    try {
+      const loaded = {};
+      SAVE_SLOTS.forEach(slot=>{
+        const raw = localStorage.getItem("tsr_"+slot);
+        loaded[slot] = raw ? JSON.parse(raw) : null;
+      });
+      setSaves(loaded);
+    } catch(e){}
   });
+
+  const saveToSlot = (slot, i) => {
+    const existing = saves[slot];
+    const doSave = () => {
+      try {
+        const data = charToJSON(char);
+        localStorage.setItem("tsr_"+slot, JSON.stringify(data));
+        setSaves(s=>({...s,[slot]:data}));
+        flash(`Saved to Slot ${i+1}!`);
+      } catch(e){ flash("Save failed."); }
+    };
+    if(existing && existing.name) {
+      confirm(`Overwrite "${existing.name}" in Slot ${i+1}?`, doSave);
+    } else {
+      doSave();
+    }
+  };
+
+  const loadFromSlot = (slot) => {
+    try {
+      const raw = localStorage.getItem("tsr_"+slot);
+      if(!raw) return;
+      setChar(charFromJSON(JSON.parse(raw)));
+      setStep(0);
+      flash(`Loaded!`);
+    } catch(e){ flash("Load failed."); }
+  };
+
+  const deleteSlot = (slot, i) => {
+    confirm(`Clear Slot ${i+1}? This cannot be undone.`, () => {
+      localStorage.removeItem("tsr_"+slot);
+      setSaves(s=>({...s,[slot]:null}));
+      flash("Slot cleared.");
+    });
+  };
+
+  const [jsonModal, setJsonModal] = useState(null);
+  const [importText, setImportText] = useState("");
+
+  const exportChar = () => {
+    const txt = JSON.stringify(charToJSON(char), null, 2);
+    const a = document.createElement("a");
+    a.href = "data:text/plain;charset=utf-8," + encodeURIComponent(txt);
+    a.download = `${(char.name||"character").replace(/\s+/g,"_")}_tsr5.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const importChar = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".txt,.json";
+    document.body.appendChild(input);
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      document.body.removeChild(input);
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const obj = JSON.parse(ev.target.result);
+          setChar(charFromJSON(obj));
+          setStep(0);
+          flash("Character imported!");
+        } catch(err){ flash("Import failed — invalid file."); }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  };
+
+  const doImport = () => {
+    try {
+      const obj = JSON.parse(importText);
+      setChar(charFromJSON(obj));
+      setStep(0);
+      setJsonModal(null);
+      setImportText("");
+      flash("Character imported!");
+    } catch(err){ flash("Import failed — check the text is valid."); }
+  };
+
+  const newChar = () => {
+    confirm("Start a new character? Unsaved progress will be lost.", () => {
+      setChar({...EMPTY_CHAR, purchasedTrainings: new Set()});
+      setStep(0);
+    });
+  };
+
+  const flash = (msg) => { setSaveMsg(msg); setTimeout(()=>setSaveMsg(""),2500); };
 
   const setC = (field, val) => {
     if(field === "boon") {
@@ -863,6 +979,29 @@ function App() {
         </div>
       </header>
 
+      {/* ── Character Manager bar ── */}
+      <div style={{borderBottom:"1px solid #d0c0e8",background:"rgba(255,255,255,0.5)",backdropFilter:"blur(4px)",padding:"6px 16px",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+        <span style={{fontSize:9,color:"#8a78a8",letterSpacing:"0.15em",marginRight:4}}>CHARACTER:</span>
+        <button onClick={newChar} style={{...mic,background:"rgba(139,26,42,0.06)",border:"1px solid #e0b0b8",color:"#7a2030"}}>✦ New</button>
+        <button onClick={exportChar} style={{...mic,background:"rgba(76,200,224,0.06)",border:"1px solid #4cc8e0",color:"#2a7a9a"}}>↓ Export .txt</button>
+        <button onClick={importChar} style={{...mic,background:"rgba(76,200,224,0.06)",border:"1px solid #4cc8e0",color:"#2a7a9a"}}>↑ Import .txt</button>
+        <button onClick={()=>setJsonModal("export")} style={{...mic,color:"#8a78a8"}}>📋 Copy</button>
+        <div style={{width:1,height:16,background:"rgba(200,180,230,0.5)",margin:"0 4px"}}/>
+        {SAVE_SLOTS.map((slot,i)=>{
+          const saved = saves[slot];
+          return(
+            <div key={slot} style={{display:"flex",gap:3,alignItems:"center"}}>
+              <button onClick={()=>saveToSlot(slot,i)} style={{...mic,background:"rgba(200,168,74,0.08)",border:"1px solid #c8a84a",color:"#2a1848",minWidth:52}}>
+                💾 {saved?saved.name||`Slot ${i+1}`:`Slot ${i+1}`}
+              </button>
+              {saved&&<button onClick={()=>loadFromSlot(slot)} style={{...mic,color:"#6a50a0"}}>Load</button>}
+              {saved&&<button onClick={()=>deleteSlot(slot,i)} style={{...mic,color:"#8b1a2a",border:"1px solid #e0b0b8"}}>✕</button>}
+            </div>
+          );
+        })}
+        {saveMsg&&<span style={{fontSize:10,color:"#4cc8e0",marginLeft:8,fontStyle:"italic"}}>{saveMsg}</span>}
+      </div>
+
       <nav style={{display:"flex",borderBottom:"2px solid #d0c0e8",background:"rgba(255,255,255,0.6)",backdropFilter:"blur(6px)",overflowX:"auto",boxShadow:"0 2px 10px rgba(30,16,56,0.08)"}}>
         {STEPS.map((s,i)=>(
           <button key={s.id} onClick={()=>i<=step&&setStep(i)} style={{
@@ -889,17 +1028,67 @@ function App() {
         {step===3 && <StepAttributes char={char} setChar={setChar} stLeft={stLeft} apLeft={apLeft} totalAP={totalAP} trainBonuses={trainBonuses} derived={derived}/>}
         {step===4 && <StepSkills char={char} setChar={setChar} spLeft={spLeft} totalSP={totalSP} moneyLeft={moneyLeft} skillSilverSpent={skillSilverSpent}/>}
         {step===5 && <StepEquipment char={char} setChar={setChar} moneyLeft={moneyLeft}/>}
-        {step===6 && <StepSummary char={char} derived={derived} totalSP={totalSP}/>}
+        {step===6 && <StepSummary char={char} setChar={setChar} derived={derived} totalSP={totalSP}/>}
+        {step===7 && <StepLevelUp char={char} setChar={setChar}/>}
       </main>
 
-      {step<6&&(
+      {step<7&&(
         <footer style={{borderTop:"2px solid #d0c0e8",padding:"14px 32px",display:"flex",justifyContent:"space-between",alignItems:"center",background:"rgba(255,255,255,0.7)",backdropFilter:"blur(6px)"}}>
           <button onClick={()=>setStep(s=>Math.max(0,s-1))} disabled={step===0} style={btnS("sec")}>← Back</button>
           <span style={{fontSize:9,color:"#a898c0",letterSpacing:"0.2em"}}>STEP {step+1} OF {STEPS.length}</span>
-          <button onClick={()=>setStep(s=>s+1)} disabled={!canContinue()} style={btnS("pri")}>{step===5?"View Summary →":"Continue →"}</button>
+          <button onClick={()=>setStep(s=>s+1)} disabled={!canContinue()} style={btnS("pri")}>{step===5?"View Summary →":step===6?"Level Up →":"Continue →"}</button>
         </footer>
       )}
       <div style={{height:3,background:"linear-gradient(90deg,#3a1a5a,#4cc8e0 15%,#8b1a2a 35%,#c8a84a 50%,#8b1a2a 65%,#4cc8e0 85%,#3a1a5a)"}}/>
+
+      {/* ── Confirm Modal ── */}
+      {confirmModal&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(30,16,56,0.7)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1001}}>
+          <div style={{background:"#f4f0f8",border:"2px solid #2a1848",borderRadius:4,padding:28,width:"min(380px,90vw)",boxShadow:"0 8px 40px rgba(30,16,56,0.4)",display:"flex",flexDirection:"column",gap:18}}>
+            <div style={{fontSize:13,color:"#2a1848",lineHeight:1.6}}>{confirmModal.message}</div>
+            <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+              <button onClick={()=>setConfirmModal(null)} style={btnS("sec")}>Cancel</button>
+              <button onClick={()=>{confirmModal.onConfirm();setConfirmModal(null);}} style={btnS("pri")}>Confirm</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── JSON Export/Import Modal ── */}
+      {jsonModal&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(30,16,56,0.7)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setJsonModal(null)}>
+          <div style={{background:"#f4f0f8",border:"2px solid #2a1848",borderRadius:4,padding:28,width:"min(560px,95vw)",maxHeight:"80vh",display:"flex",flexDirection:"column",gap:14,boxShadow:"0 8px 40px rgba(30,16,56,0.4)"}} onClick={e=>e.stopPropagation()}>
+            <div style={{fontSize:13,fontWeight:700,color:"#2a1848",letterSpacing:"0.1em"}}>
+              {jsonModal==="export"?"↓ EXPORT CHARACTER":"↑ IMPORT CHARACTER"}
+            </div>
+            {jsonModal==="export"&&(
+              <>
+                <div style={{fontSize:11,color:"#7a68a0"}}>Copy the text below and save it to a <code>.json</code> file, or paste it directly into the Import box on another device.</div>
+                <textarea id="tsr-export-ta" readOnly value={JSON.stringify(charToJSON(char),null,2)} style={{flex:1,minHeight:220,fontFamily:"monospace",fontSize:10,background:"#fff",border:"1px solid #cebee8",borderRadius:2,padding:10,color:"#1e1430",resize:"vertical"}} onClick={e=>e.target.select()}/>
+                <div style={{display:"flex",gap:8}}>
+                  <button onClick={()=>{
+                    const ta=document.querySelector("#tsr-export-ta");
+                    if(ta){ta.select();document.execCommand("copy");}
+                    else{try{navigator.clipboard.writeText(JSON.stringify(charToJSON(char),null,2));}catch(e){}}
+                    flash("Copied to clipboard!");
+                  }} style={{...btnS("pri"),flex:1}}>📋 Copy to Clipboard</button>
+                  <button onClick={()=>setJsonModal(null)} style={{...btnS("sec")}}>Close</button>
+                </div>
+              </>
+            )}
+            {jsonModal==="import"&&(
+              <>
+                <div style={{fontSize:11,color:"#7a68a0"}}>Paste your exported character JSON below, then click Import.</div>
+                <textarea value={importText} onChange={e=>setImportText(e.target.value)} placeholder='Paste JSON here...' style={{flex:1,minHeight:220,fontFamily:"monospace",fontSize:10,background:"#fff",border:"1px solid #cebee8",borderRadius:2,padding:10,color:"#1e1430",resize:"vertical"}}/>
+                <div style={{display:"flex",gap:8}}>
+                  <button onClick={doImport} disabled={!importText.trim()} style={{...btnS("pri"),flex:1,opacity:importText.trim()?1:0.5}}>↑ Import Character</button>
+                  <button onClick={()=>setJsonModal(null)} style={{...btnS("sec")}}>Cancel</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1187,7 +1376,34 @@ function StepSkills({char,setChar,spLeft,totalSP,moneyLeft,skillSilverSpent}){
     return{...c,techniques:{...c.techniques,[skillId]:{...(c.techniques[skillId]||{}),[tier]:exists?cur.filter(n=>n!==techName):[...cur,techName]}}};
   });
 
-  const setMasterPerk=(skillId,perkName)=>setChar(c=>({...c,masterPerks:{...c.masterPerks,[skillId]:c.masterPerks[skillId]===perkName?undefined:perkName}}));
+  const maxPerksFor = (tree) => {
+    const isPhys = tree.type==="physical";
+    const isMag  = tree.type==="magic";
+    if(isVoA && isPhys) return 2;
+    if(isRoE && isMag)  return 2;
+    return 1;
+  };
+
+  // masterPerks stored as {skillId: [perk1, perk2?]}
+  const getPerks = (skillId) => {
+    const val = char.masterPerks[skillId];
+    if(!val) return [];
+    if(Array.isArray(val)) return val;
+    return [val]; // migrate old string format
+  };
+
+  const setMasterPerk = (skillId, perkName, slotIndex) => setChar(c => {
+    const cur = getPerks(skillId);
+    let next = [...cur];
+    if(next[slotIndex] === perkName) {
+      next[slotIndex] = undefined; // deselect
+    } else {
+      next[slotIndex] = perkName;
+    }
+    // remove undefined trailing entries
+    while(next.length && !next[next.length-1]) next.pop();
+    return {...c, masterPerks:{...c.masterPerks,[skillId]:next}};
+  });
 
   const phys=SKILL_TREES.filter(s=>s.type==="physical");
   const magic=SKILL_TREES.filter(s=>s.type==="magic");
@@ -1314,26 +1530,42 @@ function StepSkills({char,setChar,spLeft,totalSP,moneyLeft,skillSilverSpent}){
                             </div>
                           )}
 
-                          {/* Master Perks (free — perk selection only) */}
+                          {/* Master Perks */}
                           {tier==="master"&&tree.masterPerks&&(
                             <div style={{marginTop:10}}>
-                              <div style={{fontSize:10,color:"#c8a84a",letterSpacing:"0.1em",marginBottom:6}}>★ MASTER PERK — choose one (free)</div>
-                              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
-                                {tree.masterPerks.map(p=>{
-                                  const sel=char.masterPerks[tree.id]===p.name;
-                                  return(
-                                    <button key={p.name} onClick={()=>setMasterPerk(tree.id,p.name)} style={{
-                                      border:sel?"1px solid #c8a84a":"1px solid #cebee8",
-                                      background:sel?"#fffbe8":"white",
-                                      color:"inherit",padding:"8px 10px",cursor:"pointer",
-                                      textAlign:"left",fontFamily:"inherit",borderRadius:3,
-                                    }}>
-                                      <div style={{fontSize:11,fontWeight:700,color:sel?"#d4a030":"#4a3a6a",marginBottom:4}}>{p.name}</div>
-                                      <div style={{fontSize:10,color:sel?"#c8bca0":"#2e2248",lineHeight:1.4}}>{p.desc}</div>
-                                    </button>
-                                  );
-                                })}
-                              </div>
+                              {Array.from({length:maxPerksFor(tree)}).map((_,slotIdx)=>{
+                                const perks = getPerks(tree.id);
+                                const chosenThisSlot = perks[slotIdx];
+                                const otherSlotPerk = perks[slotIdx===0?1:0];
+                                const isBonus = slotIdx===1;
+                                return(
+                                  <div key={slotIdx} style={{marginBottom:slotIdx===0?10:0}}>
+                                    <div style={{fontSize:10,color:isBonus?"#8b1a2a":"#c8a84a",letterSpacing:"0.1em",marginBottom:6}}>
+                                      {isBonus?"★ BONUS PERK (Boon) — choose one":"★ MASTER PERK — choose one (free)"}
+                                    </div>
+                                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
+                                      {tree.masterPerks.map(p=>{
+                                        const sel = chosenThisSlot===p.name;
+                                        // grey out if chosen in the other slot
+                                        const takenOther = otherSlotPerk===p.name;
+                                        return(
+                                          <button key={p.name} onClick={()=>!takenOther&&setMasterPerk(tree.id,p.name,slotIdx)} style={{
+                                            border:sel?"1px solid #c8a84a":takenOther?"1px solid #d0c0e8":"1px solid #cebee8",
+                                            background:sel?"#fffbe8":takenOther?"rgba(200,180,230,0.2)":"white",
+                                            color:"inherit",padding:"8px 10px",
+                                            cursor:takenOther?"default":"pointer",
+                                            textAlign:"left",fontFamily:"inherit",borderRadius:3,
+                                            opacity:takenOther?0.4:1,
+                                          }}>
+                                            <div style={{fontSize:11,fontWeight:700,color:sel?"#d4a030":"#4a3a6a",marginBottom:4}}>{p.name}</div>
+                                            <div style={{fontSize:10,color:sel?"#c8bca0":"#2e2248",lineHeight:1.4}}>{p.desc}</div>
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                );
+                              })}
                             </div>
                           )}
                         </div>
@@ -1505,7 +1737,7 @@ function StepEquipment({char,setChar,moneyLeft}){
 }
 
 // ─── STEP SUMMARY ─────────────────────────────────────────────────────────────
-function StepSummary({char,derived,totalSP}){
+function StepSummary({char,setChar,derived,totalSP}){
   const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft}=derived;
   const fmt = ({die,bonus}) => bonus>0?`${die} (+${bonus})`:bonus<0?`${die} (${bonus})`:die;
   const RANK_LABELS=["","Novice","Adept","Master"];
@@ -1527,9 +1759,11 @@ function StepSummary({char,derived,totalSP}){
       ``,`SKILLS:`,
       ...SKILL_TREES.filter(t=>char.skills[t.id]>0).map(t=>{
         const rank=char.skills[t.id];
-        const perk=char.masterPerks[t.id];
+        const perkVal=char.masterPerks[t.id];
+        const perkArr=Array.isArray(perkVal)?perkVal:perkVal?[perkVal]:[];
+        const perkStr=perkArr.filter(Boolean).length?` [Perk: ${perkArr.filter(Boolean).join(" + ")}]`:"";
         const techList=Object.entries(char.techniques[t.id]||{}).flatMap(([,ts])=>ts);
-        return `  ${t.name}: ${RANK_LABELS[rank]}${perk?" [Perk: "+perk+"]":""}${techList.length?" — "+techList.join(", "):""}`;
+        return `  ${t.name}: ${RANK_LABELS[rank]}${perkStr}${techList.length?" — "+techList.join(", "):""}`;
       }),
       ``,`EQUIPMENT:`,
       `  Weapon: ${char.equipment.weapon?.name||"—"}`,
@@ -1599,26 +1833,27 @@ function StepSummary({char,derived,totalSP}){
           ?<span style={{fontSize:11,color:"#6a50a0"}}>No skills selected.</span>
           :SKILL_TREES.filter(t=>char.skills[t.id]>0).map(tree=>{
             const rank=char.skills[tree.id];
-            const perk=char.masterPerks[tree.id];
+            const perkVal=char.masterPerks[tree.id];
+            const perkArr=Array.isArray(perkVal)?perkVal:perkVal?[perkVal]:[];
             return(
               <div key={tree.id} style={{marginBottom:12,paddingBottom:12,borderBottom:"1px solid rgba(200,180,230,0.4)"}}>
                 <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:4}}>
                   <span style={{fontSize:12,fontWeight:600,color:"#c8a84a"}}>{tree.name}</span>
                   <span style={{fontSize:10,color:"#c8a84a",padding:"1px 5px",background:"rgba(200,168,74,0.1)",borderRadius:3}}>{RANK_LABELS[rank]}</span>
                 </div>
-                {/* Only show PURCHASED trainings */}
                 {TIERS.slice(0,rank).filter(tier=>char.purchasedTrainings.has(`${tree.id}:${tier}`)).map(tier=>(
                   <div key={tier} style={{fontSize:10,color:"#4cc8e0",marginBottom:2}}>
                     ⚡ {tree.tiers[tier].training.name}: {tree.tiers[tier].training.desc}
                   </div>
                 ))}
-                {/* Selected techniques */}
                 {Object.entries(char.techniques[tree.id]||{}).map(([tier,techs])=>
                   techs.map(t=>(
                     <div key={t} style={{fontSize:10,color:"#3a2858",marginBottom:2}}>• {t}</div>
                   ))
                 )}
-                {perk&&<div style={{fontSize:10,color:"#c8a84a",marginTop:3}}>★ Master Perk: {perk}</div>}
+                {perkArr.filter(Boolean).map((p,i)=>(
+                  <div key={i} style={{fontSize:10,color:"#c8a84a",marginTop:3}}>★ {i===1?"Bonus ":""}Master Perk: {p}</div>
+                ))}
               </div>
             );
           })
@@ -1637,9 +1872,260 @@ function StepSummary({char,derived,totalSP}){
           </Card>
         )}
       </div>
+      {/* Silver management */}
+      <Card title="Silver Management">
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+          <span style={{fontSize:12,color:"#8a78a8"}}>Current Silver:</span>
+          <span style={{fontSize:16,fontWeight:700,color:"#c8a84a"}}>{moneyLeft}</span>
+        </div>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          {[10,50,100,250,500].map(amt=>(
+            <button key={amt} onClick={()=>setChar(c=>({...c,money:c.money+amt}))} style={{...mic,background:"rgba(200,168,74,0.08)",border:"1px solid #c8a84a",color:"#2a1848",padding:"5px 12px",fontSize:10}}>+{amt}s</button>
+          ))}
+          {[10,50,100,250,500].map(amt=>(
+            <button key={-amt} onClick={()=>setChar(c=>({...c,money:Math.max(0,c.money-amt)}))} style={{...mic,background:"rgba(139,26,42,0.06)",border:"1px solid #e0b0b8",color:"#7a2030",padding:"5px 12px",fontSize:10}}>−{amt}s</button>
+          ))}
+        </div>
+        <div style={{marginTop:8,fontSize:10,color:"#a898c0"}}>Use + to add earned silver. Use − to record purchases not tracked by the equipment step.</div>
+      </Card>
       <div style={{marginTop:12,padding:"10px 14px",background:"rgba(255,255,255,0.65)",border:"1px solid #cebee8",borderRadius:3,fontSize:10,color:"#8a78a8",textAlign:"center"}}>
-        Character complete! Submit to an Admin for approval. Use "Copy Sheet" to get your formatted sheet.
+        Character complete! Submit to an Admin for approval. Use "Copy Sheet" to get your formatted sheet. Head to the Level Up tab to grow your character.
       </div>
+    </div>
+  );
+}
+
+// ─── STEP LEVEL UP ────────────────────────────────────────────────────────────
+function StepLevelUp({char,setChar}){
+  const isVoA = char.boon?.name==="Vow of Ash";
+  const isRoE = char.boon?.name==="Rite of Embers";
+  const isGigantic = char.boon?.name==="Gigantic";
+  const GIGANTIC_CHAIN = ["d4","d6","d8","d10","d12","d12+1","d12+2","d12+3","d12+4","d12+5","d12+6"];
+  const statChainFor = (stat) => (isGigantic&&(stat==="Strength"||stat==="Vigor")) ? GIGANTIC_CHAIN : STAT_CHAIN;
+
+  const level = char.level||1;
+  const exp   = char.exp||0;
+  const MAX_LEVEL = 10;
+  const awakened  = char.awakened||false;
+
+  // Bonuses granted per level (per rules)
+  const bonusStatAtLevel = (lvl) => [4,7,10].includes(lvl) ? 2 : 1;
+
+  const addExp = (amt) => setChar(c=>{
+    const newExp = (c.exp||0)+amt;
+    const lvl = c.level||1;
+    if(newExp >= 10 && lvl < MAX_LEVEL) {
+      // Level up!
+      const newLevel = lvl+1;
+      const statBonus = bonusStatAtLevel(newLevel);
+      return {
+        ...c,
+        level: newLevel,
+        exp: newExp - 10,
+        attrs: {...c.attrs, HP: c.attrs.HP+5},
+        levelStatPoints: (c.levelStatPoints||0) + statBonus,
+        levelAttrPoints: (c.levelAttrPoints||0) + 5,
+        levelSkillPoints: (c.levelSkillPoints||0) + 1,
+      };
+    }
+    if(newExp >= 10 && lvl === MAX_LEVEL) return c; // cap
+    return {...c, exp: newExp};
+  });
+
+  const spendStat = (stat,dir) => setChar(c=>{
+    if((c.levelStatPoints||0)<=0 && dir>0) return c;
+    const chain = statChainFor(stat);
+    const cur = chain.indexOf(c.stats[stat]);
+    const next = cur+dir;
+    if(next<0||next>=chain.length) return c;
+    return {...c, stats:{...c.stats,[stat]:chain[next]}, levelStatPoints:(c.levelStatPoints||0)-dir};
+  });
+
+  const spendAttr = (key,val) => setChar(c=>{
+    if((c.levelAttrPoints||0)<=0) return c;
+    if(key==="Mana"&&isVoA) return c;
+    if(key==="Stamina"&&isRoE) return c;
+    const diff = val - c.attrs[key];
+    if(diff>0 && diff>(c.levelAttrPoints||0)) return c;
+    if(diff<0 && (c.attrs[key]+diff) < {HP:20,Stamina:10,Mana:0}[key]) return c;
+    return {...c, attrs:{...c.attrs,[key]:val}, levelAttrPoints:(c.levelAttrPoints||0)-diff};
+  });
+
+  const spendSkill = (id,dir) => setChar(c=>{
+    if((c.levelSkillPoints||0)<=0 && dir>0) return c;
+    const cur = c.skills[id]||0;
+    const next = cur+dir;
+    if(next<0||next>3) return c;
+    // VoA / RoE skill restrictions
+    const tree = SKILL_TREES.find(t=>t.id===id);
+    if(isVoA && tree?.type==="magic") return c;
+    if(isRoE && ["cqc","savagery","endurance","marksmanship","tactics","martialarts"].includes(id)) return c;
+    return {...c, skills:{...c.skills,[id]:next}, levelSkillPoints:(c.levelSkillPoints||0)-dir};
+  });
+
+  const doAwakenRound = () => setChar(c=>{
+    if(c.awakened) return c;
+    return {
+      ...c,
+      awakened: true,
+      attrs: {...c.attrs, HP: c.attrs.HP+5},
+      levelStatPoints: (c.levelStatPoints||0)+2,
+      levelAttrPoints: (c.levelAttrPoints||0)+5,
+    };
+  });
+
+  const tier = level<=3?"1":level<=6?"2":level<=9?"3":"4";
+  const trialLevels = [3,6,9];
+  const needsTrial = trialLevels.includes(level) && exp>=10;
+
+  return(
+    <div>
+      <ST>Level Up & Progression</ST>
+
+      {/* EXP & Level tracker */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:20}}>
+        <Card title="Level & Experience">
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+            <div>
+              <div style={{fontSize:28,fontWeight:700,color:"#2a1848",lineHeight:1}}>{level}</div>
+              <div style={{fontSize:9,color:"#8a78a8",letterSpacing:"0.15em"}}>LEVEL · TIER {tier}</div>
+            </div>
+            <div style={{textAlign:"right"}}>
+              <div style={{fontSize:20,fontWeight:700,color:"#c8a84a"}}>{exp}<span style={{fontSize:11,color:"#8a78a8",fontWeight:400}}> / 10</span></div>
+              <div style={{fontSize:9,color:"#8a78a8",letterSpacing:"0.15em"}}>EXPERIENCE</div>
+            </div>
+          </div>
+          {/* EXP bar */}
+          <div style={{height:6,background:"rgba(200,180,230,0.3)",borderRadius:3,marginBottom:12,overflow:"hidden"}}>
+            <div style={{height:"100%",width:`${Math.min(100,exp*10)}%`,background:"linear-gradient(90deg,#4cc8e0,#2a7a9a)",borderRadius:3,transition:"width 0.3s"}}/>
+          </div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+            {[1,2,3,5].map(amt=>(
+              <button key={amt} onClick={()=>addExp(amt)} disabled={level>=MAX_LEVEL} style={{...mic,background:"rgba(76,200,224,0.08)",border:"1px solid #4cc8e0",color:"#2a7a9a",padding:"5px 14px",fontSize:10,opacity:level>=MAX_LEVEL?0.4:1}}>+{amt} EXP</button>
+            ))}
+          </div>
+          {needsTrial&&<Banner>Level {level} reached — must pass a Tier {parseInt(tier)+1} Trial before gaining more EXP!</Banner>}
+          {level>=MAX_LEVEL&&!awakened&&(
+            <div style={{marginTop:10}}>
+              <Banner>Max level reached! Complete the Awakening Trial then click below.</Banner>
+              <button onClick={doAwakenRound} style={{...btnS("pri"),width:"100%",marginTop:8}}>✦ Confirm Awakening</button>
+            </div>
+          )}
+          {awakened&&<div style={{marginTop:8,padding:"8px 12px",background:"rgba(200,168,74,0.1)",border:"1px solid #c8a84a",borderRadius:2,fontSize:11,color:"#c8a84a",textAlign:"center",letterSpacing:"0.1em"}}>✦ AWAKENED</div>}
+        </Card>
+
+        <Card title="Unspent Points">
+          {[
+            ["Stat Points",char.levelStatPoints||0,"#2a1848"],
+            ["Attribute Points",char.levelAttrPoints||0,"#2a1848"],
+            ["Skill Points",char.levelSkillPoints||0,"#2a1848"],
+          ].map(([k,v,c])=>(
+            <div key={k} style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:8,paddingBottom:8,borderBottom:"1px solid rgba(200,180,230,0.4)"}}>
+              <span style={{color:"#8a78a8"}}>{k}</span>
+              <span style={{fontWeight:700,color:v>0?"#8b1a2a":c,fontSize:14}}>{v}</span>
+            </div>
+          ))}
+          <div style={{fontSize:10,color:"#a898c0",lineHeight:1.6,marginTop:4}}>
+            Each level: +1 SP, +1 Stat Pt, +5 HP, +5 AP.<br/>
+            Levels 4/7/10: +2 Stat Pts instead of +1.<br/>
+            Awakening: +2 Stat Pts, +5 HP, +5 AP (no other bonuses).
+          </div>
+        </Card>
+      </div>
+
+      {/* Spend Stat Points */}
+      {(char.levelStatPoints||0)>0&&(
+        <div style={{marginBottom:20}}>
+          <Card title={`Spend Stat Points (${char.levelStatPoints||0} remaining)`}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              {STATS.map(s=>{
+                const chain=statChainFor(s);
+                const cur=chain.indexOf(char.stats[s]);
+                const atCap=cur>=chain.length-1;
+                return(
+                  <div key={s} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 12px",background:"rgba(255,255,255,0.82)",border:"1px solid #cebee8",borderRadius:3}}>
+                    <span style={{fontSize:12,color:"#1e1430"}}>{s}</span>
+                    <div style={{display:"flex",alignItems:"center",gap:6}}>
+                      <span style={{fontSize:12,color:"#c8a84a",minWidth:40,textAlign:"center",fontWeight:700}}>{char.stats[s]}</span>
+                      <button onClick={()=>spendStat(s,1)} disabled={atCap||(char.levelStatPoints||0)<=0} style={{...sm,opacity:(atCap||(char.levelStatPoints||0)<=0)?0.3:1}}>+</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Spend Attribute Points */}
+      {(char.levelAttrPoints||0)>0&&(
+        <div style={{marginBottom:20}}>
+          <Card title={`Spend Attribute Points (${char.levelAttrPoints||0} remaining)`}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+              {[{key:"HP",label:"Health"},{key:"Stamina",label:"Stamina"},{key:"Mana",label:"Mana"}].map(({key,label})=>{
+                const locked=(key==="Mana"&&isVoA)||(key==="Stamina"&&isRoE);
+                return(
+                  <div key={key} style={{padding:"10px 12px",background:locked?"rgba(240,230,255,0.5)":"rgba(255,255,255,0.82)",border:`1px solid ${locked?"#c8a84a":"#cebee8"}`,borderRadius:3,textAlign:"center",opacity:locked?0.6:1}}>
+                    <div style={{fontSize:9,color:"#8a78a8",letterSpacing:"0.1em",marginBottom:4}}>{label.toUpperCase()}{locked&&" 🔒"}</div>
+                    <div style={{fontSize:18,fontWeight:700,color:"#c8a84a",marginBottom:6}}>{char.attrs[key]}</div>
+                    <div style={{display:"flex",gap:4,justifyContent:"center"}}>
+                      <button onClick={()=>spendAttr(key,char.attrs[key]-1)} disabled={locked} style={{...sm,opacity:locked?0.3:1}}>−</button>
+                      <button onClick={()=>spendAttr(key,char.attrs[key]+1)} disabled={locked||(char.levelAttrPoints||0)<=0} style={{...sm,opacity:(locked||(char.levelAttrPoints||0)<=0)?0.3:1}}>+</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Spend Skill Points */}
+      {(char.levelSkillPoints||0)>0&&(
+        <div style={{marginBottom:20}}>
+          <Card title={`Spend Skill Points (${char.levelSkillPoints||0} remaining)`}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              {SKILL_TREES.map(tree=>{
+                const locked=(isVoA&&tree.type==="magic")||
+                  (isRoE&&["cqc","savagery","endurance","marksmanship","tactics","martialarts"].includes(tree.id));
+                const cur=char.skills[tree.id]||0;
+                const RANK_LABELS=["None","Novice","Adept","Master"];
+                return(
+                  <div key={tree.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 12px",background:locked?"rgba(240,230,255,0.4)":"rgba(255,255,255,0.82)",border:"1px solid #cebee8",borderRadius:3,opacity:locked?0.5:1}}>
+                    <div>
+                      <div style={{fontSize:11,color:"#1e1430",fontWeight:600}}>{tree.name}</div>
+                      <div style={{fontSize:9,color:"#8a78a8"}}>{RANK_LABELS[cur]}</div>
+                    </div>
+                    <div style={{display:"flex",gap:4}}>
+                      <button onClick={()=>spendSkill(tree.id,-1)} disabled={cur<=0} style={{...sm,opacity:cur<=0?0.3:1}}>−</button>
+                      <button onClick={()=>spendSkill(tree.id,1)} disabled={locked||cur>=3||(char.levelSkillPoints||0)<=0} style={{...sm,opacity:(locked||cur>=3||(char.levelSkillPoints||0)<=0)?0.3:1}}>+</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Level history */}
+      <Card title="Progression Reference">
+        <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:4}}>
+          {[1,2,3,4,5,6,7,8,9,10].map(lvl=>{
+            const done=level>lvl||(level===lvl&&exp>=0);
+            const current=level===lvl;
+            const isTrial=trialLevels.includes(lvl);
+            return(
+              <div key={lvl} style={{padding:"8px 4px",background:current?"rgba(42,24,72,0.08)":"rgba(255,255,255,0.7)",border:`1px solid ${current?"#2a1848":"#cebee8"}`,borderRadius:3,textAlign:"center"}}>
+                <div style={{fontSize:14,fontWeight:700,color:done?"#2a1848":"#b0a0c8"}}>Lv{lvl}</div>
+                <div style={{fontSize:8,color:"#8a78a8",marginTop:2}}>+1SP +{[4,7,10].includes(lvl)?2:1}Stat +5AP</div>
+                {isTrial&&<div style={{fontSize:8,color:"#8b1a2a",marginTop:2}}>⚑ Trial</div>}
+                {lvl===10&&<div style={{fontSize:8,color:"#c8a84a",marginTop:2}}>✦ Awakening</div>}
+              </div>
+            );
+          })}
+        </div>
+      </Card>
     </div>
   );
 }
