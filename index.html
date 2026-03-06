@@ -706,6 +706,7 @@ function calcSkillSilverSpent(skills, purchasedTrainings, techniques) {
 // ─── MAIN APP ────────────────────────────────────────────────────────────────
 const EMPTY_CHAR = {
   name:"", race:"", age:"", location:"", appearance:"", personality:"", history:"",
+  portrait: null,
   role:"", boon:null, size:1,
   level:1, exp:0, awakened:false,
   levelStatPoints:0, levelAttrPoints:0, levelSkillPoints:0,
@@ -1099,20 +1100,73 @@ function StepIdentity({char,setC}){
     <div>
       <ST>Who Are You?</ST>
       <p style={sub}>Fill in your character's basic details for the Social Character Sheet.</p>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:18,marginTop:20}}>
-        {[["Character Name *","name","e.g. Zora Aelia"],["Race","race","Human, Vanir, Vampire…"],["Age","age","e.g. 24"],["Location","location","Where do they live?"]].map(([label,key,ph])=>(
-          <div key={key}>
-            <Lbl>{label}</Lbl>
-            <input style={inp} value={char[key]||""} onChange={e=>setC(key,e.target.value)} placeholder={ph}/>
+      <div style={{display:"grid",gridTemplateColumns:"180px 1fr",gap:24,marginTop:20,alignItems:"start"}}>
+        {/* Portrait upload */}
+        <div>
+          <Lbl>Character Art</Lbl>
+          <div
+            onClick={()=>document.getElementById("portrait-upload").click()}
+            style={{
+              width:180,height:220,border:"2px dashed #c8b8e0",borderRadius:4,
+              background:"rgba(255,255,255,0.7)",cursor:"pointer",
+              display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+              overflow:"hidden",position:"relative",transition:"border-color 0.2s",
+            }}
+            onMouseEnter={e=>e.currentTarget.style.borderColor="#4cc8e0"}
+            onMouseLeave={e=>e.currentTarget.style.borderColor="#c8b8e0"}
+          >
+            {char.portrait
+              ? <img src={char.portrait} alt="Character portrait" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+              : <>
+                  <div style={{fontSize:32,marginBottom:8,color:"#c8b8e0"}}>🖼</div>
+                  <div style={{fontSize:10,color:"#a898c0",textAlign:"center",padding:"0 12px",lineHeight:1.5}}>Click to upload character art</div>
+                </>
+            }
+            {char.portrait&&(
+              <div style={{position:"absolute",inset:0,background:"rgba(42,24,72,0)",display:"flex",alignItems:"center",justifyContent:"center",transition:"background 0.2s"}}
+                onMouseEnter={e=>e.currentTarget.style.background="rgba(42,24,72,0.5)"}
+                onMouseLeave={e=>e.currentTarget.style.background="rgba(42,24,72,0)"}
+              >
+                <span style={{color:"white",fontSize:10,letterSpacing:"0.1em",opacity:0,transition:"opacity 0.2s"}}
+                  onMouseEnter={e=>e.currentTarget.style.opacity=1}
+                  onMouseLeave={e=>e.currentTarget.style.opacity=0}
+                >CHANGE</span>
+              </div>
+            )}
           </div>
-        ))}
-      </div>
-      {[["Appearance","appearance","How others see your character…"],["Personality","personality","First impressions, notable habits…"],["History","history","Background before adventuring…"]].map(([label,key,ph])=>(
-        <div key={key} style={{marginTop:16}}>
-          <Lbl>{label}</Lbl>
-          <textarea style={{...inp,height:70,resize:"vertical"}} value={char[key]||""} onChange={e=>setC(key,e.target.value)} placeholder={ph}/>
+          <input id="portrait-upload" type="file" accept="image/*" style={{display:"none"}}
+            onChange={e=>{
+              const file=e.target.files[0];
+              if(!file) return;
+              const reader=new FileReader();
+              reader.onload=ev=>setC("portrait",ev.target.result);
+              reader.readAsDataURL(file);
+              e.target.value="";
+            }}
+          />
+          {char.portrait&&(
+            <button onClick={()=>setC("portrait",null)} style={{...mic,marginTop:6,width:"100%",color:"#8b1a2a",border:"1px solid #e0b0b8",background:"rgba(139,26,42,0.04)"}}>✕ Remove</button>
+          )}
         </div>
-      ))}
+
+        {/* Text fields */}
+        <div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:18}}>
+            {[["Character Name *","name","e.g. Zora Aelia"],["Race","race","Human, Vanir, Vampire…"],["Age","age","e.g. 24"],["Location","location","Where do they live?"]].map(([label,key,ph])=>(
+              <div key={key}>
+                <Lbl>{label}</Lbl>
+                <input style={inp} value={char[key]||""} onChange={e=>setC(key,e.target.value)} placeholder={ph}/>
+              </div>
+            ))}
+          </div>
+          {[["Appearance","appearance","How others see your character…"],["Personality","personality","First impressions, notable habits…"],["History","history","Background before adventuring…"]].map(([label,key,ph])=>(
+            <div key={key} style={{marginTop:16}}>
+              <Lbl>{label}</Lbl>
+              <textarea style={{...inp,height:70,resize:"vertical"}} value={char[key]||""} onChange={e=>setC(key,e.target.value)} placeholder={ph}/>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -1785,7 +1839,12 @@ function StepSummary({char,setChar,derived,totalSP}){
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
         <Card title="Identity">
-          {[["Name",char.name||"—"],["Race",char.race||"—"],["Level","1 (0/10 EXP)"],["Role",char.role||"—"],["Boon",char.boon?.name||"—"]].map(([k,v])=><Row key={k} label={k} val={v}/>)}
+          {char.portrait&&(
+            <div style={{width:"100%",maxHeight:200,overflow:"hidden",borderRadius:2,marginBottom:10}}>
+              <img src={char.portrait} alt="Character portrait" style={{width:"100%",objectFit:"cover",objectPosition:"top"}}/>
+            </div>
+          )}
+          {[["Name",char.name||"—"],["Race",char.race||"—"],["Level",`${char.level||1} (${char.exp||0}/10 EXP)`],["Role",char.role||"—"],["Boon",char.boon?.name||"—"]].map(([k,v])=><Row key={k} label={k} val={v}/>)}
         </Card>
         <Card title="Attributes">
           {[["HP",finalHP,true],["Stamina",finalStamina,true],["Mana",finalMana,true],["Dmg Shield Cap",finalDmgShield,true],["Tech Slots",finalStamina+""],["Spell Slots",finalMana+""]].map(([k,v,h])=><Row key={k} label={k} val={v} hi={h}/>)}
