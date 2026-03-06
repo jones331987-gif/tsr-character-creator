@@ -12,7 +12,7 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script type="text/babel">
-    const { useState } = React;
+    const { useState, useEffect } = React;
 
 // ─── STAT HELPERS ────────────────────────────────────────────────────────────
 const STAT_CHAIN = ["d4","d6","d8","d10","d12","d12+1","d12+2","d12+3","d12+4","d12+5"];
@@ -736,7 +736,7 @@ function App() {
   const confirm = (message, onConfirm) => setConfirmModal({message, onConfirm});
 
   // Load saves from localStorage on mount
-  useState(()=>{
+  useEffect(()=>{
     try {
       const loaded = {};
       SAVE_SLOTS.forEach(slot=>{
@@ -745,7 +745,7 @@ function App() {
       });
       setSaves(loaded);
     } catch(e){}
-  });
+  }, []);
 
   const saveToSlot = (slot, i) => {
     const existing = saves[slot];
@@ -954,7 +954,7 @@ function App() {
     return true;
   };
 
-  const derived = {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft};
+  const derived = {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus};
 
   return (
     <div style={{minHeight:"100vh",background:"linear-gradient(170deg,#f0ecf8 0%,#ede8f5 45%,#f4f0f8 100%)",color:"#1e1430",fontFamily:"'Palatino Linotype',Palatino,Georgia,serif",display:"flex",flexDirection:"column"}}>
@@ -1792,7 +1792,7 @@ function StepEquipment({char,setChar,moneyLeft}){
 
 // ─── STEP SUMMARY ─────────────────────────────────────────────────────────────
 function StepSummary({char,setChar,derived,totalSP}){
-  const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft}=derived;
+  const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus}=derived;
   const fmt = ({die,bonus}) => bonus>0?`${die} (+${bonus})`:bonus<0?`${die} (${bonus})`:die;
   const RANK_LABELS=["","Novice","Adept","Master"];
   const TIERS=["novice","adept","master"];
@@ -1856,7 +1856,28 @@ function StepSummary({char,setChar,derived,totalSP}){
           {[
             ["Reach", `${finalReach} space${finalReach>1?"s":""}${size>=2?" (size 2+)":""}`],
             ["Accuracy", fmt(finalMeleeAcc), true],
-            ["Primary Damage", fmt(finalMeleeDmg)+(size>1?` [+${sizeB.primDmg} size]`:""), true],
+            ["Primary Damage", (()=>{
+              const w = char.equipment.weapon;
+              const bonus = dmgBonus;
+              const bonusStr = bonus>0?` (+${bonus})`:bonus<0?` (${bonus})`:"";
+              const sizeStr = size>1?` [+${sizeB.primDmg} size]`:"";
+              if(!w) return `${char.stats.Strength}${bonusStr}${sizeStr}`;
+              const raw = w.dmg;
+              const elemMatch = raw.match(/^(.+?)\s+([A-Z][a-z]+)$/);
+              const dmgCore = elemMatch ? elemMatch[1] : raw;
+              const elem = elemMatch ? ` ${elemMatch[2]}` : "";
+              const statPlusMatch = dmgCore.match(/^(Str|Mind)\+(.+)$/);
+              const statOnlyMatch = dmgCore.match(/^(Str|Mind)$/);
+              if(statPlusMatch) {
+                const statDie = statPlusMatch[1]==="Str" ? char.stats.Strength : char.stats.Mind;
+                return `${statDie} + ${statPlusMatch[2]}${elem}${bonusStr}${sizeStr}`;
+              } else if(statOnlyMatch) {
+                const statDie = statOnlyMatch[1]==="Str" ? char.stats.Strength : char.stats.Mind;
+                return `${statDie}${elem}${bonusStr}${sizeStr}`;
+              } else {
+                return `${dmgCore}${elem}${bonusStr}${sizeStr}`;
+              }
+            })(), true],
             ["Parry", `${finalParry}`+(size>1?` [${sizeB.parry} size]`:""), true],
             ["Armor", `${finalArmor}`+(size>1?` [+${sizeB.armor} size]`:""), true],
             ["Ward", finalWard, true],
