@@ -33,8 +33,8 @@ const calcArmor     = (vig) => Math.max(0,Math.floor((dieValue(vig)-2)/2));
 const calcVigorHP   = (vig) => vigorTier(vig) * 5;
 // Damage Shield cap: +5 per tier above d4 (0 at d4)
 const calcDmgShield = (vig) => vigorTier(vig) * 5;
-// Spell Range: base 2 + Mind die value + Willpower die value (each "point" = face value of die)
-const calcSpellRange = (mind, wil) => 2 + dieValue(mind) + dieValue(wil);
+// Spell Range: base 2 + tiers above d4 for Mind + tiers above d4 for Willpower
+const calcSpellRange = (mind, wil) => 2 + STAT_CHAIN.indexOf(mind) + STAT_CHAIN.indexOf(wil);
 // Size bonuses per size above 1: +1 Armor, +1 Primary Damage, −1 Parry. Size 2+ grants +1 Reach.
 const calcSizeBonus = (size) => ({
   armor:   size - 1,
@@ -1006,8 +1006,8 @@ function StepAttributes({char,setChar,stLeft,apLeft,totalAP,trainBonuses,derived
     Strength:   "Damage for unarmed & weapon attacks. Required to wield heavier weapons. Used in Grab checks.",
     Dexterity:  "Accuracy for attacks. Parry = ½ DEX + 2.",
     Vigor:      "+5 Max HP & +5 Damage Shield cap per tier above d4. Armor = ½ VIG − 2. Resists physical crowd control.",
-    Mind:       "Accuracy & damage of spells. Spell Range +1 per point of Mind (base 2).",
-    Willpower:  "Ward = ½ WIL − 2. Spell Range +1 per point of Willpower. Used to apply & resist magical crowd control.",
+    Mind:       "Accuracy & damage of attack spells. Spell Range +1 per tier above d4.",
+    Willpower:  "Powers CC & save spells. Ward = ½ WIL − 2. Spell Range +1 per tier above d4.",
   };
 
   return(
@@ -1092,7 +1092,7 @@ function StepAttributes({char,setChar,stLeft,apLeft,totalAP,trainBonuses,derived
                 ["Parry", `${calcParry(char.stats.Dexterity) + szB.parry} (½ DEX+2${szB.parry!==0?" "+szB.parry+" size":""})`],
                 ["Armor", `${calcArmor(char.stats.Vigor) + szB.armor} (½ VIG−2${szB.armor>0?" +"+szB.armor+" size":""})`],
                 ["Ward", `${calcWard(char.stats.Willpower)} (½ WIL − 2)`],
-                ["Spell Range", `${calcSpellRange(char.stats.Mind,char.stats.Willpower)} (2+${dieValue(char.stats.Mind)}M+${dieValue(char.stats.Willpower)}WIL)`],
+                ["Spell Range", `${calcSpellRange(char.stats.Mind,char.stats.Willpower)} (2+${STAT_CHAIN.indexOf(char.stats.Mind)}M+${STAT_CHAIN.indexOf(char.stats.Willpower)}WIL)`],
                 ["Carry Cap", `${char.attrs.Stamina} (= Stamina)`],
                 ["Tech Slots", `${char.attrs.Stamina} (= Stamina)`],
                 ["Spell Slots", `${char.attrs.Mana} (= Mana)`],
@@ -1572,12 +1572,17 @@ function StepSummary({char,derived,totalSP}){
         </Card>
         <Card title="Spell Attack">
           {[
-            ["Spell Accuracy", fmt(finalSpellAcc), true],
-            ["Spell Power", `${finalSpellPower.die} + Spell Dice${finalSpellPower.bonus>0?" (+"+finalSpellPower.bonus+")":""}`, true],
-            ["Spell Range", `${finalSpellRange} spaces (2 + ${dieValue(char.stats.Mind)} Mind + ${dieValue(char.stats.Willpower)} WIL)`, true],
+            ["Spell Range", `${finalSpellRange} spaces (2 + ${STAT_CHAIN.indexOf(char.stats.Mind)} Mind + ${STAT_CHAIN.indexOf(char.stats.Willpower)} WIL)`, true],
+            ["Attack Spell Accuracy", fmt(finalSpellAcc)+" (Mind)", true],
+            ["Attack Spell Power", `${finalSpellPower.die} + Spell Dice${finalSpellPower.bonus>0?" (+"+finalSpellPower.bonus+")":""}`, true],
+            ["CC / Save Spell Stat", `${char.stats.Willpower} (Willpower)`, true],
+            ["Mana Cost Discount", "−1 mana with 1+ free hand"],
+            ["Spell Slots (Mana)", finalMana],
             ["Ward (vs spells)", finalWard, true],
-            ["Spell Slots", finalMana],
           ].map(([k,v,h])=><Row key={k} label={k} val={v} hi={h}/>)}
+          <div style={{fontSize:10,color:"#7a68a0",marginTop:8,lineHeight:1.6,borderTop:"1px solid rgba(200,180,230,0.4)",paddingTop:8}}>
+            Attack spells: Mind for Accuracy &amp; Damage. CC/Save spells: auto-hit if in range, resisted by target using Willpower. Hybrid spells require both a hit and a failed save.
+          </div>
         </Card>
         <Card title="General">
           {[
