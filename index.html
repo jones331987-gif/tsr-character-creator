@@ -1,0 +1,1561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TSR 5.0 — Character Creator</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #f0ecf8; }
+    #root { min-height: 100vh; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- React + Babel via CDN — no build step needed -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="text/babel">
+    const { useState } = React;
+
+    // ─── PASTE YOUR APP CODE BELOW ───────────────────────────────────────────
+
+// ─── STAT HELPERS ────────────────────────────────────────────────────────────
+const STAT_CHAIN = ["d4","d6","d8","d10","d12","d12+1","d12+2","d12+3","d12+4","d12+5"];
+const STAT_COSTS = {d4:0,d6:1,d8:2,d10:3,d12:4,"d12+1":5,"d12+2":6,"d12+3":7,"d12+4":8,"d12+5":9};
+const STATS = ["Strength","Dexterity","Vigor","Mind","Willpower"];
+const ROLES = ["Warrior","Assassin","Destroyer","Support","Disabler"];
+const statPointsUsed = (s) => Object.values(s).reduce((t,d)=>t+STAT_COSTS[d],0);
+const dieValue = (d) => { const m={d4:4,d6:6,d8:8,d10:10,d12:12}; if(m[d])return m[d]; if(d.startsWith("d12+"))return 12+parseInt(d.slice(4)); return 4; };
+const calcParry = (dex) => Math.floor(dieValue(dex)/2)+2;
+const calcWard  = (wil) => Math.max(0,Math.floor(dieValue(wil)/2)-2);
+const calcArmor = (vig) => Math.max(0,Math.floor((dieValue(vig)-2)/2));
+
+// ─── BOONS ───────────────────────────────────────────────────────────────────
+const BOONS = [
+  {name:"History of Discipline", desc:"+2 Skill Points, +10 Attribute Points. At 4th level, gain +1 additional Skill Point."},
+  {name:"History of Knowledge",  desc:"-2 Resource Cost on damaging hits inflict Fumble. Great for debuff builds."},
+  {name:"Blessing of Power",     desc:"+1 Primary Damage, Spell Power, Accuracy & Parry. At 4th level these increase to +2, plus +2 Armor & Ward."},
+  {name:"Vow of Ash",            desc:"Extra mastery perk for Physical skills. Cannot invest in Magic skills or increase Mana."},
+  {name:"Rite of Embers",        desc:"Extra mastery perk for Magic skills. Cannot invest in Physical skills or increase Stamina."},
+  {name:"Gigantic",              desc:"Occupy 2×2 space, Melee Reach +1. STR & VIG start at d6 and can reach d12+6."},
+  {name:"Multi-Limbed",          desc:"4 arms — hold more weapons or items simultaneously."},
+  {name:"Winged",                desc:"Gain a flight speed of 50ft."},
+];
+
+// ─── SKILL TREES (with techniques per tier) ──────────────────────────────────
+const SKILL_TREES = [
+  {
+    id:"cqc", name:"Close Quarters Combat", type:"physical",
+    desc:"Melee weapons using STR/DEX. Adept: proficiency + AoO. Master perk: Brute, Crush Armor, or Lethality.",
+    masterPerks:[
+      {name:"Brute",        desc:"Use Strength for Accuracy with Melee weapons instead of Dexterity."},
+      {name:"Crush Armor",  desc:"First melee attack has AP = ½ STR. Critical hits apply Rend."},
+      {name:"Lethality",    desc:"Melee HP damage applies 2 stacks of Bleed (Aggravate on crit)."},
+    ],
+    tiers:{
+      novice:{
+        training:{name:"Novice CQC Training", effect:"statBonus", key:"Stamina", value:5, desc:"+5 Maximum Stamina."},
+        techniques:[
+          {name:"Wild Strikes",      cost:"4 Stamina",  desc:"+2 Primary Damage (Melee only). Attack Enhancer."},
+          {name:"Measured Strikes",  cost:"4 Stamina",  desc:"+2 Accuracy (Melee only). Attack Enhancer."},
+          {name:"Rudimentary Fencing",cost:"4 Stamina", desc:"+1 Accuracy & +1 Primary Damage next attack phase. Melee only. Attack Enhancer."},
+          {name:"Determined Strike", cost:"1 Action",   desc:"Add an extra Primary Weapon damage dice to next attack. Melee only."},
+        ],
+      },
+      adept:{
+        training:{name:"Adept CQC Training", effect:"statBonus", key:"Stamina", value:5, bonus:"+1 Primary Damage & Accuracy with Physical Weapons.", desc:"+5 Max Stamina, +1 Primary Damage & Accuracy with Physical Weapons."},
+        techniques:[
+          {name:"Improved Power Attack",   cost:"4 Stamina", desc:"Power Attack for +3 Primary Damage."},
+          {name:"Improved Take Aim",        cost:"4 Stamina", desc:"Take Aim for +3 Accuracy."},
+          {name:"Hamstring Strike",         cost:"4 Stamina", desc:"+2 Accuracy; HP damage → Str vs Vig → Slow. Melee. Attack Enhancer."},
+          {name:"Rudimentary CQC Style",    cost:"4 Stam / 2 upkeep", desc:"+1 Accuracy & Primary Damage while active."},
+          {name:"Practiced Fencing",        cost:"4 Stamina", desc:"+2 Accuracy & +2 Primary Damage next attack. Melee. Attack Enhancer."},
+          {name:"Overwhelming Strike",      cost:"1 Action",  desc:"Add +2 dmg, acc, and extra Primary dice to next attack. Melee."},
+          {name:"Stinging Blow",            cost:"4 Stamina", desc:"+1 Acc; HP dmg → 1 Bleed. Dagger only. Attack Enhancer."},
+          {name:"Carve",                    cost:"2 Actions", desc:"AoE swing around you (Two-Handed). +1 Primary Dmg per enemy hit (max +4)."},
+          {name:"Heavy Strikes",            cost:"4 Stamina", desc:"+4 Primary Damage. Two-Handed only. Attack Enhancer."},
+          {name:"Shield Fighter",           cost:"Passive",   desc:"Ignore wielding penalties for shields; attack with shield using Unarmed dmg."},
+          {name:"Great Weapon Fighter",     cost:"Passive",   desc:"AoE with Two-Handed procs Cloak AoE (Primary Dmg Dice) per swing."},
+          {name:"Versatile Fighter",        cost:"Passive",   desc:"Use Versatile weapon bonuses in One-Handed grip."},
+          {name:"Dual Fighter",             cost:"Passive",   desc:"No -2 Accuracy penalty on Dual Strike if using ≥1 Finesse weapon."},
+        ],
+      },
+      master:{
+        training:{name:"Master CQC Training", effect:"statBonus", key:"Stamina", value:5, bonus:"Titan's Grip feat.", desc:"+5 Max Stamina + Titan's Grip (wield Two-Handed in one hand, keeping all bonuses)."},
+        techniques:[
+          {name:"Disciplined Power Attack", cost:"4 Stamina", desc:"Power Attack for +4 Primary Damage."},
+          {name:"Disciplined Take Aim",     cost:"4 Stamina", desc:"Take Aim for +4 Accuracy."},
+          {name:"Hamstring Slam",           cost:"4 Stamina", desc:"+4 Accuracy; HP dmg → Str vs Vig → Root. Melee. Attack Enhancer."},
+          {name:"Masterful CQC Style",      cost:"6 Stam / 3 upkeep", desc:"+3 Accuracy & Primary Damage while active."},
+          {name:"Masterful Fencing",        cost:"8 Stamina", desc:"+3 Accuracy, Primary Damage, +1 Crit. Melee. Attack Enhancer."},
+          {name:"Overwhelming Stampede",    cost:"1 Action",  desc:"+2 dmg, acc, +STR dice to next attack. Melee."},
+          {name:"Flurry",                   cost:"2-3 Actions", desc:"2-3 attacks at current MAP. Dual Wield only."},
+          {name:"Vicious Smite",            cost:"2-3 Actions", desc:"Single strike adding STR twice/thrice. Two-Handed only."},
+          {name:"Stinging Flurry",          cost:"8 Stamina", desc:"+2 Acc; HP dmg → 2 Bleed. Dagger only. Attack Enhancer."},
+          {name:"Sever Arteries",           cost:"8 Stamina", desc:"+2 Acc; HP dmg → 2 Bleed. Dual Wield Melee. Attack Enhancer."},
+          {name:"Cross Slash",              cost:"2 Actions", desc:"2 attacks; both hit → Aggravate. Dual Wield."},
+          {name:"Battle Fury",              cost:"2-3 Actions", desc:"AoE swing + optional Cloak AoE. Two-Handed only."},
+          {name:"Overbearing Strikes",      cost:"8 Stamina", desc:"+6 Primary Damage; HP dmg → Rend. Two-Handed. Attack Enhancer."},
+          {name:"Exploiting Lunge",         cost:"8 Stamina", desc:"+3 Acc, +1 Reach. One-Handed, empty offhand. Attack Enhancer."},
+          {name:"Shield Master",            cost:"Passive",   desc:"Ignore shield wielding penalties; shield attacks recover DS; add shield Parry to Physical Resistance."},
+          {name:"Great Weapon Master",      cost:"Passive",   desc:"AoE with Two-Handed procs Cloak of Primary + Secondary Dmg Dice."},
+          {name:"Versatile Master",         cost:"Passive",   desc:"Versatile bonuses in any grip; use One- or Two-Handed stances freely."},
+          {name:"Dual Master",              cost:"Passive",   desc:"No Accuracy penalties on Dual Strike regardless of weapon type."},
+        ],
+      },
+    },
+  },
+  {
+    id:"marksmanship", name:"Marksmanship", type:"physical",
+    desc:"Ranged weapons using STR/DEX. Adept: proficiency. Master perk: Eagle Eye, Overwatch, or Barbed Shots.",
+    masterPerks:[
+      {name:"Eagle Eye",    desc:"Use Dexterity for Ranged Weapon damage instead of Strength."},
+      {name:"Overwatch",    desc:"Attacks of Opportunity with Ranged Weapons at half range (double cost enhancers)."},
+      {name:"Barbed Shots", desc:"Ranged HP damage applies 2 stacks of Bleed (Aggravate on crit)."},
+    ],
+    tiers:{
+      novice:{
+        training:{name:"Novice Marksmanship Training", effect:"statBonus", key:"Stamina", value:5, desc:"+5 Maximum Stamina."},
+        techniques:[
+          {name:"Hunter's Focus", cost:"1 Action", desc:"Mark target; +1 Accuracy vs them next round."},
+          {name:"Risky Shots",    cost:"2 Stamina", desc:"+2 Damage. Ranged only. Attack Enhancer."},
+          {name:"Safe Shots",     cost:"2 Stamina", desc:"+2 Accuracy. Ranged only. Attack Enhancer."},
+          {name:"Hunter's Shot",  cost:"4 Stamina", desc:"+1 Accuracy & +1 Damage. Ranged only."},
+        ],
+      },
+      adept:{
+        training:{name:"Adept Marksmanship Training", effect:"statBonus", key:"Stamina", value:5, bonus:"+1 Primary Damage & Accuracy with Physical Weapons.", desc:"+5 Max Stamina, +1 Primary Damage & Accuracy with Physical Weapons."},
+        techniques:[
+          {name:"Improved Power Attack",         cost:"4 Stamina", desc:"Power Attack for +3 Primary Damage."},
+          {name:"Improved Take Aim",              cost:"4 Stamina", desc:"Take Aim for +3 Accuracy."},
+          {name:"Rudimentary Marksmanship Style", cost:"4 Stam / 2 upkeep", desc:"+1 Accuracy & Primary Damage while active."},
+          {name:"Hunter's Discharge",             cost:"4 Stamina", desc:"+2 Accuracy & +2 Damage. Ranged only."},
+          {name:"Hunter's Mark",                  cost:"1 Action",  desc:"Mark target; +2 Accuracy vs them next round."},
+          {name:"Stalker's Shot",                 cost:"4 Stamina", desc:"+1 Acc; HP dmg → 1 Bleed. Ranged. Attack Enhancer."},
+          {name:"Arrow Volley",                   cost:"2 Actions", desc:"AoE in 15ft radius at Bow's range. Bows only."},
+          {name:"Unload",                         cost:"2 Actions", desc:"Empty clip in 5ft cloak at half range. Trigger weapons only."},
+          {name:"Crippling Shot",                 cost:"4 Stamina", desc:"HP dmg → 1 Cripple (2 on crit) + Aggravate DoTs. Bow/Crossbow. Attack Enhancer."},
+        ],
+      },
+      master:{
+        training:{name:"Master Marksmanship Training", effect:"statBonus", key:"Stamina", value:5, bonus:"High Ground Advantage on all shots.", desc:"+5 Max Stamina. Shots from High Ground gain Advantage."},
+        techniques:[
+          {name:"Disciplined Power Attack",         cost:"4 Stamina", desc:"Power Attack for +4 Primary Damage."},
+          {name:"Disciplined Take Aim",              cost:"4 Stamina", desc:"Take Aim for +4 Accuracy."},
+          {name:"Masterful Marksmanship Style",      cost:"6 Stam / 3 upkeep", desc:"+3 Accuracy & Primary Damage while active."},
+          {name:"Hunter's Snipe",                    cost:"8 Stamina", desc:"+3 Accuracy, Primary Damage, +1 Crit. Ranged. Attack Enhancer."},
+          {name:"Hunter's Vow",                      cost:"1 Action",  desc:"Mark target; +3 Accuracy vs them next round."},
+          {name:"Stalker's Snipe",                   cost:"4 Stamina", desc:"+2 Acc; HP dmg → 2 Bleed. Ranged. Attack Enhancer."},
+          {name:"Arrow Storm",                       cost:"2-3 Actions", desc:"AoE 15ft radius; optional: area becomes Difficult Terrain (2 Bleed/space). Bows."},
+          {name:"Rapid Unload",                      cost:"2-3 Actions", desc:"Empty one (or two if dual) clips in 5ft cloak at half range. Trigger only."},
+          {name:"Brutal Shot",                       cost:"8 Stamina", desc:"+2 Acc & Dmg; Str vs Vig → Knockback 4. Bow or Two-Handed Trigger. Attack Enhancer."},
+          {name:"Double Shot",                       cost:"2 Actions", desc:"2 attacks at current MAP. Bow or Trigger only."},
+          {name:"Arcing Shots",                      cost:"Passive",   desc:"+Marksmanship Skill Level to Ranged range. Does not stack with Calculated Shots."},
+          {name:"Sniper's Stance",                   cost:"Passive",   desc:"Going Prone enters Sniper's Stance: no Disadvantage, +1 Dmg/Acc/Crit/Range."},
+        ],
+      },
+    },
+  },
+  {
+    id:"endurance", name:"Endurance", type:"physical",
+    desc:"Tanking & armor. Master perk: Endure Pain, Landshark, or Punishing Draw.",
+    masterPerks:[
+      {name:"Endure Pain",    desc:"Spend Stamina for damage cancellation (2 Stam = cancel 1 dmg, cap 10/phase)."},
+      {name:"Landshark",      desc:"Use Techniques and Light Armor bonuses even in Heavy Armor."},
+      {name:"Punishing Draw", desc:"First attack when initiating always has +2 Primary Damage & Accuracy."},
+    ],
+    tiers:{
+      novice:{
+        training:{name:"Novice Endurance Training", effect:"statBonus", key:"HP", value:5, desc:"+5 Maximum Health."},
+        techniques:[
+          {name:"Crude Anchoring Howl", cost:"2 Stam / 1 upkeep", desc:"10ft Guard cloak as Free Action. Heavy Armor only."},
+          {name:"Dodge",               cost:"4 Stamina (Reaction)", desc:"+2 Parry."},
+          {name:"Block",               cost:"4 Stamina (Reaction)", desc:"+2 Physical Resistance. Heavy Armor only."},
+          {name:"Hardy Sentinel",      cost:"2 Stamina + Action",   desc:"Gain 5 damage shields immediately."},
+          {name:"Stable Ground",       cost:"2 Stamina + Action",   desc:"Gain 1 stack of Stability."},
+          {name:"Snarebreaker",        cost:"4 Stamina (passive slot)", desc:"+2 to Breaking Free from physical CC."},
+          {name:"Shattering Slam",     cost:"Passive",              desc:"When DS destroyed by melee, proc STR-dice Cloak AoE around you."},
+          {name:"Crude Armored Blow",  cost:"4 Stamina",            desc:"+1 Accuracy & +1 Primary Damage. Attack Enhancer."},
+        ],
+      },
+      adept:{
+        training:{name:"Adept Endurance Training", effect:"statBonus", key:"HP", value:5, bonus:"+1 Parry & Physical Resistance.", desc:"+5 Max Health, +1 Parry & Physical Resistance."},
+        techniques:[
+          {name:"Anchoring Howl",   cost:"2 Stam / 1 upkeep", desc:"10ft Guard cloak; drag up to 2 allies (2 Stam each) during movement. Heavy Armor."},
+          {name:"Improved Dodge",   cost:"4 Stamina", desc:"+3 Parry."},
+          {name:"Improved Block",   cost:"4 Stamina", desc:"+3 Physical Resistance. Heavy Armor."},
+          {name:"Mobile",           cost:"2 Stamina", desc:"After melee attack, perform Brave Step. Not Heavy Armor."},
+          {name:"Swift Guard",      cost:"4 Stamina", desc:"Instantly refund your Reaction."},
+          {name:"Footwork",         cost:"4 Stamina", desc:"Step as Free Action during your turn."},
+          {name:"Reflexes",         cost:"4 Stam / 2 upkeep", desc:"+1 Parry & Physical Resistance."},
+          {name:"Relentless",       cost:"Passive",   desc:"Attacks of Opportunity; Reaction refunded on HP damage."},
+          {name:"Lunge",            cost:"2 Actions", desc:"Move double speed then Attack."},
+          {name:"Armored Blow",     cost:"4 Stamina", desc:"+2 Accuracy & +2 Primary Damage. Attack Enhancer."},
+          {name:"Breaker",          cost:"4 Stam / 2 upkeep", desc:"+1 Accuracy & Primary Damage. Not Heavy Armor."},
+          {name:"Lead the Wind",    cost:"Free + 4 Stam", desc:"Move 30ft in any direction. Not Heavy Armor."},
+          {name:"Enduring Sentinel",cost:"Passive",   desc:"At start of turn, gain 5 DS for free. Heavy Armor."},
+          {name:"Robust Sentinel",  cost:"4 Stam + Action", desc:"Gain 10 DS immediately."},
+          {name:"Unbreakable",      cost:"Passive",   desc:"Enemy crit chance vs you -1. Heavy Armor. (doesn't stack with Indestructible)"},
+          {name:"Juggernaut",       cost:"Passive",   desc:"+10 DS at combat start; apply Passive Resistances over DS. Heavy Armor."},
+          {name:"Stable Stance",    cost:"2 Stam/stack + Action", desc:"Gain up to 3 Stability stacks. Heavy Armor."},
+          {name:"Holdbreaker",      cost:"4 Stamina", desc:"+2 Breaking Free + Advantage on physical CC breaks."},
+          {name:"Barbed Rebuke",    cost:"Passive",   desc:"Counter Attack procs STR-dice Cloak AoE around you. Heavy Armor."},
+          {name:"Ram Charge",       cost:"1 Action",  desc:"Bash Attack (Unarmed dice); hit + dmg → Str vs Vig → Stun."},
+        ],
+      },
+      master:{
+        training:{name:"Master Endurance Training", effect:"statBonus", key:"HP", value:5, bonus:"Immortal feat (1 Stam = 2 dmg cancellation, no cap). 5-round cooldown.", desc:"+5 Max Health + Immortal feat (1 Stam = 2 dmg cancel, unlimited, 5-round CD)."},
+        techniques:[
+          {name:"Masterful Anchoring Howl", cost:"2 Stam / 1 upkeep",   desc:"10ft Guard cloak; drag up to 4 allies (2 Stam each). Heavy Armor."},
+          {name:"Disciplined Dodge",         cost:"4 Stamina",            desc:"+4 Parry."},
+          {name:"Disciplined Block",         cost:"4 Stamina",            desc:"+4 Physical Resistance. Heavy Armor."},
+          {name:"Masterful Mobility",        cost:"2 Stamina",            desc:"After melee attack, perform Brave Step or full Movement. Not Heavy Armor."},
+          {name:"Masterful Armored Blow",    cost:"8 Stamina",            desc:"+2 Acc & Dmg; before accuracy roll proc STR-dice Cloak AoE. Attack Enhancer."},
+          {name:"Limit Breaker",             cost:"6 Stam / 3 upkeep",   desc:"+2 Acc & Primary Dmg; Free Action to reset MAP (8 Stam). Not Heavy Armor."},
+          {name:"Trained Reflexes",          cost:"6 Stam / 3 upkeep",   desc:"+2 Parry & Physical Resistance; pay 8 Stam to turn incoming attack into Glancing Blows."},
+          {name:"Sneak Attack",              cost:"Passive",              desc:"From Stealth or vs Flanked: +1 Crit, Fatal crits; larger Shroud radius. Not Heavy Armor."},
+          {name:"Battle Rhythm",             cost:"Passive",              desc:"Successful Dodge/Block/AoO/Counter dealing HP dmg → regenerate Vigor dice Stamina. 1-round CD."},
+          {name:"Spiked Armor",              cost:"Passive",              desc:"After Movement or when hit in melee, proc STR-dice Cloak AoE. Heavy Armor."},
+          {name:"Vigilant Sentinel",         cost:"Passive",              desc:"Gain 5 DS at turn start; AoO dmg → Slow target. Heavy Armor."},
+          {name:"Sturdy Sentinel",           cost:"6 Stam + Action",      desc:"Gain 15 DS immediately."},
+          {name:"Crescent Counter",          cost:"Passive",              desc:"Counter Attacks hit weapon-range AoE instead of single target."},
+          {name:"Thick Skin",               cost:"Passive + 4 Stam/extra", desc:"Auto-cleanse 1 negative condition at Cleansing Phase; pay 4 Stam per extra. Heavy Armor."},
+          {name:"Indestructible",            cost:"Passive + 4 Stam/hit",  desc:"Enemy crit chance vs you -2; pay 4 Stam to negate a critical hit. Heavy Armor."},
+          {name:"Balanced Stance",           cost:"2 Stam/extra stack",    desc:"Gain 1 Stability at turn start; pay 2 Stam per additional (max 3/turn). Heavy Armor."},
+          {name:"Cagebreaker",               cost:"4 Stamina",             desc:"+4 Breaking Free + Advantage on physical CC breaks."},
+          {name:"Aegis",                     cost:"Passive",               desc:"Block physical resistance can become Magical Resistance; use Stam or Mana to break Magical CC."},
+          {name:"Reflective Bulwark",        cost:"4 Stam activate + 1/hit", desc:"3-space aura in front deflects Projectiles to Glancing Blows; Block/Dodge → Reflect. Guard Stance required."},
+          {name:"Defiant Stance",            cost:"Free Action (own turn)", desc:"Destroy own DS → +1 Parry/PhysRes per 10 DS; Defiant Stacks → Vigor Dice HP+Stam regen. Heavy Armor."},
+          {name:"Quickdraw",                 cost:"4 Stamina",             desc:"Interact Action as Free Action anytime in combat (except Use Alchemical). Not Heavy Armor."},
+        ],
+      },
+    },
+  },
+  {
+    id:"martial_arts", name:"Martial Arts", type:"physical",
+    desc:"Unarmed & utility maneuvers. Master perk: Style Master, Enduring Warrior, or Disciplined Fighter.",
+    masterPerks:[
+      {name:"Style Master",        desc:"Use 3 Attack Enhancers per phase (most expensive at 2x cost). 2-round CD."},
+      {name:"Enduring Warrior",    desc:"+10 max DS cap; regain 5 DS at start of each Upkeep Phase."},
+      {name:"Disciplined Fighter", desc:"Halve the cost of 1 attack enhancer each attack phase."},
+    ],
+    tiers:{
+      novice:{
+        training:{name:"Novice Martial Training", effect:"statBonus", key:"Stamina", value:5, desc:"+5 Maximum Stamina."},
+        techniques:[
+          {name:"Novice Brawler",    cost:"Passive", desc:"Fists gain Finesse. Unarmed damage: 1d6 + STR."},
+          {name:"Dazing Strike",     cost:"1 Action", desc:"Fist weapon: hit + HP dmg → Str vs Vig → Dazed."},
+          {name:"Precise Strikes",   cost:"4 Stamina", desc:"+1 Accuracy & +1 Primary Damage. Attack Enhancer."},
+          {name:"Bodyguard",         cost:"2 Stamina (Free)", desc:"Instantly create 5ft Guard aura."},
+          {name:"Dodge",             cost:"4 Stamina (Reaction)", desc:"+2 Parry."},
+          {name:"Crude Unarmored Style", cost:"Passive (No Armor)", desc:"+1 Parry while wearing no armor."},
+        ],
+      },
+      adept:{
+        training:{name:"Adept Martial Training", effect:"statBonus", key:"Stamina", value:5, bonus:"+1 Primary Damage & Accuracy with Physical Weapons.", desc:"+5 Max Stamina, +1 Primary Damage & Accuracy with Physical Weapons."},
+        techniques:[
+          {name:"Adept Brawler",          cost:"Passive", desc:"Fists gain Finesse. 1d8+STR dmg. Use DEX for CC saves with fists."},
+          {name:"Knockdown Strike",        cost:"1 Action", desc:"Fist weapon: hit + HP dmg → Str vs Vig → Knocked Prone."},
+          {name:"Wrestler",               cost:"Passive", desc:"Use Grab Actions as Counter Attacks."},
+          {name:"Precision Strikes",       cost:"4 Stamina", desc:"+2 Accuracy & +2 Primary Damage. Attack Enhancer."},
+          {name:"CQC Expertise",           cost:"Passive", desc:"Proficiency with CQC weapons."},
+          {name:"Marksmanship Expertise",  cost:"Passive", desc:"Proficiency with Marksmanship weapons."},
+          {name:"Improved Dodge",          cost:"4 Stamina", desc:"+3 Parry."},
+          {name:"Improved Movement",       cost:"Passive", desc:"+1 Base Movement Speed."},
+          {name:"Push Kick",               cost:"4 Stamina + Action", desc:"Str vs Vig → push adjacent enemies 2 spaces."},
+          {name:"Brutal Leap",             cost:"4 Stamina + Action", desc:"Move 30ft, land → 5ft STR-dice Cloak AoE."},
+          {name:"Fan of Blades",           cost:"2 Actions", desc:"Throw weapon without hitting Parry at half range. No enhancers."},
+          {name:"Interruptor",             cost:"Passive", desc:"+1 Primary Damage & Accuracy on AoO/Counter. (doesn't stack with Masterful)"},
+          {name:"Riposte",                cost:"Passive", desc:"+1 Acc & Dmg on Counter; +10 DS if using shield. (doesn't stack with Masterful)"},
+          {name:"Deflect",                cost:"4 Stam + Guard Stance", desc:"3-space line deflects Projectiles to Glancing; Block/Dodge → Reflect (1 Stam). Shield required."},
+          {name:"Practiced Stance",        cost:"4 Stam / 2 upkeep", desc:"+1 Accuracy & Primary Damage."},
+          {name:"Clairvoyance",            cost:"1 Action (2 Stam/attack)", desc:"Advantage on next attack phase."},
+          {name:"Unarmored Style",         cost:"Passive (No Armor)", desc:"+2 Parry; Upkeep Phase start → regain 1 Vigor dice Stamina."},
+        ],
+      },
+      master:{
+        training:{name:"Master Martial Training", effect:"statBonus", key:"Stamina", value:5, bonus:"+1 to stat effectiveness of all attack enhancers.", desc:"+5 Max Stamina. Attack Enhancers gain +1 to their stat effectiveness."},
+        techniques:[
+          {name:"Master Brawler",         cost:"Passive", desc:"Fists: 1d10+STR; DEX for CC saves; choose fighting style (+1 Acc/Dmg or Knockback 1)."},
+          {name:"Paralyzing Strike",       cost:"3 Actions", desc:"Fist: hit + dmg → Str vs Vig → Paralyzed 1 round."},
+          {name:"Flicker Jabs",           cost:"8 Stamina", desc:"+6 Accuracy. Fist weapons. Attack Enhancer."},
+          {name:"Pro Wrestler",           cost:"Passive", desc:"Grab with Counter Attacks; Grabs deal full Unarmed dmg; no movement penalty while grappling."},
+          {name:"Bull's Charge",          cost:"2 Actions + 8 Stam", desc:"Move 60ft then Attack; hit + dmg → Str vs Vig → Prone."},
+          {name:"Surgical Strikes",       cost:"8 Stamina", desc:"+2 Accuracy + Pierce quality. Attack Enhancer."},
+          {name:"CQC Mastery",            cost:"Passive", desc:"CQC weapon proficiency; learn/slot CQC Techniques at +2 slot cost."},
+          {name:"Marksmanship Mastery",   cost:"Passive", desc:"Marksmanship proficiency; learn/slot Marksman Techniques at +2 slot cost."},
+          {name:"Disciplined Dodge",      cost:"4 Stamina", desc:"+4 Parry."},
+          {name:"Disciplined Movement",   cost:"Passive", desc:"+2 Base Movement Speed."},
+          {name:"Storm of Blades",        cost:"2-3 Actions", desc:"Throw without Parry at half range; 3rd Action for second throw. No enhancers."},
+          {name:"Bold Stance",            cost:"4 Stamina", desc:"+1 Reach; hit + dmg → Str vs Vig → Prone. Two-Handed. Attack Enhancer."},
+          {name:"Pavise",                cost:"8 Stamina", desc:"After dmg rolled → turn attack phase into Glancing Blows. 2-round CD. Requires Shield Master + Shield."},
+          {name:"Masterful Riposte",      cost:"Passive", desc:"+2 Acc & Dmg on Counter; +10 DS if using shield. (doesn't stack with Riposte)"},
+          {name:"Perfected Stance",       cost:"6 Stam / 2 upkeep", desc:"+2 Accuracy, Primary Damage & Parry."},
+          {name:"Master Interruptor",     cost:"Passive", desc:"+2 Primary Damage & Accuracy on AoO/Counter. (doesn't stack with Interruptor)"},
+          {name:"Adrenaline Surge",       cost:"16 Stamina", desc:"Immediately gain 1 extra Action."},
+          {name:"Smokescreen",           cost:"1 Action", desc:"Enter Stealth at start of combat or impose Disadvantage on next defensive phase (2 Stam/attacker)."},
+          {name:"Perfected Unarmored Style", cost:"Passive (No Armor)", desc:"+3 Parry; 2 self-buffs on 1 Concentration slot (master+adept only); Upkeep Phase → regain 1 Vigor dice Stamina."},
+        ],
+      },
+    },
+  },
+  {
+    id:"tactics", name:"Tactics", type:"physical",
+    desc:"Command and CC. Master perk: Tactical Genius, Perfect Positioning, or Outnumbered Positioning.",
+    masterPerks:[
+      {name:"Tactical Genius",        desc:"Cast 1 Tactics buff as Free Action per turn (+2 Stamina cost)."},
+      {name:"Perfect Positioning",    desc:"Gain 1 stack of Stability at start of Upkeep Phase for free."},
+      {name:"Outnumbered Positioning",desc:"When attacked, redirect first attack to a nearby enemy (once per defensive phase, 4 Stam)."},
+    ],
+    tiers:{
+      novice:{
+        training:{name:"Novice Tactical Training", effect:"ccBonus", value:1, desc:"+1 to CC application rolls and Target Number to Break Free from your CCs."},
+        techniques:[
+          {name:"Crude Tactical Strike",  cost:"4 Stamina", desc:"+1 Accuracy & +1 Primary Damage. Attack Enhancer."},
+          {name:"Crude Defense Tactics",  cost:"1 Action",  desc:"Allies in 10ft radius get +X DS (X = allies in range, max +4)."},
+          {name:"Hamstring Attack",       cost:"2 Stamina", desc:"HP dmg → Root until target's next turn. Attack Enhancer."},
+          {name:"Crude Mending",          cost:"2 Stam (Interact)", desc:"5ft radius: cure 1 negative condition + heal 1 Vigor dice."},
+          {name:"Crude Warhorn",          cost:"2 Stam (Interact)", desc:"Heal 1 Vigor dice + give DS equal to half healed. Up to ½ Vigor range."},
+          {name:"Defensive Frontliner",   cost:"2 Stamina (Free)", desc:"Create 5ft Guard aura."},
+          {name:"Phalanx",               cost:"2 Stam (Free)", desc:"Shield: impose Disadvantage on attack targeting ally within 5ft. Guard ability."},
+        ],
+      },
+      adept:{
+        training:{name:"Adept Tactical Training", effect:"ccBonus", value:2, bonus:"CC landing inflicts Rend.", desc:"+2 to CC rolls and Break Free TN. Successful CC inflicts Rend."},
+        techniques:[
+          {name:"Tactical Strike",      cost:"4 Stamina", desc:"+2 Accuracy & +2 Primary Damage. Attack Enhancer."},
+          {name:"Attack Tactics",       cost:"1 Action",  desc:"Allies 15ft: +X Primary Damage for their next round (X = allies, max +4)."},
+          {name:"Defense Tactics",      cost:"1 Action",  desc:"Allies 15ft: +1d4×X DS (X = allies up to 4)."},
+          {name:"Speed Tactics",        cost:"1 Action",  desc:"Allies 15ft: +X Movement Speed for 1 turn (X = allies, max +4)."},
+          {name:"Attack Formation",     cost:"4 Stam + Action / 2 upkeep", desc:"15ft Banner aura: allies inside get +1 Primary Damage."},
+          {name:"Defense Formation",    cost:"4 Stam + Action / 2 upkeep", desc:"15ft Banner aura: allies inside get +1 Parry."},
+          {name:"Reactive Defense",     cost:"4 Stamina", desc:"Turn AoE dmg targeting you and nearby allies (5ft) into Glancing Blows. Shield required."},
+          {name:"Rallying Cry",         cost:"1 Action",  desc:"Command 1 ally (20ft) to Attack; HP dmg → 10 DS for them."},
+          {name:"No Quarter",           cost:"4 Stam + Action", desc:"Command up to 2 allies (10ft) to immediately Step."},
+          {name:"Marching Orders",      cost:"4 Stam + Action", desc:"Move + 1 ally within 10ft moves too (½ movement)."},
+          {name:"Defiant Stand",        cost:"4 Stam + Action", desc:"Grant up to 2 allies (5ft, including self) 1 Stability stack."},
+          {name:"Together we Stand",    cost:"4 Stam + Action", desc:"Command up to 2 allies (10ft, including self) to enter Guard Stance."},
+          {name:"Gallop",               cost:"1-4 Stamina", desc:"Mount's Movement Speed +1-4 based on Stamina spent."},
+          {name:"Expert Cavalier",      cost:"Free Action", desc:"Guard your mount for free any time it is targeted."},
+          {name:"Backbreaker",          cost:"4 Stamina", desc:"HP dmg → Str vs Vig → Prone. Attack Enhancer."},
+          {name:"Find the Gap",         cost:"4 Stam + Action", desc:"Target within 10 spaces → Fumble."},
+          {name:"Mending",              cost:"4 Stam (Interact)", desc:"10ft radius: cure 2 conditions + heal 2 Vigor dice."},
+          {name:"Warhorn",              cost:"4 Stam (Interact)", desc:"Heal 2 Vigor dice + DS = half healed. Up to ½ Vigor range."},
+          {name:"Dismantle",            cost:"4 Stam + Action (4 more/extra)", desc:"Dispel a Physical Augment. Range: 10 spaces."},
+        ],
+      },
+      master:{
+        training:{name:"Master Tactical Training", effect:"ccBonus", value:3, bonus:"CC landing deals STR damage to target's Stamina.", desc:"+3 to CC rolls and Break Free TN. CC landing deals STR damage to Stamina."},
+        techniques:[
+          {name:"Masterful Tactical Strike",  cost:"8 Stamina", desc:"+2 Accuracy + True Hit. Attack Enhancer."},
+          {name:"Spellbreaker",               cost:"Passive",   desc:"Use Vigor to Break Free from Magical Saves; Advantage on Magical Saves."},
+          {name:"Improved Attack Tactics",    cost:"Auto Pre-Battle + Action", desc:"Allies 15ft: +X Primary Dmg for next round; bonus added to initiative."},
+          {name:"Improved Defense Tactics",   cost:"Auto Pre-Battle + Action", desc:"Allies 15ft: +1d6×X DS (X = allies up to 4). Auto-cast Pre-Battle."},
+          {name:"Improved Speed Tactics",     cost:"Auto Pre-Battle + Action", desc:"Allies 15ft: +X Movement for 1 turn. Auto-cast Pre-Battle."},
+          {name:"Advanced Positioning Tactics",cost:"Auto Pre-Battle", desc:"Freely reposition ally initiatives among one another."},
+          {name:"Ambush Tactics",             cost:"8 Stam + Action", desc:"Allies 15ft: next attack phase is Unguardable. Can be Pre-Battle."},
+          {name:"Masterful Attack Formation", cost:"6 Stam + Action / 3 upkeep", desc:"20ft Banner aura: allies get +2 Primary Damage & Accuracy."},
+          {name:"Masterful Defense Formation",cost:"6 Stam + Action / 3 upkeep", desc:"20ft Banner aura: allies get +2 Parry & Physical Resistance."},
+          {name:"Rallying Roar",              cost:"1 Action",  desc:"Command up to 3 allies (30ft) to Attack; HP dmg → 10 DS for them."},
+          {name:"Advanced Marching Orders",   cost:"6 Stam + Action", desc:"Move + 3 allies within 10ft move too (½ movement)."},
+          {name:"Forward Momentum",           cost:"6 Stam + Action", desc:"Move + 3 allies within 15ft move too (full movement)."},
+          {name:"Hold the Line",              cost:"6 Stam + Action", desc:"Grant up to 4 allies (15ft, including self) 1 Stability stack."},
+          {name:"Walking Fortress",           cost:"8 Stamina", desc:"If guarded ally's protection is bypassed, turn that attack into Glancing Blows."},
+          {name:"Galeforce",                  cost:"16 Stamina", desc:"After a kill, take another turn + reset MAP. 10-round CD."},
+          {name:"Mending Salve",              cost:"6 Stam (Interact)", desc:"15ft radius: cure 2 conditions + heal 3 Vigor dice."},
+          {name:"Pristine Warhorn",           cost:"6 Stam (Interact)", desc:"Heal 3 Vigor dice + DS = half healed. Up to ½ Vigor range."},
+          {name:"Masterful Dismantle",        cost:"6 Stam + Action (6 more/extra)", desc:"Dispel Physical or Magical Augments; target multiple units. Up to 4 casts. Range: 10 spaces."},
+        ],
+      },
+    },
+  },
+  {
+    id:"savagery", name:"Savagery", type:"physical",
+    desc:"Primal berserker. Master perk: Primal Mass, Warrior's Ichor, or Savage Fighting.",
+    masterPerks:[
+      {name:"Primal Mass",    desc:"Use Vigor instead of Strength for melee attack damage."},
+      {name:"Warrior's Ichor",desc:"When you attack and deal damage, transfer the last negative condition applied to you onto them."},
+      {name:"Savage Fighting",desc:"Parry bonuses from Unarmored Fighting also add to Primary Damage."},
+    ],
+    tiers:{
+      novice:{
+        training:{name:"Novice Savagery Training", effect:"statBonus", key:"HP", value:5, desc:"+5 Maximum Health."},
+        techniques:[
+          {name:"Unflinching",       cost:"4 Stamina (passive slot)", desc:"+2 to Breaking Free from physical CC."},
+          {name:"Crude Savage Blow", cost:"4 Stamina", desc:"+2 Primary Damage. Attack Enhancer."},
+          {name:"Crude Recovery",    cost:"2 Stam (Interact)", desc:"Heal 1 Vigor dice + DS = amount healed."},
+          {name:"Red Rust",          cost:"4 HP (Interact)", desc:"Enchant 1 weapon: HP dmg → 1 Bleed. Leaves 1 Bleed on self."},
+          {name:"Crude Barbarism",   cost:"Passive (No Armor)", desc:"+1 Parry while wearing no armor."},
+        ],
+      },
+      adept:{
+        training:{name:"Adept Savagery Training", effect:"statBonus", key:"HP", value:5, bonus:"Blood Boil feat + Counter Attack on HP damage even after Block/Dodge.", desc:"+5 Max Health + Blood Boil feat; Counter Attack after any HP damage even after Block/Dodge."},
+        techniques:[
+          {name:"Rage",              cost:"4 Stam / 2 upkeep", desc:"No Armor only. Dmg becomes Glancing Blows; +1 Dmg per 10 missing HP (max +3). +2 penalty to all ability costs."},
+          {name:"Recovery",          cost:"4 Stam (Interact)", desc:"Heal 2 Vigor dice + DS = amount healed."},
+          {name:"Savage Blow",       cost:"4 Stamina", desc:"+3 Primary Damage. Attack Enhancer."},
+          {name:"Unbowed",           cost:"4 Stamina (passive slot)", desc:"+2 Breaking Free + Advantage on physical CC breaks."},
+          {name:"Ring of Pain",      cost:"4 Stam (Interact)", desc:"4×4 aura totem (10 HP): all units inside get +1 Crit Rate; taking dmg → 1 Bleed."},
+          {name:"Terrifying Fury",   cost:"4 Stam + Action", desc:"After killing blow: 1 enemy 10ft → Str vs Wil → Feared. Once per round."},
+          {name:"Sanguine Edge",     cost:"6 HP (Interact)", desc:"Enchant 1 weapon: HP dmg → 2 Bleed. Leaves 2 Bleed on self."},
+          {name:"Barbarism",         cost:"Passive (No Armor)", desc:"+2 Parry; Upkeep Phase → regain 1 Vigor dice Health."},
+        ],
+      },
+      master:{
+        training:{name:"Master Savagery Training", effect:"statBonus", key:"HP", value:5, bonus:"Lifesteal: on HP damage hit, heal ½ dmg dealt (once per round).", desc:"+5 Max Health. On HP damage hit → heal ½ damage dealt (once per round)."},
+        techniques:[
+          {name:"Bloodrage",          cost:"6 Stam / 3 upkeep", desc:"No Armor only. Dmg becomes Glancing Blows; +1 Dmg per 10 missing HP (max +5). +4 penalty to all ability costs."},
+          {name:"Healthy Recovery",   cost:"6 Stam (Interact)", desc:"Heal 3 Vigor dice + DS = amount healed."},
+          {name:"Heavy Savage Blow",  cost:"4 Stamina", desc:"+4 Primary Damage. Attack Enhancer."},
+          {name:"Unbroken",           cost:"4 Stamina (passive slot)", desc:"+4 Breaking Free + Advantage on physical CC breaks."},
+          {name:"Devour",             cost:"6 Stamina", desc:"After killing blow: heal 1 Vigor dice Health. Once per round."},
+          {name:"Ring of Torment",    cost:"4 Stam (Interact)", desc:"6×6 aura totem (20 HP): all units +2 Crit Rate; taking dmg → 2 Bleed."},
+          {name:"Dreadful Fury",      cost:"6 Stam + Action", desc:"After killing blow: all enemies 10ft → Str vs Wil → Feared. Once per round."},
+          {name:"Crimson Steel",      cost:"8 HP (Interact)", desc:"Enchant 1 weapon: HP dmg → 3 Bleed. Leaves 3 Bleed on self."},
+          {name:"Raging Barbarism",   cost:"Passive (No Armor)", desc:"+3 Parry; 2 self-buffs on 1 Concentration slot; Upkeep Phase → regain 1 Vigor dice Health."},
+          {name:"Blood Fountain",     cost:"Passive (Interact to drink)", desc:"6×6 aura totem (30 HP): 50% of dmg dealt inside fills totem; allies drink for 20 HP."},
+        ],
+      },
+    },
+  },
+  // ── MAGIC ──────────────────────────────────────────────────────────────────
+  {
+    id:"spellcrafting", name:"Spellcrafting", type:"magic",
+    desc:"Augment spells. Master perk: Blessing of Mana, Find Familiar, or Wizard.",
+    masterPerks:[
+      {name:"Blessing of Mana", desc:"50% chance (d20 ≥11) after casting to get Empowered status — next spell costs 0 Mana. 1-round CD."},
+      {name:"Find Familiar",    desc:"Bond with a non-swarm summon; Free Action to command it; control range 1 mile."},
+      {name:"Wizard",           desc:"Learn spells from other schools using Spellcrafting for scaling (+2 slot cost penalty). No Training spells."},
+    ],
+    tiers:{
+      novice:{ training:{name:"Novice Spellcrafting Training", effect:"none", desc:"Access to Novice-tier Magic Techniques."}, techniques:[] },
+      adept:{ training:{name:"Adept Spellcrafting Training", effect:"none", desc:"Access to Adept-tier Magic Techniques."}, techniques:[] },
+      master:{ training:{name:"Master Spellcrafting Training", effect:"none", desc:"Access to Master-tier Magic Techniques."}, techniques:[] },
+    },
+  },
+  {
+    id:"anima", name:"Anima Magic", type:"magic",
+    desc:"Fire, Water, Earth, Air & Lightning. Master perk: Energy, Domination, or Magnitude (Elemental Soul).",
+    masterPerks:[
+      {name:"Energy",    desc:"+5 Mana pool. Gain the Redirect spell."},
+      {name:"Domination",desc:"Active spells cost 1 less Mana/round to upkeep. Touch Magic with Anima spells."},
+      {name:"Magnitude", desc:"Attune to one element (Infernal/Aqua/Terra/Vacuum/Thunderous Soul). Cannot cast other element types."},
+    ],
+    tiers:{
+      novice:{ training:{name:"Novice Anima Training", effect:"none", desc:"Access to Novice-tier Anima spells."}, techniques:[] },
+      adept:{ training:{name:"Adept Anima Training", effect:"none", desc:"Access to Adept-tier Anima spells."}, techniques:[] },
+      master:{ training:{name:"Master Anima Training", effect:"none", desc:"Access to Master-tier Anima spells."}, techniques:[] },
+    },
+  },
+  {
+    id:"void", name:"Void Magic", type:"magic",
+    desc:"Telekinesis, teleportation & gravity. Master perk: Arcane Spirit, Arcane Order, or Arcane Chaos.",
+    masterPerks:[
+      {name:"Arcane Spirit", desc:"+5 Mana pool. Gain Drifter's Sheathe spell."},
+      {name:"Arcane Order",  desc:"Active spells cost 1 less Mana/round to upkeep. Touch Magic with Void spells."},
+      {name:"Arcane Chaos",  desc:"+2 spaces to Teleportation, Forced Movement, Range Enhancers, and effective Void spell range."},
+    ],
+    tiers:{
+      novice:{ training:{name:"Novice Void Training", effect:"none", desc:"Access to Novice-tier Void spells."}, techniques:[] },
+      adept:{ training:{name:"Adept Void Training", effect:"none", desc:"Access to Adept-tier Void spells."}, techniques:[] },
+      master:{ training:{name:"Master Void Training", effect:"none", desc:"Access to Master-tier Void spells."}, techniques:[] },
+    },
+  },
+  {
+    id:"holy", name:"Holy Magic", type:"magic",
+    desc:"Healing, wards & holy damage. Master perk: Holy Might, Angelic Radiance, or Divine Mind.",
+    masterPerks:[
+      {name:"Holy Might",      desc:"+5 Mana pool. Gain Mitotic Regeneration spell."},
+      {name:"Angelic Radiance",desc:"Touch Magic with Holy spells. Create CQC/Marksmanship weapons via Manifest Relic spells."},
+      {name:"Divine Mind",     desc:"Spend a 3rd Action on a holy cast to empower it — increased magnitude and up to 4 targets."},
+    ],
+    tiers:{
+      novice:{ training:{name:"Novice Holy Training", effect:"none", desc:"Access to Novice-tier Holy spells."}, techniques:[] },
+      adept:{ training:{name:"Adept Holy Training", effect:"none", desc:"Access to Adept-tier Holy spells."}, techniques:[] },
+      master:{ training:{name:"Master Holy Training", effect:"none", desc:"Access to Master-tier Holy spells."}, techniques:[] },
+    },
+  },
+  {
+    id:"dark", name:"Dark Magic", type:"magic",
+    desc:"Curses, DoTs & necromancy. Master perk: Sorcerer, Hexer, or Necromancer.",
+    masterPerks:[
+      {name:"Sorcerer",    desc:"+5 Mana pool. Gain the Empathy spell."},
+      {name:"Hexer",       desc:"Active spells cost 1 less Mana/round upkeep. Touch Magic with Elder spells."},
+      {name:"Necromancer", desc:"All summons gain 5 DS on summon; summon attacks deal +1d6 Dark Secondary damage."},
+    ],
+    tiers:{
+      novice:{ training:{name:"Novice Dark Training", effect:"none", desc:"Access to Novice-tier Dark spells."}, techniques:[] },
+      adept:{ training:{name:"Adept Dark Training", effect:"none", desc:"Access to Adept-tier Dark spells."}, techniques:[] },
+      master:{ training:{name:"Master Dark Training", effect:"none", desc:"Access to Master-tier Dark spells."}, techniques:[] },
+    },
+  },
+  {
+    id:"figment", name:"Figment Magic", type:"magic",
+    desc:"Illusions & mind control. Master perk: Shadow Thief, Diplomat, or Conqueror.",
+    masterPerks:[
+      {name:"Shadow Thief", desc:"+5 Mana pool. Gain Shadow God's Fingers spell."},
+      {name:"Diplomat",     desc:"Cast Figment spells stealthily (3 Actions) — opponent cannot perform defensive action."},
+      {name:"Conqueror",    desc:"Figment debuffs become 10ft AoEs; +1 magnitude to all Figment spells (+1 Stack where applicable)."},
+    ],
+    tiers:{
+      novice:{ training:{name:"Novice Figment Training", effect:"none", desc:"Access to Novice-tier Figment spells."}, techniques:[] },
+      adept:{ training:{name:"Adept Figment Training", effect:"none", desc:"Access to Adept-tier Figment spells."}, techniques:[] },
+      master:{ training:{name:"Master Figment Training", effect:"none", desc:"Access to Master-tier Figment spells."}, techniques:[] },
+    },
+  },
+  {
+    id:"thaumaturgy", name:"Thaumaturgy", type:"magic",
+    desc:"Constructs, glyphs & runic weapons. Master perk: Thaumic Battery, Thaumic Might, or Thaumic Power.",
+    masterPerks:[
+      {name:"Thaumic Battery", desc:"+5 Mana pool. Gain Replicate Magic Item spell."},
+      {name:"Thaumic Might",   desc:"Successful Thaumic weapon hits generate DS = weapon's damage dice. Create CQC/Marksman weapons via Manifest Weapons spells."},
+      {name:"Thaumic Power",   desc:"2 self-buffs on 1 Concentration slot (master+adept only); +2 penalty to all ability costs while active."},
+    ],
+    tiers:{
+      novice:{ training:{name:"Novice Thaumaturgy Training", effect:"none", desc:"Access to Novice-tier Thaumaturgy spells."}, techniques:[] },
+      adept:{ training:{name:"Adept Thaumaturgy Training", effect:"none", desc:"Access to Adept-tier Thaumaturgy spells."}, techniques:[] },
+      master:{ training:{name:"Master Thaumaturgy Training", effect:"none", desc:"Access to Master-tier Thaumaturgy spells."}, techniques:[] },
+    },
+  },
+  {
+    id:"nature", name:"Nature Magic", type:"magic",
+    desc:"Summons, terrain & druidic power. Master perk: Druidcraft, Nature's Wrath, or Soulbeast.",
+    masterPerks:[
+      {name:"Druidcraft",    desc:"+5 Mana pool. Gain the Polymorph spell."},
+      {name:"Nature's Wrath",desc:"Active spells cost 1 less Mana/round upkeep. Touch Magic with Nature spells."},
+      {name:"Soulbeast",     desc:"Merge with a bonded Nature animal (takes Concentration slot); all attacks count as Flanking while merged."},
+    ],
+    tiers:{
+      novice:{ training:{name:"Novice Nature Training", effect:"none", desc:"Access to Novice-tier Nature spells."}, techniques:[] },
+      adept:{ training:{name:"Adept Nature Training", effect:"none", desc:"Access to Adept-tier Nature spells."}, techniques:[] },
+      master:{ training:{name:"Master Nature Training", effect:"none", desc:"Access to Master-tier Nature spells."}, techniques:[] },
+    },
+  },
+];
+
+// ─── ITEMS ───────────────────────────────────────────────────────────────────
+const WEAPONS_DATA = {
+  "Simple Melee":[
+    {name:"Light Club",dmg:"Str+d4",props:"-",minStr:"d4",wt:3,cost:5},
+    {name:"Heavy Club",dmg:"Str+d6",props:"Two-Handed",minStr:"d6",wt:5,cost:10},
+    {name:"Mace",dmg:"Str+d8",props:"-",minStr:"d8",wt:3,cost:30},
+    {name:"Maul",dmg:"Str+d10",props:"Two-Handed",minStr:"d10",wt:5,cost:50},
+    {name:"Shortsword",dmg:"Str+d6",props:"Finesse",minStr:"d6",wt:3,cost:30},
+    {name:"Broadsword",dmg:"Str+d8",props:"Versatile",minStr:"d8",wt:4,cost:40},
+    {name:"Spear",dmg:"Str+d6",props:"Two-Handed, Reach+1",minStr:"d8",wt:5,cost:40},
+    {name:"Caestus",dmg:"Str+d4",props:"Glove",minStr:"d4",wt:1,cost:30},
+    {name:"Wand",dmg:"Str",props:"Catalytic",minStr:"d4",wt:2,cost:60},
+    {name:"Staff",dmg:"Str+d4",props:"Versatile, Catalytic, Parry+1",minStr:"d4",wt:4,cost:80},
+  ],
+  "CQC Melee":[
+    {name:"Battleaxe",dmg:"Str+d8",props:"Finesse, Dmg+1",minStr:"d8",wt:3,cost:60},
+    {name:"Greataxe",dmg:"Str+d10",props:"Versatile, Dmg+1",minStr:"d10",wt:4,cost:100},
+    {name:"Labrys",dmg:"Str+d12",props:"Two-Handed, Dmg+1",minStr:"d12",wt:5,cost:120},
+    {name:"Arming Sword",dmg:"Str+d6",props:"Finesse, Acc+1",minStr:"d6",wt:3,cost:60},
+    {name:"Longsword",dmg:"Str+d8",props:"Versatile, Acc+1",minStr:"d8",wt:4,cost:100},
+    {name:"Greatsword",dmg:"Str+d12",props:"Two-Handed, Acc+1",minStr:"d12",wt:5,cost:120},
+    {name:"Scimitar",dmg:"Str+d6",props:"Finesse, Crit+2",minStr:"d6",wt:3,cost:60},
+    {name:"Rapier",dmg:"Str+d6",props:"Finesse, AP 2",minStr:"d6",wt:3,cost:60},
+    {name:"Dagger",dmg:"Str+d4",props:"Finesse, Deadly, Crit+2",minStr:"d4",wt:1,cost:60},
+    {name:"Halberd",dmg:"Str+d8",props:"Two-Handed, Reach+1, Acc+1",minStr:"d12",wt:6,cost:135},
+  ],
+  "Simple Ranged":[
+    {name:"Shortbow",dmg:"Str+d6",props:"Bow(10)",minStr:"d6",wt:3,cost:50},
+    {name:"Light Crossbow",dmg:"2d6",props:"Trigger(8), Ammo(3)",minStr:"d6",wt:3,cost:50},
+    {name:"Pistol",dmg:"2d6",props:"Trigger(8), Ammo(2), Gun",minStr:"d4",wt:3,cost:60},
+    {name:"Musket",dmg:"2d10",props:"Two-Handed, Trigger(10), Ammo(2), Gun",minStr:"d6",wt:5,cost:120},
+    {name:"Knife",dmg:"Str+d4",props:"Throwing(6), Crit+2",minStr:"d4",wt:1,cost:30},
+    {name:"Handaxe",dmg:"Str+d6",props:"Throwing(6)",minStr:"d6",wt:1,cost:30},
+  ],
+  "Marksman Ranged":[
+    {name:"Composite Bow",dmg:"Str+d8",props:"Bow(12), Acc+1",minStr:"d8",wt:4,cost:100},
+    {name:"Longbow",dmg:"Str+d12",props:"Bow(15), Acc+1",minStr:"d12",wt:5,cost:120},
+    {name:"Revolver",dmg:"2d6",props:"Trigger(10), Ammo(6), Gun, AP 2",minStr:"d4",wt:3,cost:90},
+    {name:"Rifle",dmg:"2d10",props:"Two-Handed, Trigger(15), Ammo(6), Gun, AP 2",minStr:"d8",wt:5,cost:180},
+    {name:"Javelin",dmg:"Str+d6",props:"Throwing(10)",minStr:"d8",wt:3,cost:60},
+    {name:"Shuriken",dmg:"Str+d4",props:"Throwing(8), Crit+2",minStr:"d4",wt:1,cost:60},
+  ],
+};
+const ARMORS_DATA=[
+  {name:"Clothes",bonus:"-",type:"Light",armor:0,parry:0,minStr:"d4",wt:1,cost:5},
+  {name:"Padded Clothes",bonus:"Parry+1",type:"Light",armor:0,parry:1,minStr:"d4",wt:2,cost:50},
+  {name:"Gambeson",bonus:"Parry+1, Armor+1",type:"Light",armor:1,parry:1,minStr:"d6",wt:3,cost:100},
+  {name:"Brigandine",bonus:"Parry+2, Armor+1",type:"Light",armor:1,parry:2,minStr:"d6",wt:4,cost:250},
+  {name:"Lamellar",bonus:"Parry+3, Armor+2",type:"Light",armor:2,parry:3,minStr:"d8",wt:5,cost:300},
+  {name:"Bodyglove",bonus:"Parry+3, Move+1",type:"Light",armor:0,parry:3,minStr:"d4",wt:1,cost:300},
+  {name:"Hauberk",bonus:"Armor+4",type:"Heavy",armor:4,parry:0,minStr:"d6",wt:4,cost:50},
+  {name:"Scale",bonus:"Armor+6",type:"Heavy",armor:6,parry:0,minStr:"d8",wt:6,cost:150},
+  {name:"Half Plate",bonus:"Armor+8, CritRes+1",type:"Heavy",armor:8,parry:0,minStr:"d10",wt:8,cost:250},
+  {name:"Plate Armor",bonus:"Armor+10, CritRes+2",type:"Heavy",armor:10,parry:0,minStr:"d12",wt:10,cost:400},
+];
+const SHIELDS_DATA=[
+  {name:"Buckler",bonus:"Parry+1",parry:1,minStr:"d6",wt:2,cost:60},
+  {name:"Heater Shield",bonus:"Parry+2",parry:2,minStr:"d10",wt:4,cost:100},
+  {name:"Greatshield",bonus:"Parry+3",parry:3,minStr:"d12",wt:6,cost:250},
+];
+const ALCHEMICAL_DATA=[
+  {name:"Health Serum",desc:"Heals 3d4+10 HP (3 uses)",cost:100},
+  {name:"Ash Incense",desc:"Restores 3d4+10 Stamina (3 uses)",cost:100},
+  {name:"Dust Potion",desc:"Restores 3d4+10 Mana (3 uses)",cost:100},
+  {name:"Stoneskin Serum",desc:"Grants 20 Damage Shields (3 uses)",cost:100},
+  {name:"Warding Incense",desc:"Ward+4 for 2 rounds (3 uses)",cost:100},
+  {name:"Poison",desc:"Apply Poison(4) to weapon for 2 rounds (3 uses)",cost:100},
+  {name:"Shrapnel Grenade",desc:"4d6 Physical + Bleed(4) in 10ft (2 uses)",cost:100},
+  {name:"Incendiary Grenade",desc:"2d6 Fire + Searing(2) in 10ft (2 uses)",cost:100},
+  {name:"Gas Grenade",desc:"Poison(2) in 10ft, lingers 2 rounds (2 uses)",cost:100},
+];
+const CATALYSTS_DATA=[
+  {name:"Elfire",dmg:"Mind+d6 Fire",props:"Searing(1)",minMind:"d6",cost:100},
+  {name:"Archfire",dmg:"Mind+d10 Fire",props:"Searing(2)",minMind:"d10",cost:250},
+  {name:"Elwater",dmg:"Mind+d6 Water",props:"Stamina Drain(1d6)",minMind:"d6",cost:100},
+  {name:"Elwind",dmg:"Mind+d6 Wind",props:"Accuracy+1",minMind:"d6",cost:100},
+  {name:"Archwind",dmg:"Mind+d10 Wind",props:"Accuracy+2",minMind:"d10",cost:250},
+  {name:"Elthunder",dmg:"Mind+d6 Lightning",props:"Can Crit, Crit+2",minMind:"d6",cost:100},
+  {name:"Faint Light",dmg:"Mind+d6 Holy",props:"Health Drain(Holy)",minMind:"d6",cost:100},
+  {name:"Radiant Light",dmg:"Mind+d10 Holy",props:"Health Drain(Holy)",minMind:"d10",cost:250},
+  {name:"Dark Spikes",dmg:"Mind+d4 Dark",props:"Cloak(5ft)",minMind:"d6",cost:100},
+  {name:"Shadow Lance",dmg:"Mind+d8 Dark",props:"Cloak(5ft)",minMind:"d10",cost:250},
+];
+const JEWELRY_DATA=[
+  {name:"Ring of Dexterity",bonus:"Accuracy+1",cost:250},
+  {name:"Ring of Strength",bonus:"Primary Damage+1",cost:250},
+  {name:"Ring of Mind",bonus:"Spell Power+1",cost:250},
+  {name:"Ring of Magic Resistance",bonus:"Ward+3",cost:250},
+];
+
+// ─── STEPS ───────────────────────────────────────────────────────────────────
+const STEPS=[
+  {id:"identity",   label:"Identity",   icon:"⚔"},
+  {id:"role",       label:"Role",       icon:"🛡"},
+  {id:"boon",       label:"Boon",       icon:"✨"},
+  {id:"attributes", label:"Attributes", icon:"💪"},
+  {id:"skills",     label:"Skills",     icon:"📖"},
+  {id:"equipment",  label:"Equipment",  icon:"🗡"},
+  {id:"summary",    label:"Summary",    icon:"📜"},
+];
+
+const ROLE_INFO={
+  Warrior:{icon:"🛡",desc:"Frontline tank. Redirect attacks, use Guard effects, high HP & armor."},
+  Assassin:{icon:"🗡",desc:"High accuracy & mobility. Eliminate targets, disengage before retaliation."},
+  Destroyer:{icon:"💥",desc:"Area damage dealer. Clear mobs and soften tanky enemies."},
+  Support:{icon:"💊",desc:"Backline healer & buffer. Keep allies alive and empowered."},
+  Disabler:{icon:"🔒",desc:"Crowd controller. Strip Poise, root enemies, enable assassins."},
+};
+
+// ─── SILVER COSTS ────────────────────────────────────────────────────────────
+const TIER_SILVER = {novice:50, adept:100, master:150};
+
+// ─── STAT BONUS CALC ─────────────────────────────────────────────────────────
+// Compute training bonuses ONLY from explicitly purchased trainings
+function getTrainingBonuses(purchasedTrainings) {
+  // purchasedTrainings: Set of "skillId:tier" strings
+  let bonuses = {HP:0, Stamina:0, Mana:0, Parry:0, PhysRes:0, PrimDmg:0, Acc:0};
+  for(const tree of SKILL_TREES) {
+    const tiers = ["novice","adept","master"];
+    for(const tier of tiers) {
+      if(!purchasedTrainings.has(`${tree.id}:${tier}`)) continue;
+      const training = tree.tiers[tier].training;
+      if(training.effect === "statBonus") {
+        bonuses[training.key] = (bonuses[training.key]||0) + training.value;
+      }
+      if(training.bonus) {
+        if(training.bonus.includes("Primary Damage") && training.bonus.includes("Accuracy")) {
+          bonuses.PrimDmg += 1; bonuses.Acc += 1;
+        }
+        if(training.bonus.includes("Parry") && training.bonus.includes("Physical Resistance")) {
+          bonuses.Parry += 1; bonuses.PhysRes += 1;
+        }
+      }
+    }
+  }
+  return bonuses;
+}
+
+// Compute total silver spent on skills (trainings + techniques)
+function calcSkillSilverSpent(skills, purchasedTrainings, techniques) {
+  let total = 0;
+  const tierList = ["novice","adept","master"];
+  for(const tree of SKILL_TREES) {
+    for(let ti=0; ti<3; ti++) {
+      const tier = tierList[ti];
+      const silverCost = TIER_SILVER[tier];
+      // Training cost
+      if(purchasedTrainings.has(`${tree.id}:${tier}`)) total += silverCost;
+      // Techniques cost
+      const techs = ((techniques[tree.id]||{})[tier])||[];
+      total += techs.length * silverCost;
+    }
+  }
+  return total;
+}
+
+// ─── MAIN APP ────────────────────────────────────────────────────────────────
+function App() {
+  const [step, setStep] = useState(0);
+  const [char, setChar] = useState({
+    name:"", race:"", age:"", location:"", appearance:"", personality:"", history:"",
+    role:"",
+    boon:null,
+    stats:{Strength:"d4",Dexterity:"d4",Vigor:"d4",Mind:"d4",Willpower:"d4"},
+    attrs:{HP:20,Stamina:10,Mana:0},
+    attrPointsUsed:0,
+    skills:{},             // {id: 0|1|2|3}
+    techniques:{},         // {skillId: {tier: [techName, ...]}}
+    purchasedTrainings:new Set(), // Set of "skillId:tier" strings
+    masterPerks:{},        // {skillId: perkName}
+    equipment:{weapon:null,offhand:null,armor:null,items:[],catalyst:null,jewelry:[]},
+    money:500,
+  });
+
+  const setC = (field, val) => setChar(c=>({...c,[field]:val}));
+
+  const trainBonuses = getTrainingBonuses(char.purchasedTrainings);
+  const skillSilverSpent = calcSkillSilverSpent(char.skills, char.purchasedTrainings, char.techniques);
+
+  // stat point budget
+  const stUsed = statPointsUsed(char.stats);
+  const stLeft = 6 - stUsed;
+
+  // attribute budget
+  const boonAP = char.boon?.name==="History of Discipline" ? 10 : 0;
+  const totalAP = 20 + boonAP;
+  const apLeft = totalAP - char.attrPointsUsed;
+
+  // skill point budget
+  const boonSP = char.boon?.name==="History of Discipline" ? 2 : 0;
+  const totalSP = 3 + boonSP;
+  const spUsed = Object.values(char.skills).reduce((t,v)=>t+v,0);
+  const spLeft = totalSP - spUsed;
+
+  // derived stats with bonuses
+  const finalHP      = char.attrs.HP + trainBonuses.HP;
+  const finalStamina = char.attrs.Stamina + trainBonuses.Stamina;
+  const finalMana    = char.attrs.Mana + (trainBonuses.Mana||0);
+  const baseParry    = calcParry(char.stats.Dexterity);
+  const armorParryB  = char.equipment.armor?.parry||0;
+  const shieldParryB = (char.equipment.offhand?.parry)||0;
+  const finalParry   = baseParry + armorParryB + shieldParryB + trainBonuses.Parry + (char.boon?.name==="Blessing of Power"?1:0);
+  const finalWard    = calcWard(char.stats.Willpower) + (char.boon?.name==="Blessing of Power"?1:0);
+  const armorBonus   = char.equipment.armor?.armor||0;
+  const finalArmor   = calcArmor(char.stats.Vigor) + armorBonus;
+
+  // Weapon bonuses (parse Acc+N and Dmg+N from props string)
+  const weaponAccBonus = (() => {
+    const m = char.equipment.weapon?.props?.match(/Acc\+(\d+)/);
+    return m ? parseInt(m[1]) : 0;
+  })();
+  const weaponDmgBonus = (() => {
+    const m = char.equipment.weapon?.props?.match(/Dmg\+(\d+)/);
+    return m ? parseInt(m[1]) : 0;
+  })();
+  const jewelryAccBonus = char.equipment.jewelry.reduce((t,j) => {
+    const m = j.bonus?.match(/Accuracy\+(\d+)/); return t + (m ? parseInt(m[1]) : 0);
+  }, 0);
+  const jewelryDmgBonus = char.equipment.jewelry.reduce((t,j) => {
+    const m = j.bonus?.match(/Primary Damage\+(\d+)/); return t + (m ? parseInt(m[1]) : 0);
+  }, 0);
+  const boonOffensive = char.boon?.name==="Blessing of Power" ? 1 : 0;
+  const accBonus  = trainBonuses.Acc + boonOffensive + weaponAccBonus + jewelryAccBonus;
+  const dmgBonus  = trainBonuses.PrimDmg + boonOffensive + weaponDmgBonus + jewelryDmgBonus;
+  const finalMeleeAcc = { die: char.stats.Dexterity, bonus: accBonus };
+  const finalMeleeDmg = { die: char.stats.Strength,  bonus: dmgBonus };
+
+  // equipment + skill money
+  const moneySpent = [
+    char.equipment.weapon?.cost||0,
+    char.equipment.offhand?.cost||0,
+    char.equipment.armor?.cost||0,
+    char.equipment.catalyst?.cost||0,
+    ...char.equipment.items.map(i=>i.cost),
+    ...char.equipment.jewelry.map(j=>j.cost),
+  ].reduce((a,b)=>a+b,0);
+  const moneyLeft = char.money - moneySpent - skillSilverSpent;
+
+  const canContinue = () => {
+    if(step===0) return char.name.trim().length>0;
+    if(step===1) return char.role!=="";
+    if(step===2) return char.boon!==null;
+    if(step===3) return stLeft>=0 && apLeft>=0;
+    if(step===4) return spUsed<=totalSP;
+    return true;
+  };
+
+  const derived = {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalMeleeAcc,finalMeleeDmg,trainBonuses,moneyLeft};
+
+  return (
+    <div style={{minHeight:"100vh",background:"linear-gradient(170deg,#f0ecf8 0%,#ede8f5 45%,#f4f0f8 100%)",color:"#1e1430",fontFamily:"'Palatino Linotype',Palatino,Georgia,serif",display:"flex",flexDirection:"column"}}>
+      <div style={{height:3,background:"linear-gradient(90deg,#3a1a5a,#4cc8e0 15%,#8b1a2a 35%,#c8a84a 50%,#8b1a2a 65%,#4cc8e0 85%,#3a1a5a)"}}/>
+      <header style={{borderBottom:"1px solid #c8b8e0",padding:"16px 32px",background:"linear-gradient(180deg,#2a1848 0%,#1e1038 100%)",display:"flex",alignItems:"center",gap:18,boxShadow:"0 4px 20px rgba(30,16,56,0.3)"}}>
+        <div style={{width:46,height:46,borderRadius:"50%",background:"linear-gradient(135deg,#2e1a52,#1e1038)",border:"1px solid rgba(76,200,224,0.4)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 0 14px rgba(76,200,224,0.2)",position:"relative"}}>
+          <div style={{position:"absolute",inset:4,borderRadius:"50%",border:"1px solid rgba(76,200,224,0.2)"}}/>
+          <span style={{fontSize:20,filter:"drop-shadow(0 0 5px rgba(76,200,224,0.6))"}}>⚙</span>
+        </div>
+        <div>
+          <div style={{fontSize:22,fontWeight:700,letterSpacing:"0.22em",background:"linear-gradient(135deg,#c8a84a,#edd880,#b89030,#f0d870)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>TSR 5.0</div>
+          <div style={{fontSize:9,color:"#9a88c0",letterSpacing:"0.4em",marginTop:2}}>IMPERIAL REGISTRY · CITIZEN DOSSIER</div>
+        </div>
+        <div style={{flex:1,height:1,background:"linear-gradient(90deg,transparent,rgba(76,200,224,0.25),transparent)",margin:"0 8px"}}/>
+        {char.name&&<div style={{textAlign:"right"}}>
+          <div style={{fontSize:9,color:"#9a88c0",letterSpacing:"0.2em",marginBottom:2}}>REGISTERED SUBJECT</div>
+          <div style={{fontSize:13,color:"#c8a84a",fontStyle:"italic",letterSpacing:"0.06em"}}>✦ {char.name}</div>
+        </div>}
+        <div style={{width:1,height:30,background:"rgba(76,200,224,0.2)",margin:"0 4px"}}/>
+        <div style={{textAlign:"right",opacity:0.7}}>
+          <div style={{fontSize:8,color:"#4cc8e0",letterSpacing:"0.2em"}}>CLEARANCE</div>
+          <div style={{fontSize:10,color:"#e05a6a",letterSpacing:"0.1em",fontWeight:700}}>LEVEL I</div>
+        </div>
+      </header>
+
+      <nav style={{display:"flex",borderBottom:"2px solid #d0c0e8",background:"rgba(255,255,255,0.6)",backdropFilter:"blur(6px)",overflowX:"auto",boxShadow:"0 2px 10px rgba(30,16,56,0.08)"}}>
+        {STEPS.map((s,i)=>(
+          <button key={s.id} onClick={()=>i<=step&&setStep(i)} style={{
+            flex:1,minWidth:72,padding:"10px 6px",border:"none",
+            background:i===step?"rgba(76,200,224,0.08)":"transparent",
+            borderBottom:i===step?"3px solid #4cc8e0":"3px solid transparent",
+            color:i===step?"#2a7a9a":i<step?"#7a5a9a":"#b8a8cc",
+            cursor:i<=step?"pointer":"default",
+            fontSize:10,letterSpacing:"0.1em",fontFamily:"inherit",
+            display:"flex",flexDirection:"column",alignItems:"center",gap:3,
+            transition:"color 0.15s,background 0.15s",
+          }}>
+            <span style={{fontSize:14}}>{s.icon}</span>
+            <span>{s.label.toUpperCase()}</span>
+            {i<step&&<span style={{fontSize:8,color:"#c8a84a"}}>◆</span>}
+          </button>
+        ))}
+      </nav>
+
+      <main style={{flex:1,maxWidth:960,width:"100%",margin:"0 auto",padding:"28px 20px",boxSizing:"border-box"}}>
+        {step===0 && <StepIdentity char={char} setC={setC}/>}
+        {step===1 && <StepRole char={char} setC={setC}/>}
+        {step===2 && <StepBoon char={char} setC={setC}/>}
+        {step===3 && <StepAttributes char={char} setChar={setChar} stLeft={stLeft} apLeft={apLeft} totalAP={totalAP} trainBonuses={trainBonuses} derived={derived}/>}
+        {step===4 && <StepSkills char={char} setChar={setChar} spLeft={spLeft} totalSP={totalSP} moneyLeft={moneyLeft} skillSilverSpent={skillSilverSpent}/>}
+        {step===5 && <StepEquipment char={char} setChar={setChar} moneyLeft={moneyLeft}/>}
+        {step===6 && <StepSummary char={char} derived={derived} totalSP={totalSP}/>}
+      </main>
+
+      {step<6&&(
+        <footer style={{borderTop:"2px solid #d0c0e8",padding:"14px 32px",display:"flex",justifyContent:"space-between",alignItems:"center",background:"rgba(255,255,255,0.7)",backdropFilter:"blur(6px)"}}>
+          <button onClick={()=>setStep(s=>Math.max(0,s-1))} disabled={step===0} style={btnS("sec")}>← Back</button>
+          <span style={{fontSize:9,color:"#a898c0",letterSpacing:"0.2em"}}>STEP {step+1} OF {STEPS.length}</span>
+          <button onClick={()=>setStep(s=>s+1)} disabled={!canContinue()} style={btnS("pri")}>{step===5?"View Summary →":"Continue →"}</button>
+        </footer>
+      )}
+      <div style={{height:3,background:"linear-gradient(90deg,#3a1a5a,#4cc8e0 15%,#8b1a2a 35%,#c8a84a 50%,#8b1a2a 65%,#4cc8e0 85%,#3a1a5a)"}}/>
+    </div>
+  );
+}
+
+// ─── STEP COMPONENTS ─────────────────────────────────────────────────────────
+function StepIdentity({char,setC}){
+  return(
+    <div>
+      <ST>Who Are You?</ST>
+      <p style={sub}>Fill in your character's basic details for the Social Character Sheet.</p>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:18,marginTop:20}}>
+        {[["Character Name *","name","e.g. Zora Aelia"],["Race","race","Human, Vanir, Vampire…"],["Age","age","e.g. 24"],["Location","location","Where do they live?"]].map(([label,key,ph])=>(
+          <div key={key}>
+            <Lbl>{label}</Lbl>
+            <input style={inp} value={char[key]||""} onChange={e=>setC(key,e.target.value)} placeholder={ph}/>
+          </div>
+        ))}
+      </div>
+      {[["Appearance","appearance","How others see your character…"],["Personality","personality","First impressions, notable habits…"],["History","history","Background before adventuring…"]].map(([label,key,ph])=>(
+        <div key={key} style={{marginTop:16}}>
+          <Lbl>{label}</Lbl>
+          <textarea style={{...inp,height:70,resize:"vertical"}} value={char[key]||""} onChange={e=>setC(key,e.target.value)} placeholder={ph}/>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function StepRole({char,setC}){
+  return(
+    <div>
+      <ST>Choose Your Role</ST>
+      <p style={sub}>Your role signals what to expect from you in combat and determines trial requirements at tier thresholds.</p>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginTop:20}}>
+        {ROLES.map(r=>{
+          const d=ROLE_INFO[r]; const sel=char.role===r;
+          return(
+            <button key={r} onClick={()=>setC("role",r)} style={{border:sel?"1px solid #c8a84a":"1px solid #cebee8",background:sel?"linear-gradient(135deg,#ede0ff,#e0d0ff)":"rgba(255,255,255,0.85)",color:"inherit",padding:"18px",cursor:"pointer",textAlign:"left",fontFamily:"inherit",borderRadius:3,transition:"all 0.2s"}}>
+              <div style={{fontSize:22,marginBottom:6}}>{d.icon}</div>
+              <div style={{fontWeight:700,fontSize:14,color:sel?"#2a1848":"#6a50a0",marginBottom:6,letterSpacing:"0.05em"}}>{r.toUpperCase()}</div>
+              <div style={{fontSize:11,color:sel?"#c8bca0":"#3a2a5a",lineHeight:1.5}}>{d.desc}</div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function StepBoon({char,setC}){
+  return(
+    <div>
+      <ST>Starting Boon</ST>
+      <p style={sub}>Every character receives one starting boon. Choose carefully — it shapes your entire career.</p>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginTop:20}}>
+        {BOONS.map(b=>{
+          const sel=char.boon?.name===b.name;
+          return(
+            <button key={b.name} onClick={()=>setC("boon",b)} style={{border:sel?"1px solid #c8a84a":"1px solid #cebee8",background:sel?"linear-gradient(135deg,#ede0ff,#e0d0ff)":"rgba(255,255,255,0.85)",color:"inherit",padding:"16px",cursor:"pointer",textAlign:"left",fontFamily:"inherit",borderRadius:3,transition:"all 0.2s"}}>
+              <div style={{fontWeight:700,fontSize:13,color:sel?"#2a1848":"#6a50a0",marginBottom:6}}>{b.name}</div>
+              <div style={{fontSize:11,color:sel?"#c8bca0":"#3a2a5a",lineHeight:1.5}}>{b.desc}</div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function StepAttributes({char,setChar,stLeft,apLeft,totalAP,trainBonuses,derived}){
+  const updStat=(stat,dir)=>setChar(c=>{
+    const cur=STAT_CHAIN.indexOf(c.stats[stat]),next=cur+dir;
+    if(next<0||next>=STAT_CHAIN.length)return c;
+    const ns={...c.stats,[stat]:STAT_CHAIN[next]};
+    if(statPointsUsed(ns)>6)return c;
+    return{...c,stats:ns};
+  });
+  const updAttr=(key,val)=>setChar(c=>{
+    const base={HP:20,Stamina:10,Mana:0};
+    if(val<base[key])return c;
+    const diff=val-c.attrs[key];
+    const newUsed=c.attrPointsUsed+diff;
+    if(newUsed>totalAP)return c;
+    return{...c,attrs:{...c.attrs,[key]:val},attrPointsUsed:newUsed};
+  });
+  const STAT_DESC={Strength:"Damage for unarmed/weapon attacks and Grab checks.",Dexterity:"Accuracy for attacks. Parry = ½DEX + 2.",Vigor:"Durability. +5 HP per tier cap. Armor = ½VIG−2.",Mind:"Spell accuracy and damage.",Willpower:"Magic resistance. Ward = ½WIL−2."};
+
+  return(
+    <div>
+      <ST>Stats & Attributes</ST>
+      {char.boon?.name==="History of Discipline"&&<Banner>History of Discipline: +10 Attribute Points added!</Banner>}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:28,marginTop:20}}>
+        <div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+            <span style={{fontSize:12,color:"#c8a84a",letterSpacing:"0.12em"}}>STATS</span>
+            <span style={{fontSize:11,color:stLeft<0?"#c94a4c":"#6a5a3a"}}>{stLeft} / 6 pts left</span>
+          </div>
+          {STATS.map(s=>(
+            <div key={s} style={{marginBottom:10,padding:"10px 12px",background:"rgba(255,255,255,0.82)",border:"1px solid #cebee8",borderRadius:3}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:3}}>
+                <span style={{fontSize:12,fontWeight:600,color:"#1e1430"}}>{s}</span>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <button onClick={()=>updStat(s,-1)} style={sm}>−</button>
+                  <span style={{fontSize:14,color:"#c8a84a",minWidth:50,textAlign:"center",fontWeight:700}}>{char.stats[s]}</span>
+                  <button onClick={()=>updStat(s,1)} style={sm}>+</button>
+                </div>
+              </div>
+              <div style={{fontSize:10,color:"#6a50a0"}}>{STAT_DESC[s]}</div>
+            </div>
+          ))}
+        </div>
+        <div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+            <span style={{fontSize:12,color:"#c8a84a",letterSpacing:"0.12em"}}>ATTRIBUTES</span>
+            <span style={{fontSize:11,color:apLeft<0?"#c94a4c":"#6a5a3a"}}>{apLeft} / {totalAP} pts left</span>
+          </div>
+          <div style={{fontSize:10,color:"#a090c0",marginBottom:10}}>Base: 20 HP / 10 Stamina / 0 Mana. Each point = +1 to one attribute.</div>
+          {[
+            {key:"HP",label:"Health (HP)",base:20,desc:"0 HP = Downed. Wounds reduce max HP by 5."},
+            {key:"Stamina",label:"Stamina",base:10,desc:"Fuels Techniques. 0 = risk Unconscious."},
+            {key:"Mana",label:"Mana",base:0,desc:"Fuels Spells. 0 = Manashock risk."},
+          ].map(({key,label,desc})=>(
+            <div key={key} style={{marginBottom:10,padding:"10px 12px",background:"rgba(255,255,255,0.82)",border:"1px solid #cebee8",borderRadius:3}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:3}}>
+                <span style={{fontSize:12,fontWeight:600,color:"#1e1430"}}>{label}</span>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <button onClick={()=>updAttr(key,char.attrs[key]-1)} style={sm}>−</button>
+                  <span style={{fontSize:14,color:"#c8a84a",minWidth:36,textAlign:"center",fontWeight:700}}>{char.attrs[key]}</span>
+                  <button onClick={()=>updAttr(key,char.attrs[key]+1)} style={sm}>+</button>
+                </div>
+              </div>
+              <div style={{fontSize:10,color:"#6a50a0"}}>{desc}</div>
+            </div>
+          ))}
+          {/* Derived block */}
+          <div style={{marginTop:12,padding:"12px",background:"rgba(255,255,255,0.82)",border:"1px solid #cebee8",borderRadius:3}}>
+            <div style={{fontSize:10,color:"#c8a84a",letterSpacing:"0.12em",marginBottom:8}}>DERIVED STATS (base only — training bonuses not yet active)</div>
+            {[
+              ["Parry",`${calcParry(char.stats.Dexterity)} (base)`],
+              ["Ward",`${calcWard(char.stats.Willpower)} (base)`],
+              ["Armor",`${calcArmor(char.stats.Vigor)} (base)`],
+              ["Carry Cap",`${char.attrs.Stamina} (= Stamina)`],
+              ["Technique Slots",`${char.attrs.Stamina} (= Stamina)`],
+              ["Spell Slots",`${char.attrs.Mana} (= Mana)`],
+            ].map(([k,v])=>(
+              <div key={k} style={{display:"flex",justifyContent:"space-between",fontSize:11,marginBottom:4,paddingBottom:4,borderBottom:"1px solid rgba(200,180,230,0.4)"}}>
+                <span style={{color:"#8a78a8"}}>{k}</span>
+                <span style={{color:"#3a2858"}}>{v}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── STEP SKILLS ─────────────────────────────────────────────────────────────
+function StepSkills({char,setChar,spLeft,totalSP,moneyLeft,skillSilverSpent}){
+  const [openTree,setOpenTree]=useState(null);
+  const isVoA=char.boon?.name==="Vow of Ash";
+  const isRoE=char.boon?.name==="Rite of Embers";
+  const RANK_LABELS=["None","Novice","Adept","Master"];
+  const TIERS=["novice","adept","master"];
+
+  const setRank=(id,rank)=>setChar(c=>{
+    const cur=c.skills[id]||0,diff=rank-cur;
+    const newUsed=Object.values(c.skills).reduce((t,v)=>t+v,0)+diff;
+    const bSP=c.boon?.name==="History of Discipline"?2:0;
+    if(newUsed>3+bSP)return c;
+    const tree=SKILL_TREES.find(s=>s.id===id);
+    if(isVoA&&tree?.type==="magic"&&rank>0)return c;
+    if(isRoE&&tree?.type==="physical"&&rank>0)return c;
+    // Strip data from tiers being removed
+    const newTechs={...c.techniques};
+    const newMPs={...c.masterPerks};
+    const newPT=new Set(c.purchasedTrainings);
+    if(rank<3){
+      delete newMPs[id];
+      if(newTechs[id]?.master){const t={...newTechs[id]};delete t.master;newTechs[id]=t;}
+      newPT.delete(`${id}:master`);
+    }
+    if(rank<2){
+      if(newTechs[id]?.adept){const t={...newTechs[id]};delete t.adept;newTechs[id]=t;}
+      newPT.delete(`${id}:adept`);
+    }
+    if(rank<1){
+      delete newTechs[id];
+      newPT.delete(`${id}:novice`);
+    }
+    return{...c,skills:{...c.skills,[id]:rank},techniques:newTechs,masterPerks:newMPs,purchasedTrainings:newPT};
+  });
+
+  // Which skill tree (if any) currently owns the training line?
+  const trainingTreeId = (() => {
+    for(const tree of SKILL_TREES) {
+      const tiers = ["novice","adept","master"];
+      if(tiers.some(t => char.purchasedTrainings.has(`${tree.id}:${t}`))) return tree.id;
+    }
+    return null;
+  })();
+
+  const toggleTraining=(skillId,tier)=>setChar(c=>{
+    const key=`${skillId}:${tier}`;
+    const silverCost=TIER_SILVER[tier];
+    const already=c.purchasedTrainings.has(key);
+    if(!already){
+      // Block if a DIFFERENT tree already owns the training line
+      const tiers2=["novice","adept","master"];
+      const ownerTree=SKILL_TREES.find(t=>t.id!==skillId&&tiers2.some(ti=>c.purchasedTrainings.has(`${t.id}:${ti}`)));
+      if(ownerTree)return c;
+      // Check silver
+      const equipSpent=[c.equipment.weapon?.cost||0,c.equipment.offhand?.cost||0,c.equipment.armor?.cost||0,c.equipment.catalyst?.cost||0,...c.equipment.items.map(i=>i.cost),...c.equipment.jewelry.map(j=>j.cost)].reduce((a,b)=>a+b,0);
+      const currentSkillSpent=calcSkillSilverSpent(c.skills,c.purchasedTrainings,c.techniques);
+      if(equipSpent+currentSkillSpent+silverCost>c.money)return c;
+    }
+    const newPT=new Set(c.purchasedTrainings);
+    already?newPT.delete(key):newPT.add(key);
+    return{...c,purchasedTrainings:newPT};
+  });
+
+  const toggleTechnique=(skillId,tier,techName)=>setChar(c=>{
+    const cur=((c.techniques[skillId]||{})[tier])||[];
+    const exists=cur.includes(techName);
+    const silverCost=TIER_SILVER[tier];
+    if(!exists){
+      const equipSpent=[c.equipment.weapon?.cost||0,c.equipment.offhand?.cost||0,c.equipment.armor?.cost||0,c.equipment.catalyst?.cost||0,...c.equipment.items.map(i=>i.cost),...c.equipment.jewelry.map(j=>j.cost)].reduce((a,b)=>a+b,0);
+      const currentSkillSpent=calcSkillSilverSpent(c.skills,c.purchasedTrainings,c.techniques);
+      if(equipSpent+currentSkillSpent+silverCost>c.money)return c;
+    }
+    return{...c,techniques:{...c.techniques,[skillId]:{...(c.techniques[skillId]||{}),[tier]:exists?cur.filter(n=>n!==techName):[...cur,techName]}}};
+  });
+
+  const setMasterPerk=(skillId,perkName)=>setChar(c=>({...c,masterPerks:{...c.masterPerks,[skillId]:c.masterPerks[skillId]===perkName?undefined:perkName}}));
+
+  const phys=SKILL_TREES.filter(s=>s.type==="physical");
+  const magic=SKILL_TREES.filter(s=>s.type==="magic");
+
+  return(
+    <div>
+      <ST>Skill Trees & Techniques</ST>
+      {/* Budget bar */}
+      <div style={{display:"flex",gap:10,marginBottom:10,flexWrap:"wrap",alignItems:"center"}}>
+        <div style={{padding:"6px 12px",background:"rgba(255,255,255,0.82)",border:"1px solid #cebee8",borderRadius:3,fontSize:11}}>
+          🎯 <span style={{color:"#c8a84a",fontWeight:700}}>{spLeft}</span> / {totalSP} Skill Points
+        </div>
+        <div style={{padding:"6px 12px",background:"rgba(255,255,255,0.82)",border:moneyLeft<0?"1px solid #c94a4c":"1px solid #cebee8",borderRadius:3,fontSize:11}}>
+          💰 <span style={{color:moneyLeft<0?"#c05040":"#c8a84a",fontWeight:700}}>{moneyLeft}</span> Silver left
+          {skillSilverSpent>0&&<span style={{color:"#8a78a8",marginLeft:6}}>(spent {skillSilverSpent}s on skills)</span>}
+        </div>
+        <span style={{fontSize:10,color:"#6a50a0"}}>Novice=50s · Adept=100s · Master=150s per training or technique</span>
+      </div>
+      {isVoA&&<Banner>Vow of Ash: Cannot invest in Magic skills.</Banner>}
+      {isRoE&&<Banner>Rite of Embers: Cannot invest in Physical skills.</Banner>}
+      {trainingTreeId&&<Banner style={{borderColor:"#4a9a30",background:"rgba(228,222,248,0.88)",color:"#2a7010"}}>Training line locked to: <strong>{SKILL_TREES.find(t=>t.id===trainingTreeId)?.name}</strong>. Refund its trainings to switch trees.</Banner>}
+
+      {[["Physical Skills",phys],["Magic Skills",magic]].map(([title,trees])=>(
+        <div key={title} style={{marginTop:18}}>
+          <div style={{fontSize:11,color:"#c8a84a",letterSpacing:"0.15em",marginBottom:8}}>{title.toUpperCase()}</div>
+          {trees.map(tree=>{
+            const rank=char.skills[tree.id]||0;
+            const locked=(isVoA&&tree.type==="magic")||(isRoE&&tree.type==="physical");
+            const isOpen=openTree===tree.id;
+            return(
+              <div key={tree.id} style={{marginBottom:8,border:rank>0?"1px solid #b8a8d8":"1px solid #d8c8f0",borderRadius:3,background:"rgba(255,255,255,0.7)",opacity:locked?0.4:1}}>
+                {/* Tree header */}
+                <div style={{padding:"10px 14px",display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{flex:1}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8}}>
+                      <span style={{fontSize:13,fontWeight:600,color:rank>0?"#2a1848":"#b0a0c8"}}>{tree.name}</span>
+                      <span style={{fontSize:10,color:rank>0?"#2a1848":"#b0a0c8",padding:"1px 6px",background:"rgba(200,168,74,0.1)",borderRadius:3}}>{RANK_LABELS[rank]}</span>
+                    </div>
+                    <div style={{fontSize:10,color:"#a090c0",marginTop:2}}>{tree.desc}</div>
+                  </div>
+                  {/* Rank buttons (skill point cost shown) */}
+                  <div style={{display:"flex",gap:3}}>
+                    {[0,1,2,3].map(r=>(
+                      <button key={r} onClick={()=>!locked&&setRank(tree.id,r)} style={{
+                        padding:"3px 8px",border:"none",cursor:locked?"default":"pointer",
+                        background:rank>=r&&r>0?"#ddd0ff":"#f0ecff",
+                        color:rank>=r&&r>0?"#2a1848":"#b0a0c8",
+                        fontSize:9,fontFamily:"inherit",borderRadius:3,
+                      }}>{RANK_LABELS[r]}{r>0?` (${r}pt)`:""}</button>
+                    ))}
+                  </div>
+                  {rank>0&&(
+                    <button onClick={()=>setOpenTree(isOpen?null:tree.id)} style={{padding:"4px 10px",border:"1px solid #cebee8",background:"transparent",color:"#8a78a8",cursor:"pointer",fontSize:10,fontFamily:"inherit",borderRadius:3,whiteSpace:"nowrap"}}>
+                      {isOpen?"▲ Hide":"▼ Buy"}
+                    </button>
+                  )}
+                </div>
+
+                {/* Expanded pane */}
+                {isOpen&&rank>0&&(
+                  <div style={{borderTop:"1px solid #cebee8",padding:"14px"}}>
+                    {TIERS.map((tier,ti)=>{
+                      if(rank<ti+1)return null;
+                      const tierData=tree.tiers[tier];
+                      const selTechs=((char.techniques[tree.id]||{})[tier])||[];
+                      const training=tierData.training;
+                      const techniques=tierData.techniques;
+                      const trainingKey=`${tree.id}:${tier}`;
+                      const trainingBought=char.purchasedTrainings.has(trainingKey);
+                      const trainingLocked=!trainingBought&&trainingTreeId!==null&&trainingTreeId!==tree.id;
+                      const silverCost=TIER_SILVER[tier];
+                      return(
+                        <div key={tier} style={{marginBottom:18}}>
+                          {/* Tier label */}
+                          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                            <span style={{fontSize:10,color:"#c8a84a",letterSpacing:"0.1em"}}>{tier.toUpperCase()} TIER</span>
+                            <span style={{fontSize:9,color:"#8a78a8"}}>— each item costs {silverCost}s</span>
+                          </div>
+
+                          {/* Training — purchasable, locked if another tree owns the training line */}
+                          <button onClick={()=>!trainingLocked&&toggleTraining(tree.id,tier)} style={{
+                            width:"100%",
+                            border:trainingBought?"1px solid #c8a84a":trainingLocked?"1px solid #cebee8":"1px solid #cebee8",
+                            background:trainingBought?"linear-gradient(135deg,rgba(76,200,224,0.1),rgba(30,12,50,0.95))":trainingLocked?"#f8f4ff":"rgba(255,255,255,0.8)",
+                            color:"inherit",padding:"9px 12px",
+                            cursor:trainingLocked?"not-allowed":"pointer",
+                            textAlign:"left",fontFamily:"inherit",borderRadius:3,marginBottom:8,
+                            display:"flex",alignItems:"flex-start",gap:8,
+                            opacity:trainingLocked?0.4:1,
+                          }}>
+                            <span style={{fontSize:10,color:trainingBought?"#2a1848":trainingLocked?"#c0b0d8":"#8a78a8",whiteSpace:"nowrap",marginTop:1}}>⚡ TRAINING</span>
+                            <div style={{flex:1}}>
+                              <span style={{fontSize:11,color:trainingBought?"#1e1430":trainingLocked?"#c8b8e0":"#7a68a0",fontWeight:600}}>{training.name}</span>
+                              <span style={{fontSize:10,color:trainingBought?"#3a2858":trainingLocked?"#c0b0d8":"#8a78a8",marginLeft:6}}>{training.desc}</span>
+                            </div>
+                            <span style={{fontSize:10,color:trainingBought?"#2a1848":trainingLocked?"#c0b0d8":"#8a78a8",whiteSpace:"nowrap",marginLeft:8}}>
+                              {trainingBought?"✓ Purchased":trainingLocked?"🔒 Locked":`${silverCost}s`}
+                            </span>
+                          </button>
+
+                          {/* Techniques */}
+                          {techniques.length>0&&(
+                            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                              {techniques.map(tech=>{
+                                const sel=selTechs.includes(tech.name);
+                                return(
+                                  <button key={tech.name} onClick={()=>toggleTechnique(tree.id,tier,tech.name)} style={{
+                                    border:sel?"1px solid #c8a84a":"1px solid #d8c8f0",
+                                    background:sel?"linear-gradient(135deg,#ede0ff,#e0d0ff)":"rgba(255,255,255,0.85)",
+                                    color:"inherit",padding:"8px 10px",cursor:"pointer",
+                                    textAlign:"left",fontFamily:"inherit",borderRadius:3,
+                                  }}>
+                                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:3}}>
+                                      <span style={{fontSize:11,fontWeight:600,color:sel?"#2a1848":"#6a50a0"}}>{tech.name}</span>
+                                      <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2,marginLeft:4,flexShrink:0}}>
+                                        <span style={{fontSize:9,color:sel?"#c9a84c":"#3a2a5a"}}>{sel?"✓":silverCost+"s"}</span>
+                                        <span style={{fontSize:8,color:"#6a50a0"}}>{tech.cost}</span>
+                                      </div>
+                                    </div>
+                                    <div style={{fontSize:10,color:sel?"#c8bca0":"#2e2248",lineHeight:1.4}}>{tech.desc}</div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {/* Master Perks (free — perk selection only) */}
+                          {tier==="master"&&tree.masterPerks&&(
+                            <div style={{marginTop:10}}>
+                              <div style={{fontSize:10,color:"#c8a84a",letterSpacing:"0.1em",marginBottom:6}}>★ MASTER PERK — choose one (free)</div>
+                              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
+                                {tree.masterPerks.map(p=>{
+                                  const sel=char.masterPerks[tree.id]===p.name;
+                                  return(
+                                    <button key={p.name} onClick={()=>setMasterPerk(tree.id,p.name)} style={{
+                                      border:sel?"1px solid #c8a84a":"1px solid #cebee8",
+                                      background:sel?"#fffbe8":"white",
+                                      color:"inherit",padding:"8px 10px",cursor:"pointer",
+                                      textAlign:"left",fontFamily:"inherit",borderRadius:3,
+                                    }}>
+                                      <div style={{fontSize:11,fontWeight:700,color:sel?"#d4a030":"#4a3a6a",marginBottom:4}}>{p.name}</div>
+                                      <div style={{fontSize:10,color:sel?"#c8bca0":"#2e2248",lineHeight:1.4}}>{p.desc}</div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── STEP EQUIPMENT ──────────────────────────────────────────────────────────
+function StepEquipment({char,setChar,moneyLeft}){
+  const [tab,setTab]=useState("weapons");
+  const setEq=(key,val)=>setChar(c=>({...c,equipment:{...c.equipment,[key]:val}}));
+  const toggleList=(list,item)=>setChar(c=>{
+    const exists=c.equipment[list].find(i=>i.name===item.name);
+    return{...c,equipment:{...c.equipment,[list]:exists?c.equipment[list].filter(i=>i.name!==item.name):[...c.equipment[list],item]}};
+  });
+  const TABS=["weapons","armor","catalysts","jewelry","alchemical"];
+
+  return(
+    <div>
+      <ST>Equipment</ST>
+      <div style={{display:"flex",gap:12,marginBottom:16,alignItems:"center",flexWrap:"wrap"}}>
+        <div style={{padding:"8px 14px",background:"rgba(255,255,255,0.88)",border:"1px solid #b8a8d8",borderRadius:3,fontSize:12}}>
+          💰 <span style={{color:"#c8a84a",fontWeight:700}}>{moneyLeft}</span> Silver remaining
+        </div>
+        <div style={{padding:"8px 14px",background:"rgba(255,255,255,0.88)",border:"1px solid #b8a8d8",borderRadius:3,fontSize:12}}>
+          {char.equipment.weapon?"🗡 "+char.equipment.weapon.name:"No weapon selected"}
+        </div>
+        <div style={{padding:"8px 14px",background:"rgba(255,255,255,0.88)",border:"1px solid #b8a8d8",borderRadius:3,fontSize:12}}>
+          {char.equipment.armor?"🛡 "+char.equipment.armor.name:"No armor"}
+        </div>
+      </div>
+      <div style={{display:"flex",gap:0,marginBottom:16,borderBottom:"1px solid #cebee8"}}>
+        {TABS.map(t=>(
+          <button key={t} onClick={()=>setTab(t)} style={{padding:"7px 12px",border:"none",cursor:"pointer",background:"transparent",borderBottom:tab===t?"1px solid #c8a84a":"2px solid transparent",color:tab===t?"#c9a84c":"#2e2248",fontSize:11,fontFamily:"inherit",textTransform:"capitalize"}}>
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {tab==="weapons"&&(
+        <div>
+          {Object.entries(WEAPONS_DATA).map(([cat,items])=>(
+            <div key={cat} style={{marginBottom:20}}>
+              <div style={{fontSize:10,color:"#8a78a8",letterSpacing:"0.12em",marginBottom:6}}>{cat.toUpperCase()}</div>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:10}}>
+                <thead><tr style={{color:"#a090c0",borderBottom:"1px solid #cebee8"}}>
+                  {["Name","Damage","Properties","Min STR","Wt","Cost",""].map(h=><th key={h} style={thS}>{h}</th>)}
+                </tr></thead>
+                <tbody>
+                  {items.map(w=>{
+                    const isMW=char.equipment.weapon?.name===w.name;
+                    const isOH=char.equipment.offhand?.name===w.name;
+                    return(
+                      <tr key={w.name} style={{borderBottom:"1px solid rgba(200,180,230,0.4)",background:isMW||isOH?"rgba(42,24,72,0.06)":"transparent"}}>
+                        <td style={tdS}>{w.name}</td>
+                        <td style={{...tdS,color:"#c8a84a"}}>{w.dmg}</td>
+                        <td style={{...tdS,color:"#8a78a8"}}>{w.props}</td>
+                        <td style={tdS}>{w.minStr}</td>
+                        <td style={tdS}>{w.wt}</td>
+                        <td style={tdS}>{w.cost}s</td>
+                        <td style={tdS}>
+                          <div style={{display:"flex",gap:3}}>
+                            <button onClick={()=>setEq("weapon",isMW?null:w)} style={{...mic,background:isMW?"#e8d8ff":"transparent",color:isMW?"#c9a84c":"#2e2248"}}>Main</button>
+                            <button onClick={()=>setEq("offhand",isOH?null:w)} style={{...mic,background:isOH?"#e8d8ff":"transparent",color:isOH?"#c9a84c":"#2e2248"}}>Off</button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </div>
+      )}
+      {tab==="armor"&&(
+        <div>
+          <div style={{fontSize:10,color:"#8a78a8",letterSpacing:"0.12em",marginBottom:6}}>ARMOR</div>
+          <table style={{width:"100%",borderCollapse:"collapse",fontSize:10,marginBottom:16}}>
+            <thead><tr style={{color:"#a090c0",borderBottom:"1px solid #cebee8"}}>
+              {["Name","Bonus","Type","Min STR","Wt","Cost",""].map(h=><th key={h} style={thS}>{h}</th>)}
+            </tr></thead>
+            <tbody>{ARMORS_DATA.map(a=>{
+              const sel=char.equipment.armor?.name===a.name;
+              return(<tr key={a.name} style={{borderBottom:"1px solid rgba(200,180,230,0.4)",background:sel?"rgba(42,24,72,0.06)":"transparent"}}>
+                <td style={tdS}>{a.name}</td>
+                <td style={{...tdS,color:"#c8a84a"}}>{a.bonus}</td>
+                <td style={{...tdS,color:"#8a78a8"}}>{a.type}</td>
+                <td style={tdS}>{a.minStr}</td>
+                <td style={tdS}>{a.wt}</td>
+                <td style={tdS}>{a.cost}s</td>
+                <td style={tdS}><button onClick={()=>setEq("armor",sel?null:a)} style={{...mic,background:sel?"#e8d8ff":"transparent",color:sel?"#c9a84c":"#2e2248"}}>{sel?"Equipped":"Equip"}</button></td>
+              </tr>);
+            })}</tbody>
+          </table>
+          <div style={{fontSize:10,color:"#8a78a8",letterSpacing:"0.12em",marginBottom:6}}>SHIELDS</div>
+          <table style={{width:"100%",borderCollapse:"collapse",fontSize:10}}>
+            <thead><tr style={{color:"#a090c0",borderBottom:"1px solid #cebee8"}}>
+              {["Name","Bonus","Min STR","Wt","Cost",""].map(h=><th key={h} style={thS}>{h}</th>)}
+            </tr></thead>
+            <tbody>{SHIELDS_DATA.map(s=>{
+              const sel=char.equipment.offhand?.name===s.name;
+              return(<tr key={s.name} style={{borderBottom:"1px solid rgba(200,180,230,0.4)",background:sel?"rgba(42,24,72,0.06)":"transparent"}}>
+                <td style={tdS}>{s.name}</td>
+                <td style={{...tdS,color:"#c8a84a"}}>{s.bonus}</td>
+                <td style={tdS}>{s.minStr}</td>
+                <td style={tdS}>{s.wt}</td>
+                <td style={tdS}>{s.cost}s</td>
+                <td style={tdS}><button onClick={()=>setEq("offhand",sel?null:s)} style={{...mic,background:sel?"#e8d8ff":"transparent",color:sel?"#c9a84c":"#2e2248"}}>{sel?"Equipped":"Equip"}</button></td>
+              </tr>);
+            })}</tbody>
+          </table>
+        </div>
+      )}
+      {tab==="catalysts"&&(
+        <div>
+          <p style={{...sub,marginBottom:10}}>Require Spellcrafting or relevant magic skill.</p>
+          <table style={{width:"100%",borderCollapse:"collapse",fontSize:10}}>
+            <thead><tr style={{color:"#a090c0",borderBottom:"1px solid #cebee8"}}>
+              {["Name","Damage","Properties","Min Mind","Cost",""].map(h=><th key={h} style={thS}>{h}</th>)}
+            </tr></thead>
+            <tbody>{CATALYSTS_DATA.map(c=>{
+              const sel=char.equipment.catalyst?.name===c.name;
+              return(<tr key={c.name} style={{borderBottom:"1px solid rgba(200,180,230,0.4)",background:sel?"rgba(42,24,72,0.06)":"transparent"}}>
+                <td style={tdS}>{c.name}</td>
+                <td style={{...tdS,color:"#c8a84a"}}>{c.dmg}</td>
+                <td style={{...tdS,color:"#8a78a8"}}>{c.props}</td>
+                <td style={tdS}>{c.minMind}</td>
+                <td style={tdS}>{c.cost}s</td>
+                <td style={tdS}><button onClick={()=>setEq("catalyst",sel?null:c)} style={{...mic,background:sel?"#e8d8ff":"transparent",color:sel?"#c9a84c":"#2e2248"}}>{sel?"Equipped":"Equip"}</button></td>
+              </tr>);
+            })}</tbody>
+          </table>
+        </div>
+      )}
+      {tab==="jewelry"&&(
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          {JEWELRY_DATA.map(j=>{
+            const sel=char.equipment.jewelry.find(x=>x.name===j.name);
+            return(<button key={j.name} onClick={()=>toggleList("jewelry",j)} style={{border:sel?"1px solid #c8a84a":"1px solid #cebee8",background:sel?"linear-gradient(135deg,#ede0ff,#e0d0ff)":"rgba(255,255,255,0.85)",color:"inherit",padding:"14px",cursor:"pointer",textAlign:"left",fontFamily:"inherit",borderRadius:3}}>
+              <div style={{fontWeight:600,color:sel?"#c9a84c":"#3a2a5a",marginBottom:4}}>{j.name}</div>
+              <div style={{fontSize:10,color:sel?"#c8b898":"#4a6a4a"}}>{j.bonus} — {j.cost}s</div>
+            </button>);
+          })}
+        </div>
+      )}
+      {tab==="alchemical"&&(
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          {ALCHEMICAL_DATA.map(a=>{
+            const sel=char.equipment.items.find(x=>x.name===a.name);
+            return(<button key={a.name} onClick={()=>toggleList("items",a)} style={{border:sel?"1px solid #c8a84a":"1px solid #cebee8",background:sel?"linear-gradient(135deg,#ede0ff,#e0d0ff)":"rgba(255,255,255,0.85)",color:"inherit",padding:"14px",cursor:"pointer",textAlign:"left",fontFamily:"inherit",borderRadius:3}}>
+              <div style={{fontWeight:600,color:sel?"#c9a84c":"#3a2a5a",marginBottom:4}}>{a.name}</div>
+              <div style={{fontSize:10,color:sel?"#c8b898":"#4a6a4a"}}>{a.desc} — {a.cost}s</div>
+            </button>);
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── STEP SUMMARY ─────────────────────────────────────────────────────────────
+function StepSummary({char,derived,totalSP}){
+  const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalMeleeAcc,finalMeleeDmg,trainBonuses,moneyLeft}=derived;
+  const RANK_LABELS=["","Novice","Adept","Master"];
+  const TIERS=["novice","adept","master"];
+
+  const copySheet=()=>{
+    const lines=[
+      `=== TSR 5.0 CHARACTER SHEET ===`,
+      `Name: ${char.name||"—"}  |  Race: ${char.race||"—"}  |  Level: 1`,
+      `Role: ${char.role||"—"}  |  Starting Boon: ${char.boon?.name||"—"}`,
+      ``,`STATS:`,
+      ...STATS.map(s=>`  ${s}: ${char.stats[s]}`),
+      ``,`ATTRIBUTES (incl. training bonuses):`,
+      `  HP: ${finalHP}  |  Stamina: ${finalStamina}  |  Mana: ${finalMana}`,
+      ``,`DERIVED:`,
+      `  Melee Accuracy: ${finalMeleeAcc.die}${finalMeleeAcc.bonus!==0?" (+"+ finalMeleeAcc.bonus+")":""}  |  Primary Damage: ${finalMeleeDmg.die}${finalMeleeDmg.bonus!==0?" (+"+finalMeleeDmg.bonus+")":""}`,
+      `  Parry: ${finalParry}  |  Armor: ${finalArmor}  |  Ward: ${finalWard}`,
+      `  Movement: 6  |  Carry Cap: ${finalStamina}  |  Tech Slots: ${finalStamina}  |  Spell Slots: ${finalMana}`,
+      ``,`SKILLS:`,
+      ...SKILL_TREES.filter(t=>char.skills[t.id]>0).map(t=>{
+        const rank=char.skills[t.id];
+        const perk=char.masterPerks[t.id];
+        const techList=Object.entries(char.techniques[t.id]||{}).flatMap(([,ts])=>ts);
+        return `  ${t.name}: ${RANK_LABELS[rank]}${perk?" [Perk: "+perk+"]":""}${techList.length?" — "+techList.join(", "):""}`;
+      }),
+      ``,`EQUIPMENT:`,
+      `  Weapon: ${char.equipment.weapon?.name||"—"}`,
+      `  Off-hand: ${char.equipment.offhand?.name||"—"}`,
+      `  Armor: ${char.equipment.armor?.name||"—"}`,
+      `  Catalyst: ${char.equipment.catalyst?.name||"—"}`,
+      `  Jewelry: ${char.equipment.jewelry.map(j=>j.name).join(", ")||"—"}`,
+      `  Items: ${char.equipment.items.map(i=>i.name).join(", ")||"—"}`,
+      `  Money remaining: ${moneyLeft} Silver`,
+    ];
+    navigator.clipboard.writeText(lines.join("\n")).catch(()=>{});
+  };
+
+  return(
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+        <ST style={{margin:0}}>Character Sheet</ST>
+        <button onClick={copySheet} style={{...btnS("pri"),padding:"8px 16px",fontSize:11}}>📋 Copy Sheet</button>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
+        <Card title="Identity">
+          {[["Name",char.name||"—"],["Race",char.race||"—"],["Level","1 (0/10 EXP)"],["Role",char.role||"—"],["Boon",char.boon?.name||"—"]].map(([k,v])=><Row key={k} label={k} val={v}/>)}
+        </Card>
+        <Card title="Attributes (with training)">
+          {[["HP",finalHP,true],["Stamina",finalStamina,true],["Mana",finalMana,true],["Tech Slots",finalStamina+""],["Spell Slots",finalMana+""]].map(([k,v,h])=><Row key={k} label={k} val={v} hi={h}/>)}
+        </Card>
+        <Card title="Stats">
+          {STATS.map(s=><Row key={s} label={s} val={char.stats[s]} hi/>)}
+        </Card>
+        <Card title="Combat Reference">
+          {[
+            ["Melee Accuracy", `${finalMeleeAcc.die}${finalMeleeAcc.bonus>0?" (+"+finalMeleeAcc.bonus+")":finalMeleeAcc.bonus<0?" ("+finalMeleeAcc.bonus+")":""}`, true],
+            ["Primary Damage",  `${finalMeleeDmg.die}${finalMeleeDmg.bonus>0?" (+"+finalMeleeDmg.bonus+")":finalMeleeDmg.bonus<0?" ("+finalMeleeDmg.bonus+")":""}`, true],
+            ["Parry",finalParry,true],["Armor",finalArmor,true],["Ward",finalWard,true],
+            ["Movement","6 Spaces"],["Carry Cap",finalStamina+" wt"],["Money left",moneyLeft+" Silver",true],
+          ].map(([k,v,h])=><Row key={k} label={k} val={v} hi={h}/>)}
+        </Card>
+      </div>
+      {/* Skills with techniques */}
+      <Card title="Skills, Techniques & Master Perks">
+        {SKILL_TREES.filter(t=>char.skills[t.id]>0).length===0
+          ?<span style={{fontSize:11,color:"#6a50a0"}}>No skills selected.</span>
+          :SKILL_TREES.filter(t=>char.skills[t.id]>0).map(tree=>{
+            const rank=char.skills[tree.id];
+            const perk=char.masterPerks[tree.id];
+            return(
+              <div key={tree.id} style={{marginBottom:12,paddingBottom:12,borderBottom:"1px solid rgba(200,180,230,0.4)"}}>
+                <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:4}}>
+                  <span style={{fontSize:12,fontWeight:600,color:"#c8a84a"}}>{tree.name}</span>
+                  <span style={{fontSize:10,color:"#c8a84a",padding:"1px 5px",background:"rgba(200,168,74,0.1)",borderRadius:3}}>{RANK_LABELS[rank]}</span>
+                </div>
+                {/* Only show PURCHASED trainings */}
+                {TIERS.slice(0,rank).filter(tier=>char.purchasedTrainings.has(`${tree.id}:${tier}`)).map(tier=>(
+                  <div key={tier} style={{fontSize:10,color:"#4cc8e0",marginBottom:2}}>
+                    ⚡ {tree.tiers[tier].training.name}: {tree.tiers[tier].training.desc}
+                  </div>
+                ))}
+                {/* Selected techniques */}
+                {Object.entries(char.techniques[tree.id]||{}).map(([tier,techs])=>
+                  techs.map(t=>(
+                    <div key={t} style={{fontSize:10,color:"#3a2858",marginBottom:2}}>• {t}</div>
+                  ))
+                )}
+                {perk&&<div style={{fontSize:10,color:"#c8a84a",marginTop:3}}>★ Master Perk: {perk}</div>}
+              </div>
+            );
+          })
+        }
+      </Card>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginTop:16}}>
+        <Card title="Equipment">
+          {[["Weapon",char.equipment.weapon?.name||"—"],["Off-hand",char.equipment.offhand?.name||"—"],["Armor",char.equipment.armor?`${char.equipment.armor.name} (${char.equipment.armor.bonus})`:"—"],["Catalyst",char.equipment.catalyst?.name||"—"]].map(([k,v])=><Row key={k} label={k} val={v}/>)}
+          {char.equipment.jewelry.length>0&&<Row label="Jewelry" val={char.equipment.jewelry.map(j=>j.name).join(", ")}/>}
+          {char.equipment.items.length>0&&<Row label="Items" val={char.equipment.items.map(i=>i.name).join(", ")}/>}
+        </Card>
+        {char.boon&&(
+          <Card title="Boon Details">
+            <div style={{fontSize:12,fontWeight:600,color:"#c8a84a",marginBottom:6}}>{char.boon.name}</div>
+            <div style={{fontSize:11,color:"#7a68a0",lineHeight:1.5}}>{char.boon.desc}</div>
+          </Card>
+        )}
+      </div>
+      <div style={{marginTop:12,padding:"10px 14px",background:"rgba(255,255,255,0.65)",border:"1px solid #cebee8",borderRadius:3,fontSize:10,color:"#8a78a8",textAlign:"center"}}>
+        Character complete! Submit to an Admin for approval. Use "Copy Sheet" to get your formatted sheet.
+      </div>
+    </div>
+  );
+}
+
+// ─── SHARED UI ───────────────────────────────────────────────────────────────
+function ST({children}){return(
+  <div style={{marginBottom:16}}>
+    <h2 style={{fontSize:17,fontWeight:700,letterSpacing:"0.1em",color:"#2a1848",marginBottom:0,paddingBottom:10,fontFamily:"'Palatino Linotype',Palatino,Georgia,serif",borderBottom:"1px solid #d0c0e8",display:"flex",alignItems:"center",gap:10}}>
+      <span style={{color:"#4cc8e0",fontSize:12}}>◆</span>
+      {children}
+      <span style={{flex:1,height:1,background:"linear-gradient(90deg,rgba(76,200,224,0.2),transparent)",display:"inline-block",marginLeft:8,verticalAlign:"middle"}}/>
+    </h2>
+  </div>
+);}
+function Lbl({children}){return <div style={{fontSize:9,color:"#8a78a8",letterSpacing:"0.15em",marginBottom:5,fontWeight:700,textTransform:"uppercase"}}>{children}</div>;}
+function Banner({children}){return <div style={{padding:"8px 14px",background:"rgba(139,26,42,0.06)",border:"1px solid #e0b0b8",borderLeft:"3px solid #8b1a2a",borderRadius:2,fontSize:11,color:"#7a2030",marginBottom:10,letterSpacing:"0.02em"}}>⚠ {children}</div>;}
+function Card({title,children}){return(
+  <div style={{background:"rgba(255,255,255,0.75)",border:"1px solid #cebee8",borderTop:"2px solid #2a1848",borderRadius:3,padding:"16px",boxShadow:"0 2px 16px rgba(30,16,56,0.08)"}}>
+    <div style={{fontSize:9,color:"#6a50a0",letterSpacing:"0.22em",marginBottom:12,fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
+      <span style={{display:"inline-block",width:12,height:1,background:"rgba(76,200,224,0.5)"}}/>
+      {title.toUpperCase()}
+      <span style={{display:"inline-block",flex:1,height:1,background:"linear-gradient(90deg,rgba(76,200,224,0.3),transparent)"}}/>
+    </div>
+    {children}
+  </div>
+);}
+function Row({label,val,hi}){return <div style={{display:"flex",justifyContent:"space-between",fontSize:11,marginBottom:5,paddingBottom:5,borderBottom:"1px solid rgba(200,180,230,0.4)"}}><span style={{color:"#8a78a8"}}>{label}</span><span style={{color:hi?"#2a1848":"#3a2858",fontWeight:hi?700:400}}>{val}</span></div>;}
+const sub={fontSize:12,color:"#7a68a0",lineHeight:1.6,marginBottom:0};
+const inp={width:"100%",background:"rgba(255,255,255,0.9)",border:"1px solid #cebee8",borderBottom:"2px solid #8a78b8",color:"#1e1430",padding:"9px 12px",fontSize:12,fontFamily:"'Palatino Linotype',Palatino,Georgia,serif",outline:"none",boxSizing:"border-box",borderRadius:2,boxShadow:"0 1px 4px rgba(30,16,56,0.07)"};
+const sm={width:26,height:26,border:"1px solid #cebee8",background:"white",color:"#6a50a0",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"inherit",borderRadius:2,padding:0,boxShadow:"0 1px 3px rgba(30,16,56,0.1)"};
+const mic={padding:"3px 8px",border:"1px solid #cebee8",cursor:"pointer",fontSize:9,fontFamily:"inherit",borderRadius:2,background:"rgba(255,255,255,0.8)",color:"#7a68a0"};
+const thS={padding:"6px 8px",textAlign:"left",fontWeight:700,fontSize:9,letterSpacing:"0.12em",color:"#8a78a8",borderBottom:"1px solid #d8c8f0"};
+const tdS={padding:"7px 8px",fontSize:10,color:"#3a2858"};
+const btnS=(t)=>({
+  padding:"9px 22px",
+  border:t==="pri"?"1px solid #6a1828":"1px solid #cebee8",
+  background:t==="pri"?"linear-gradient(135deg,#3a0e1a,#5a1828,#3a0e1a)":"rgba(255,255,255,0.7)",
+  color:t==="pri"?"#e8c060":"#7a68a0",
+  cursor:"pointer",fontSize:11,letterSpacing:"0.14em",
+  fontFamily:"'Palatino Linotype',Palatino,Georgia,serif",
+  borderRadius:2,
+  boxShadow:t==="pri"?"0 2px 12px rgba(139,26,42,0.25),inset 0 1px 0 rgba(232,192,96,0.15)":"0 1px 4px rgba(30,16,56,0.08)",
+  fontWeight:t==="pri"?600:400,
+  textTransform:"uppercase",
+});
+    // ─────────────────────────────────────────────────────────────────────────
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
