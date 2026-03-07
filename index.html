@@ -621,9 +621,39 @@ const SKILL_TREES = [
       {name:"Wizard",           desc:"Learn spells from other schools using Spellcrafting for scaling (+2 slot cost penalty). No Training spells."},
     ],
     tiers:{
-      novice:{ training:{name:"Novice Spellcrafting Training", effect:"none", desc:"Access to Novice-tier Magic Techniques."}, techniques:[] },
-      adept:{ training:{name:"Adept Spellcrafting Training", effect:"none", desc:"Access to Adept-tier Magic Techniques."}, techniques:[] },
-      master:{ training:{name:"Master Spellcrafting Training", effect:"none", desc:"Access to Master-tier Magic Techniques."}, techniques:[] },
+      novice:{ training:{name:"Novice Spellcrafting Training", effect:"none", desc:"Access to Novice-tier Magic Techniques."}, techniques:[
+      {name:"Redirect Flow",cost:"Passive",desc:"Reshape any of your magical area effects. New shape must cover same tiles, all connected. Partial tiles count as half."},
+      {name:"Spellblade's Focus",cost:"Passive",desc:"When using Catch Your Breath or Meditation, you can also roll the other dice for recovery."},
+      {name:"Mana Reinforcement",cost:"Passive",desc:"Choose whether to use Mana or Stamina to pay for Attack/Spell Enhancers and Defensive Actions."},
+      {name:"Spell Geometry",cost:"Spell Enhancer",desc:"When casting a damaging spell, gain +2 Accuracy for the attack phase."},
+      {name:"Mana Weaving",cost:"Passive",desc:"When casting spells with at least 1 hand free, add +2 Accuracy and Spell Power to your cast."},
+      {name:"Visualization",cost:"Active",desc:"Cast spells purely by visualizing the pattern. Allows casting spells while hands are occupied."}
+    ] },
+      adept:{ training:{name:"Adept Spellcrafting Training", effect:"none", desc:"Access to Adept-tier Magic Techniques."}, techniques:[
+      {name:"Spellblade's Honed Focus",cost:"Passive",desc:"Roll both Catch Your Breath and Meditation dice for recovery. Use Mind, Willpower, or Vigor (highest) for those dice."},
+      {name:"Mana Abjuration",cost:"Passive",desc:"Use Mana or Stamina for Enhancers and Defensive Actions. Use half of Mind as Parry instead of Dexterity."},
+      {name:"Quickened Spell",cost:"Spell Enhancer",desc:"Reduce casting time of offensive/control spells by 1 Action (min 1). Doubles total spell cost."},
+      {name:"Spell Symmetry",cost:"Spell Enhancer",desc:"When casting a damaging spell, gain +2 Accuracy and Spell Power for the attack phase."},
+      {name:"Adaptable Mage",cost:"Passive",desc:"Use a Catalyst attack or Scroll with 1 Action instead of 2."},
+      {name:"Serene Mind",cost:"Reaction",desc:"Free yourself or an ally from Magical CC. Passive Advantage on Magic CC Saves. Spend an Action to aid an ally's saves with +4 and Advantage."},
+      {name:"Catalyst Attunement",cost:"Passive",desc:"When wielding a catalyst, add +1 Accuracy to your Spell casts."},
+      {name:"Spirit-Casting",cost:"Passive",desc:"When a Summon is active, count as having free hands for casting spells and Spell Power scaling."},
+      {name:"Chanting",cost:"Spell Enhancer",desc:"Add 1 Action to casting time to buff range, Accuracy, and Spell Power by +2. Compatible with 3rd Action divine boosts."},
+      {name:"Apocalyptic Cast",cost:"Spell Enhancer",desc:"Extend radius of magical AoE spells by 5ft. Creates a damaging wall lasting until your next turn dealing Mind Dice of the spell's type."},
+      {name:"Elemental Oil",cost:"Spell Enhancer",desc:"Expend a poison use to add its effects to a spell. If the spell deals HP damage or applies a condition, the poison is also applied."},
+      {name:"Live To Serve",cost:"Passive",desc:"When healing an ally, also heal yourself for half the amount. Multiple targets: heal yourself for the highest single-target amount."},
+      {name:"Arcane Chains",cost:"Spell Enhancer",desc:"Adds +2 effective Willpower to a CC effect when casting it on an opponent."},
+      {name:"Magical Charge",cost:"4 Mana / 2 upkeep",desc:"Self buff granting +1 Accuracy and Spell Power. One self buff active at a time."}
+    ] },
+      master:{ training:{name:"Master Spellcrafting Training", effect:"none", desc:"Access to Master-tier Magic Techniques."}, techniques:[
+      {name:"Spell Eater",cost:"8 Mana, Reaction",desc:"10ft aura for 1 defensive phase. Spells become Glancing blows inside. On successful Block/Dodge of a spell, absorb it to recover 1 Willpower die of Mana."},
+      {name:"Mana Augmentation",cost:"Passive",desc:"Use Mana or Stamina for Enhancers and Defensive Actions. Use Mind/2 as Parry. Use Willpower instead of Vigor for Damage Shield cap."},
+      {name:"Spell Clash",cost:"Reaction",desc:"While targeted by a single-target damaging spell, cast your own to clash. Loser takes both spells as one combined attack."},
+      {name:"Spell Fractal",cost:"Spell Enhancer",desc:"When casting a damaging spell, gain +2 Accuracy and True Hit for the attack phase."},
+      {name:"Renewed Focus",cost:"8 Mana, Free Action",desc:"Reset the timers of any effects on cooldown. Can only be used again after 10 turns."},
+      {name:"Spellblade",cost:"3rd Action + Enhancer Slot",desc:"Touch Magic twice in a single Attack. Both spells stack as Secondary Damage."},
+      {name:"Magical Overload",cost:"8 Mana / 3 upkeep",desc:"Self buff granting +2 Accuracy and Spell Power. Pay 8 additional Mana to gain another Action. One self buff active at a time."}
+    ] },
     },
   },
   {
@@ -635,9 +665,65 @@ const SKILL_TREES = [
       {name:"Magnitude", desc:"Attune to one element (Infernal/Aqua/Terra/Vacuum/Thunderous Soul). Cannot cast other element types."},
     ],
     tiers:{
-      novice:{ training:{name:"Novice Anima Training", effect:"none", desc:"Access to Novice-tier Anima spells."}, techniques:[] },
-      adept:{ training:{name:"Adept Anima Training", effect:"none", desc:"Access to Adept-tier Anima spells."}, techniques:[] },
-      master:{ training:{name:"Master Anima Training", effect:"none", desc:"Access to Master-tier Anima spells."}, techniques:[] },
+      novice:{ training:{name:"Novice Anima Training", effect:"none", desc:"Access to Novice-tier Anima spells."}, techniques:[
+      {name:"Novice Requiem Training",cost:"Passive",desc:"Gain +1 Accuracy and Spell Power when casting spells."},
+      {name:"Novice Fire Manipulation",cost:"Active",desc:"1d6 + Mind Fire Damage. Applies 1 stack of Searing on HP damage."},
+      {name:"Novice Water Manipulation",cost:"Active",desc:"1d6 + Mind Water Damage. Additional 1d6 Stamina Damage on HP damage (not affected by Spell Power)."},
+      {name:"Novice Earth Manipulation",cost:"Active",desc:"1d6 + Mind Physical Damage."},
+      {name:"Novice Wind Manipulation",cost:"Active",desc:"+2 Accuracy. 1d6 + Mind Wind Damage."},
+      {name:"Novice Lightning Manipulation",cost:"Active",desc:"1d6 + Mind Lightning Damage. +2 critical range. Can critically hit."},
+      {name:"Elemental Mine",cost:"Novice + spell cost",desc:"Set a rune on an adjacent surface. Explodes on contact or command, 5ft radius using an inscribed elemental manipulation spell."},
+      {name:"Sand Embrace",cost:"1 Mana/round, Free Action",desc:"10ft cloak: instantly Guard all allies within. Magical Augment. (Terra Soul perk required)"}
+    ] },
+      adept:{ training:{name:"Adept Anima Training", effect:"none", desc:"Access to Adept-tier Anima spells."}, techniques:[
+      {name:"Adept Requiem Training",cost:"Passive",desc:"Gain +1 Accuracy and Spell Power when casting. -1 Mana cost reduction when casting."},
+      {name:"Adept Fire Manipulation",cost:"Active",desc:"2d6 + Mind Fire Damage. Applies 2 stacks of Searing on HP damage."},
+      {name:"Adept Water Manipulation",cost:"Active",desc:"2d6 + Mind Water Damage. Additional 1d8 Stamina Damage on HP damage (not affected by Spell Power)."},
+      {name:"Adept Earth Manipulation",cost:"Active",desc:"2d6 + Mind Physical Damage."},
+      {name:"Adept Wind Manipulation",cost:"Active",desc:"+3 Accuracy. 2d6 + Mind Wind Damage."},
+      {name:"Adept Lightning Manipulation",cost:"Active",desc:"2d6 + Mind Lightning Damage. +2 critical range. Can crit. Has Deadly property."},
+      {name:"Elemental Rain",cost:"2-3 Actions",desc:"20ft radius AoE (30ft with 3rd Action) of Novice Elemental Manipulation. Requires an Adept Manipulation known."},
+      {name:"Charge Weapon",cost:"Touch Magic",desc:"5ft cloak during attack phase dealing 1d6+Mind Elemental Damage to surrounding enemies."},
+      {name:"Elemental Cloak",cost:"4 Mana/round upkeep",desc:"Deal Mind worth of Elemental Damage to all units within 5ft each turn. Magical augment."},
+      {name:"Elemental Wall",cost:"Active",desc:"4-space wall: 1d6 elemental damage on contact for 3 turns. Earth variant: solid wall 10 HP/tile (20 with Earth Soul)."},
+      {name:"Combustion",cost:"Spell Enhancer",desc:"On a fire spell applying Searing: add 1d6 damage and +1 Searing stack."},
+      {name:"Aquatic Projection",cost:"Reaction",desc:"+3 Parry. On successful dodge, enemy takes 1d8 Stamina damage."},
+      {name:"Stone Shield",cost:"Action or Reaction",desc:"Action: 10-pt Damage Shield on self or ally. Reaction: +3 Physical Resistance."},
+      {name:"Sand Shield",cost:"2 Mana/round, Free Action",desc:"10ft Guard Aura. Guard allies as Free Action; cast Earth DS spell as Free Action. (Terra Soul required)"},
+      {name:"Air Slash",cost:"Free Action, Attack Enhancer",desc:"Extend melee range by 2 spaces with Projectile quality on increased reach attacks."},
+      {name:"Streak",cost:"1 Action",desc:"Teleport 30ft in any direction. No AoO. (Lightning)"},
+      {name:"Redirect",cost:"Reaction",desc:"Absorb enemy magic projectile and reflect it back. Willpower vs Willpower check. Auto-acquired with Energy perk."}
+    ] },
+      master:{ training:{name:"Master Anima Training", effect:"none", desc:"Access to Master-tier Anima spells."}, techniques:[
+      {name:"Master Requiem Training",cost:"Passive",desc:"Gain +1 Accuracy and Spell Power. Can use Last Candle for 8 mana: gain another Action immediately."},
+      {name:"Master Fire Manipulation",cost:"Active",desc:"3d6 + Mind Fire Damage. Applies 3 stacks of Searing on HP damage."},
+      {name:"Master Water Manipulation",cost:"Active",desc:"3d6 + Mind Water Damage. Additional 1d10 Stamina Damage on HP damage (not affected by Spell Power)."},
+      {name:"Master Earth Manipulation",cost:"Active",desc:"3d6 + Mind Physical Damage. Gains Pierce effect."},
+      {name:"Master Wind Manipulation",cost:"Active",desc:"+4 Accuracy, True Hit. 3d6 + Mind Wind Damage. Accuracy/True Hit apply to first hit via Touch Magic only."},
+      {name:"Master Lightning Manipulation",cost:"Active",desc:"3d6 + Mind Lightning Damage. +2 critical range. Can crit. Has Deadly and Fatal properties."},
+      {name:"Elemental Salvo",cost:"Active",desc:"Summon 3 projectiles (+2 base accuracy). Each deals 1d4 + Mind elemental damage with same MAP."},
+      {name:"Elemental Fortress",cost:"Active",desc:"6-space wall: 2d6 elemental damage on contact for 4 turns. Earth variant: 20 HP/tile (40 with Terra Soul)."},
+      {name:"Molten Core",cost:"Reaction or Active",desc:"Reaction when grabbed: 1d6+Mind+1 Searing 5ft explosion. When grappling: 2d6+Mind+1 Searing 5ft explosion. (Infernal Soul required)"},
+      {name:"Aspect of the Phoenix",cost:"3 Mana/round upkeep",desc:"Self buff: Flight speed +2. Fire damage triggers 5ft fire cloak (Mind dice). +1 Searing to all fire damage. (Infernal Soul required)"},
+      {name:"Hellzone Grenade",cost:"Active",desc:"1d6 + Mind Fire Damage, 5ft Explosion AoE. (Infernal Soul required)"},
+      {name:"Precipitation",cost:"1 Action",desc:"Create Rain for 1 minute. With Aqua Soul: 5x5 shallow water tiles. (Aqua Soul required)"},
+      {name:"Flow Like Water",cost:"3 Mana upkeep",desc:"Self buff: +2 Accuracy and Parry. Pay 8 Mana to refund Reaction. (Aqua Soul required)"},
+      {name:"Freeze Time",cost:"Attack/Spell Enhancer",desc:"True Hit and +3 Accuracy on attack phase. (Aqua Soul required)"},
+      {name:"Mirror Mirror",cost:"1 Action",desc:"Extra attack matching accuracy dealing Water damage = weapon Primary Damage or Catalyst Spell Power. (Aqua Soul required)"},
+      {name:"Sand Fortress",cost:"3 Mana/round, Free Action",desc:"10ft Guard Aura. Guard + Earth DS as Free Action. Pay 4 Mana to make AoEs into Glancing blows. (Terra Soul required)"},
+      {name:"Shining Diamond",cost:"Reaction",desc:"One attack phase becomes Glancing blows. 2-round cooldown. (Terra Soul required)"},
+      {name:"Crystalline Barrier",cost:"3 Mana/round upkeep",desc:"Self buff: +2 Physical Resistance and Parry. Counter with Earth spells; regain 5 DS per Earth spell cast. (Terra Soul required)"},
+      {name:"Whirlwind",cost:"Magical Augment",desc:"After cast, activate as Free Action to push adjacent enemies 1 space (Willpower vs Vigor). 2 activations."},
+      {name:"Typhoon",cost:"3 Mana/round upkeep",desc:"10ft cloak or 6-space wall. Projectiles become Glancing (drain 2 extra mana). (Vacuum Soul required)"},
+      {name:"Gale Strike",cost:"Free Action, Attack Enhancer",desc:"Extend melee range by 4 spaces with Projectile quality. Requires Master Wind Manipulation. (Vacuum Soul required)"},
+      {name:"Violent Jolt",cost:"1 Action + recall",desc:"Mark your location. Pay again to recall (Action or Reaction, no AoO). Mark has 10 HP, 12 Parry."},
+      {name:"Instant Transmission",cost:"Free Action",desc:"Teleport 30ft in any direction. No AoO. Once per round. (Thunderous Soul required)"},
+      {name:"Thunderstruck",cost:"3 Mana upkeep",desc:"Self buff: +2 Spell Power, +1 Crit Range. Pay 8 Mana to gain another Action. (Thunderous Soul required)"},
+      {name:"Quantum Strike",cost:"1 Action",desc:"Magical Augment. Next single attack gains Advantage, +1 Crit, Fatal Quality. (Thunderous Soul required)"},
+      {name:"Overcharge Weapon",cost:"Touch Magic",desc:"5ft cloak during attack phase dealing 2d6+Mind Elemental Damage to surrounding enemies."},
+      {name:"Elemental Storm",cost:"2-3 Actions",desc:"20ft radius AoE (30ft with 3rd Action) of Adept Elemental Manipulation. Destroys all terrain hit. Requires Master Manipulation."},
+      {name:"Weather Manipulation",cost:"Full Action",desc:"Change the battlefield Weather to any type for 1 minute."}
+    ] },
     },
   },
   {
@@ -649,9 +735,51 @@ const SKILL_TREES = [
       {name:"Arcane Chaos",  desc:"+2 spaces to Teleportation, Forced Movement, Range Enhancers, and effective Void spell range."},
     ],
     tiers:{
-      novice:{ training:{name:"Novice Void Training", effect:"none", desc:"Access to Novice-tier Void spells."}, techniques:[] },
-      adept:{ training:{name:"Adept Void Training", effect:"none", desc:"Access to Adept-tier Void spells."}, techniques:[] },
-      master:{ training:{name:"Master Void Training", effect:"none", desc:"Access to Master-tier Void spells."}, techniques:[] },
+      novice:{ training:{name:"Novice Void Training", effect:"none", desc:"Access to Novice-tier Void spells."}, techniques:[
+      {name:"Novice Arcane Training",cost:"Passive",desc:"Gain +1 Accuracy."},
+      {name:"Void Sheath",cost:"Draw Action",desc:"Access items inside your Dimensional Treasury during your Draw Phase."},
+      {name:"Relocation Gate",cost:"Active",desc:"Teleport 60ft to a visible location. Can be used on a willing ally."},
+      {name:"Push",cost:"1 Action",desc:"Telekinetic blast pushes an adjacent target 1 space back. No AoO. Willpower vs Vigor save."},
+      {name:"Telekinesis",cost:"1-3 Actions",desc:"Perform 1 Interact Action with an object within range (up to Two-Handed Weapon size/weight)."},
+      {name:"Blurred Observation",cost:"1 Action",desc:"Gain Advantage on your next 1 attack within 1 round. No AoO. Magical augment."},
+      {name:"Surge",cost:"Active",desc:"1d6 + Mind gravity damage. Applies Slow on hit if target fails Willpower vs Vigor save."},
+      {name:"Projected Stasis",cost:"Active",desc:"10ft radius Difficult Terrain field at casting location for 2 rounds. Dismiss as Free Action."}
+    ] },
+      adept:{ training:{name:"Adept Void Training", effect:"none", desc:"Access to Adept-tier Void spells."}, techniques:[
+      {name:"Adept Arcane Training",cost:"Passive",desc:"Gain +1 Accuracy. Night's Sky available for 4 mana: +2 Primary Damage and Accuracy (Attack/Spell Enhancer)."},
+      {name:"Door to Emptiness",cost:"Active",desc:"Launch 2 weapons from Dimensional Treasury. Each makes 1 attack using weapon dice + Mind. Weapons return after."},
+      {name:"Perfect Balance",cost:"Active",desc:"Buff self or adjacent ally: ignore Difficult Terrain, walk on water. Lasts 1 minute. Magical augment."},
+      {name:"Planar Step",cost:"1 Action",desc:"Teleport 30ft in any direction. No AoO."},
+      {name:"Psychic Strike",cost:"Free Action, Attack Enhancer",desc:"Extend melee range by 2 spaces with Projectile quality on increased reach attacks."},
+      {name:"Reflex Force",cost:"Reaction",desc:"+3 Parry. On successful dodge of adjacent opponent, knock them back 2 spaces. Willpower vs Vigor."},
+      {name:"Telekinetic Blast",cost:"1 Action",desc:"Push all enemies 2 spaces back in 10ft radius cloak. No AoO. Willpower vs Vigor save."},
+      {name:"Gravity Well",cost:"1 Action",desc:"Pull one or more targets within 20ft radius into adjacent space. No AoO. Willpower vs Vigor save."},
+      {name:"Greater Telekinesis",cost:"1-3 Actions",desc:"Move Medium Creature-sized object. Against unwilling: 2 Actions + Willpower vs Vigor save."},
+      {name:"Gravity Crush",cost:"Active",desc:"2d6 + Mind Physical damage. On hit, Willpower vs Vigor save or target gains Slow for 1 round."},
+      {name:"Telekinetic Coating",cost:"2 Mana upkeep",desc:"Self buff: +1 Primary Damage or Spell Power and Accuracy. One self buff at a time."},
+      {name:"Telekinetic Strike",cost:"Attack Enhancer",desc:"Add +2 Secondary Damage to your attack phase."},
+      {name:"Concentrated Observation",cost:"1 Action",desc:"Gain Advantage on next attack phase: spend 2 Mana per attack for Advantage. No AoO."},
+      {name:"Bloom",cost:"Active",desc:"2d6 + Mind Magic Damage. On hit, Willpower vs Vigor save or target gains Root."},
+      {name:"Structured Stasis",cost:"Active",desc:"20ft radius Difficult Terrain field for 2 rounds. Dismiss as Free Action."},
+      {name:"Drifter's Sheathe",cost:"Free Action",desc:"Summon weapon from pocket dimension. Also perform any Interact Action as a Free Action (except Use Alchemical Item). Auto-acquired with Arcane Spirit perk."}
+    ] },
+      master:{ training:{name:"Master Void Training", effect:"none", desc:"Access to Master-tier Void spells."}, techniques:[
+      {name:"Master Arcane Training",cost:"Passive",desc:"Gain +1 Accuracy. Night's Sky upgrades to Astra (8 mana): retains bonuses, plus True Hit and +1 crit (Attack/Spell Enhancer)."},
+      {name:"Gates of Emptiness",cost:"Active",desc:"Launch 3 weapons from Dimensional Treasury. Each makes 1 attack using weapon dice + Mind. Weapons return after."},
+      {name:"Walking on Air",cost:"Active",desc:"Buff self or adjacent ally: Flight speed equal to Movement Speed for 1 minute. Magical augment."},
+      {name:"Blink",cost:"Free Action",desc:"Teleport 30ft in any direction. No AoO. Once per round."},
+      {name:"Open Portal",cost:"3 Actions",desc:"Create two linked portals within 1 mile. Units use an Action to pass through. Active 24 hours."},
+      {name:"Soul Vestige",cost:"Free Action, Attack Enhancer",desc:"Extend melee range by 3 spaces with Projectile quality on increased reach attacks."},
+      {name:"Unseen Fortress",cost:"Magical Augment",desc:"Telekinetic barrier. Activate as Free Action to push adjacent enemies 1 space (Willpower vs Vigor). 2 activations."},
+      {name:"Mass Telekinesis",cost:"1-3 Actions",desc:"Move Large Creature-sized object. Against unwilling: 2 Actions + Willpower vs Vigor save."},
+      {name:"Gravity Mangle",cost:"Active",desc:"3d6 + Mind Physical damage. On hit, Willpower vs Vigor save or target knocked Prone."},
+      {name:"Time Skip",cost:"3 Mana upkeep",desc:"Self buff: +2 Primary Damage and Accuracy. Pay 8 Mana during attack to reset MAP instantly. One self buff at a time."},
+      {name:"Telekinetic Armaments",cost:"3 Mana upkeep",desc:"Self buff: +2 Primary Damage or Spell Power, Accuracy, and Secondary Damage. One self buff at a time."},
+      {name:"Telekinetic Overload",cost:"Attack Enhancer",desc:"Add +3 Secondary Damage to your attack phase."},
+      {name:"Truesight",cost:"1 Action",desc:"Defensive: impose Disadvantage on attackers (2 Mana per attacker). Offensive: Advantage on attacks (2 Mana per attack)."},
+      {name:"Nova",cost:"Active",desc:"3d6 + Mind Magic Damage. On hit, Willpower vs Vigor save or target knocked Prone."},
+      {name:"Reverse Time",cost:"Free Action",desc:"Force a GM to re-roll any dice roll. Can counter a similar effect."}
+    ] },
     },
   },
   {
@@ -663,9 +791,46 @@ const SKILL_TREES = [
       {name:"Divine Mind",     desc:"Spend a 3rd Action on a holy cast to empower it — increased magnitude and up to 4 targets."},
     ],
     tiers:{
-      novice:{ training:{name:"Novice Holy Training", effect:"none", desc:"Access to Novice-tier Holy spells."}, techniques:[] },
-      adept:{ training:{name:"Adept Holy Training", effect:"none", desc:"Access to Adept-tier Holy spells."}, techniques:[] },
-      master:{ training:{name:"Master Holy Training", effect:"none", desc:"Access to Master-tier Holy spells."}, techniques:[] },
+      novice:{ training:{name:"Novice Holy Training", effect:"none", desc:"Access to Novice-tier Holy spells."}, techniques:[
+      {name:"Novice Celestial Training",cost:"Passive",desc:"Gain +5 Maximum Health."},
+      {name:"Heal",cost:"Active",desc:"Heal 2 targets (including caster) for 1d4 + Willpower. Remove 1 negative effect from each."},
+      {name:"Balm",cost:"1 Action",desc:"Heal 1 target (including caster) for 1d4 + Willpower. Remove 1 negative effect."},
+      {name:"Shine",cost:"Active",desc:"1d6 + Mind Holy Damage. Applies 1 Searing on HP damage (2 vs Creatures of Darkness)."},
+      {name:"Minor Ward",cost:"1 Action",desc:"Give yourself or an ally a 5-point Damage Shield."},
+      {name:"Guardian Angel",cost:"Free Action",desc:"Instantly Guard an ally within 5ft."},
+      {name:"Manifest Minor Relic",cost:"1+ Actions",desc:"Create Club, Heavy Club, or Sling from saint bones. Uses Mind for damage/accuracy. Attack enhancers cost Mana."}
+    ] },
+      adept:{ training:{name:"Adept Holy Training", effect:"none", desc:"Access to Adept-tier Holy spells."}, techniques:[
+      {name:"Adept Celestial Training",cost:"Passive",desc:"+5 Health. Enables Healing Light: cast any Heal line spell as a Reaction after taking damage."},
+      {name:"Mend",cost:"Active",desc:"Heal 3 targets (including caster) for 2d4 + Willpower. Remove 1 negative effect from each."},
+      {name:"Recover",cost:"1 Action",desc:"Heal 1 target (including caster) for 2d4 + Willpower. Remove 1 negative effect."},
+      {name:"Magic Barrier",cost:"Active",desc:"+3 Magic Resistance for 3 rounds. Magical Augment."},
+      {name:"Purge",cost:"Active",desc:"Inflict Manashock on enemy. Willpower vs Willpower save."},
+      {name:"Manifest Relic",cost:"1+ Actions",desc:"Create Simple weapon from saint bones. Uses Mind for damage/accuracy. Attack enhancers cost Mana."},
+      {name:"Angelic Aegis",cost:"Reaction",desc:"+3 Magic Resistance. Can be cast over any friendly unit within casting range as a Reaction."},
+      {name:"Aura",cost:"Active",desc:"2d6 + Mind Holy Damage. Applies 2 Searing on HP damage (4 vs Creatures of Darkness)."},
+      {name:"Ward",cost:"1 Action",desc:"Give yourself or an ally a 10-point Damage Shield."},
+      {name:"Light Rune",cost:"Active",desc:"2x2 rune for 2 rounds. Creatures of Darkness cannot pass; others treat as Difficult Terrain. One at a time."},
+      {name:"Sacred Oath",cost:"2 Mana/round upkeep",desc:"Self buff: +1 Physical Resistance and Primary Damage or Spell Power. One self buff at a time."},
+      {name:"Daylight",cost:"Active",desc:"2d6 + Mind Holy Damage. Heals caster for 50% of holy damage (HP damage heals HP; DS heals DS)."}
+    ] },
+      master:{ training:{name:"Master Holy Training", effect:"none", desc:"Access to Master-tier Holy spells."}, techniques:[
+      {name:"Master Celestial Training",cost:"Passive",desc:"+5 Maximum Health. Unlocks Radiant Dawn: channel self buff as 10ft aura for allies (double casting + upkeep). Banner buff."},
+      {name:"Catharsis",cost:"Active",desc:"Heal 4 targets (including caster) for 3d4 + Willpower. Remove 2 negative effects from each."},
+      {name:"Fortify",cost:"1 Action",desc:"Heal 1 target (including caster) for 3d4 + Willpower. Remove 2 negative effects."},
+      {name:"Great Magic Barrier",cost:"3 Mana/round, Self Buff",desc:"10ft radius aura. Magical projectiles, targeted AoE, and cloaks/explosions through it become Glancing blows."},
+      {name:"Summon Angelic Relic",cost:"1+ Actions",desc:"Create Holy damage Simple Weapon (tangible, putable away). 2 Mana/round per weapon. Attack enhancers cost Mana."},
+      {name:"Celestial's Aegis",cost:"Reaction",desc:"+4 Magic Resistance. Can be cast over any friendly unit within casting range."},
+      {name:"Blade of Light",cost:"Active",desc:"3d6 + Mind Holy Damage. Applies 3 Searing on HP damage (6 vs Creatures of Darkness)."},
+      {name:"Celestial Comet",cost:"2-3 Actions",desc:"1d6+Mind Holy targeted AoE (10ft, 20ft with 3rd Action). Persists 2 rounds as 1d4+Mind Holy cloak."},
+      {name:"Perfect Ward",cost:"1 Action",desc:"Give yourself or an ally a 15-point Damage Shield."},
+      {name:"Holy Fortress",cost:"Active",desc:"6-space wall for 2 turns. Creatures of Darkness cannot pass; others treat as Difficult Terrain. One at a time."},
+      {name:"Thorns of Heaven",cost:"Active",desc:"Summon 3 holy projectiles (+2 base accuracy). Each deals 1d4+Mind Holy Damage with same MAP."},
+      {name:"Solar Mantle",cost:"1 Action, 3 Mana/round upkeep",desc:"Self buff: +2 Physical and Magical Resistance, +2 Primary Damage or Spell Power. One self buff at a time."},
+      {name:"Sol",cost:"Active",desc:"3d6 + Mind Holy Damage. Heals caster for 50% of holy damage (HP heals HP; DS heals DS)."},
+      {name:"Swiftwinds Galdr",cost:"Any combination of Actions",desc:"Cast with Actions to grant those same Actions as Brave Actions to an adjacent ally, letting them act immediately."},
+      {name:"Mitotic Regeneration",cost:"3 Mana/round upkeep",desc:"Self buff: heal self + allies in 10ft for 1d4+Willpower/turn; +5 DS/turn; purge 1 negative effect on activation + each upkeep. Auto-acquired with Holy Might perk."}
+    ] },
     },
   },
   {
@@ -677,9 +842,59 @@ const SKILL_TREES = [
       {name:"Necromancer", desc:"All summons gain 5 DS on summon; summon attacks deal +1d6 Dark Secondary damage."},
     ],
     tiers:{
-      novice:{ training:{name:"Novice Dark Training", effect:"none", desc:"Access to Novice-tier Dark spells."}, techniques:[] },
-      adept:{ training:{name:"Adept Dark Training", effect:"none", desc:"Access to Adept-tier Dark spells."}, techniques:[] },
-      master:{ training:{name:"Master Dark Training", effect:"none", desc:"Access to Master-tier Dark spells."}, techniques:[] },
+      novice:{ training:{name:"Novice Dark Training", effect:"none", desc:"Access to Novice-tier Dark spells."}, techniques:[
+      {name:"Novice Abyssal Training",cost:"Passive",desc:"Increase rolls to apply CC and Target Number to Break Free from your CC by +1."},
+      {name:"Flux",cost:"Active",desc:"1d6 + Mind Dark Damage. Applies 2 Poison stacks on HP damage. May suffer 1 Poison to apply 1 extra stack."},
+      {name:"Harm",cost:"Active",desc:"1d6 + Mind Magic Damage. Applies 2 Bleed stacks on HP damage. May suffer 1 Bleed to apply 1 extra stack."},
+      {name:"Curse of Obscured Vision",cost:"Active",desc:"-1 Accuracy to target for 2 rounds. Mind Alteration. Willpower vs Willpower save."},
+      {name:"Curse of Aching Bones",cost:"Active",desc:"Inflicts Rend on target. Mind Alteration. Willpower vs Willpower save."},
+      {name:"Dragging Darkness",cost:"Active",desc:"Slows a target. Willpower vs Willpower save."},
+      {name:"Summon Fragment Phantom",cost:"Active",desc:"Summon (10 HP, 6 Parry, 30ft). 1d6+5 damage. Hits apply Bleed; if Bleed present, also Poison."},
+      {name:"Umbra",cost:"Active",desc:"Pull all DoT stacks in 10ft radius to you, healing those units. Unwilling: Willpower vs Willpower save."}
+    ] },
+      adept:{ training:{name:"Adept Dark Training", effect:"none", desc:"Access to Adept-tier Dark spells."}, techniques:[
+      {name:"Adept Abyssal Training",cost:"Passive",desc:"Increase CC rolls and Break Free TN by +1. On successfully applying CC, also apply 2 Poison stacks."},
+      {name:"Ruin",cost:"Active",desc:"2d6 + Mind Dark Damage. Applies 3 Poison stacks on HP damage. May suffer 2 Poison for 2 extra stacks."},
+      {name:"Injure",cost:"Active",desc:"2d6 + Mind Magic Damage. Applies 3 Bleed stacks on HP damage. May suffer 2 Bleed for 2 extra stacks."},
+      {name:"Manashock Curse",cost:"Active",desc:"Willpower vs Willpower; on fail, target gets Manashocked."},
+      {name:"Hex of Obscured Vision",cost:"Active",desc:"-2 Accuracy for 2 rounds. Mind Alteration. Willpower vs Willpower save."},
+      {name:"Hex of Aching Bones",cost:"Active",desc:"Causes Rend and Agony. Mind Alteration. Willpower vs Willpower save."},
+      {name:"Hex of Jittering Nerves",cost:"Active",desc:"-2 Parry for 2 rounds. Mind Alteration. Willpower vs Willpower save."},
+      {name:"Hex of Fear",cost:"Active",desc:"Willpower vs Willpower; on fail, target is Feared."},
+      {name:"Crushing Darkness",cost:"Active",desc:"Roots a target. Willpower vs Willpower save."},
+      {name:"Worm",cost:"Active",desc:"2d6 + Mind Dark Damage. Heals caster or ally in range for half damage dealt."},
+      {name:"Summon Dark Spirit",cost:"Active",desc:"Reanimate a fallen enemy as a Summon (50% Attributes). Cannot revive higher-level units."},
+      {name:"Fractal",cost:"Free Action",desc:"During summon's attack phase, spend 1-4 Mana to add that amount as Primary Damage."},
+      {name:"Aversa's Caress",cost:"Active",desc:"Aggravate all DoTs on self, roll 1d20 (+1 per stack). Higher rolls grant increasingly powerful dark gifts."},
+      {name:"Olumbra",cost:"Active",desc:"Pull all DoT stacks in 30ft radius to you. Unwilling: Willpower vs Willpower save."},
+      {name:"Munio",cost:"2-3 Actions",desc:"20ft radius AoE (30ft with 3rd Action): 1d6+Mind Dark Damage. HP damage applies 2 Bleed. May suffer 1 Bleed per target for 1 extra."},
+      {name:"Transcend Meek Flesh",cost:"2 Mana/round upkeep",desc:"Self buff: +2 Spell Power. Pay 1d4 Bleed per cast for +1 Spell Power that cast. One self buff at a time."},
+      {name:"Create Blood Weapon",cost:"Interact Action",desc:"Create a Simple weapon from your blood. HP damage applies 1 Bleed; suffer 1 Bleed for 1 extra stack. Cannot enchant."}
+    ] },
+      master:{ training:{name:"Master Dark Training", effect:"none", desc:"Access to Master-tier Dark spells."}, techniques:[
+      {name:"Master Abyssal Training",cost:"Passive",desc:"Increase CC rolls and Break Free TN by +3. Single-target Magical CC creates 5ft cloak; nearby enemies also targeted."},
+      {name:"Aversa",cost:"Active",desc:"3d6 + Mind Dark Damage. Applies 5 Poison stacks on HP damage. May suffer 3 Poison for 3 extra stacks."},
+      {name:"Disfigure",cost:"Active",desc:"3d6 + Mind Magic Damage. Applies 3 Bleed stacks on HP damage. May suffer 3 Bleed for 3 extra stacks."},
+      {name:"Manashock Hex",cost:"Active",desc:"Applies Fumble, then Willpower vs Willpower: on fail, Manashock. Can also Dispel a magical tile effect."},
+      {name:"Damnation of the Body",cost:"Active",desc:"-3 Accuracy for 2 rounds. Mind Alteration. Willpower vs Willpower save."},
+      {name:"Damnation of Pain",cost:"Active",desc:"Causes Rend and Agony. Optionally Aggravate target (also Aggravates self). Mind Alteration. Willpower vs Willpower save."},
+      {name:"Damnation of the Mind",cost:"Active",desc:"-3 Parry for 2 rounds + Silenced for 1 turn. Mind Alteration. Willpower vs Willpower save."},
+      {name:"Damnation of Weakening",cost:"Active",desc:"-4 Primary Damage or Spell Power; 2x Stamina or Mana cost for 2 rounds. Mind Alteration. Willpower vs Willpower save."},
+      {name:"Hands of Morpheus",cost:"Active",desc:"Summon 2 demonic hands (1d4+Mind dark each, same MAP). On damage, Grapple target using Mind vs Vigor."},
+      {name:"Gorgon",cost:"3 Actions",desc:"Paralyze target for 1 minute (1 Action upkeep each turn within range). Willpower vs Willpower save."},
+      {name:"Nosferatu",cost:"Active",desc:"3d6 + Mind Dark Damage. Heals caster or ally in range for half total dark damage."},
+      {name:"Umbral Storm",cost:"2-3 Actions",desc:"20ft radius AoE (30ft with 3rd Action): 2d6+Mind Dark. HP damage applies 3 Bleed. May suffer 2 Bleed per target for 2 extra."},
+      {name:"Summon Elder Guardian",cost:"Active",desc:"Reanimate a fallen enemy at full stats as a Summon. Cannot revive higher-level units."},
+      {name:"Mass Fractal",cost:"Free Action, 8 Mana",desc:"Add +4 damage to all attacking summons' attack phases on the following turn."},
+      {name:"Loptyr's Kiss",cost:"Active",desc:"Aggravate all DoTs on self, roll 1d20 (+1 per stack). Higher rolls grant powerful dark gifts; Nat 1 summons a demon."},
+      {name:"Sacrifice Ritual",cost:"Free, 0 Mana",desc:"Sacrifice all Summons for 5 HP, Mana, or Stamina each. Cannot sacrifice same-turn summons."},
+      {name:"Corpse Curse",cost:"Active",desc:"Detonate all Summons: 1d8+Mind 5ft Dark Explosion per Summon."},
+      {name:"Sound of Silence",cost:"Active / 4 Mana Reaction",desc:"Create 2 scrolls. As Reaction when enemy casts in range: sacrifice scroll, Willpower vs Willpower to nullify spell."},
+      {name:"Penumbra",cost:"Active",desc:"Pull all DoT stacks in 50ft radius to you. Unwilling: Willpower vs Willpower save."},
+      {name:"Transcend Abhorrent Flesh",cost:"3 Mana/round upkeep",desc:"Self buff: +3 Spell Power. Pay 2d4 Bleed per cast for +2 Spell Power that cast. One self buff at a time."},
+      {name:"Create Perfect Blood Weapon",cost:"Interact Action",desc:"Create a CQC/Marksmanship weapon from blood. HP damage applies 2 Bleed; suffer 2 Bleed for 2 extra. Cannot enchant."},
+      {name:"Empathy",cost:"Active",desc:"For 3 rounds, HP damage taken by caster is also taken by target. Willpower vs Willpower save. Auto-acquired with Sorcerer perk."}
+    ] },
     },
   },
   {
@@ -691,9 +906,53 @@ const SKILL_TREES = [
       {name:"Conqueror",    desc:"Figment debuffs become 10ft AoEs; +1 magnitude to all Figment spells (+1 Stack where applicable)."},
     ],
     tiers:{
-      novice:{ training:{name:"Novice Figment Training", effect:"none", desc:"Access to Novice-tier Figment spells."}, techniques:[] },
-      adept:{ training:{name:"Adept Figment Training", effect:"none", desc:"Access to Adept-tier Figment spells."}, techniques:[] },
-      master:{ training:{name:"Master Figment Training", effect:"none", desc:"Access to Master-tier Figment spells."}, techniques:[] },
+      novice:{ training:{name:"Novice Figment Training", effect:"none", desc:"Access to Novice-tier Figment spells."}, techniques:[
+      {name:"Novice Clarity Training",cost:"Passive",desc:"Gain +1 Parry."},
+      {name:"Minor Illusion",cost:"Active",desc:"Conjure a 5ft illusory image or sound lasting 1 minute. Targets see through on Willpower vs Willpower save."},
+      {name:"Fury",cost:"Active",desc:"Target takes 1 Confusion stack and Cripple. Willpower vs Willpower save."},
+      {name:"Drunkard's Pace",cost:"Active",desc:"Inflicts Slow on target. Willpower vs Willpower save."},
+      {name:"Empty Mind",cost:"Free Action Reaction",desc:"During cleansing phase, add +2 to Breaking Free against Magical CC."},
+      {name:"Shadow God's Stance",cost:"Free Action Reaction",desc:"During cleansing phase, add +2 to Breaking Free against Physical CC."}
+    ] },
+      adept:{ training:{name:"Adept Figment Training", effect:"none", desc:"Access to Adept-tier Figment spells."}, techniques:[
+      {name:"Adept Clarity Training",cost:"Passive",desc:"Gain +1 Parry. Unlocks Phasing: Step as a Free Action for 4 Mana."},
+      {name:"Illusory Circus",cost:"Active",desc:"20ft radius illusion zone for 1 minute. Enemy interactions trigger 1 Confusion stack. Willpower vs Willpower to see through. Move fragment 5 spaces with Action."},
+      {name:"Furor",cost:"Active",desc:"Target takes 2 Confusion stacks and Cripple. Willpower vs Willpower save."},
+      {name:"Fear",cost:"Active",desc:"Willpower vs Willpower; on fail, target is Stunned. Mind Alteration."},
+      {name:"Cease Action",cost:"1 Action",desc:"Roots target completely. Willpower vs Willpower save."},
+      {name:"Shard of Dreams",cost:"Active",desc:"Deals 1d8 Stamina damage on hit. Mind Alteration."},
+      {name:"Clear Mind",cost:"Free Action / 1 Action",desc:"Free Action: +2 and Advantage vs Magical CC. As Action: immediately cleanse CC from self or ally."},
+      {name:"Shadow God's Form",cost:"Free Action / 1 Action",desc:"Free Action: +2 and Advantage vs Physical CC. As Action: immediately cleanse CC from self or ally."},
+      {name:"Summon Tindalos Hound",cost:"Active",desc:"Summon (10 HP, 8 Parry, 60ft, moves through walls). Bite (Willpower accuracy): 2 Confusion + Cripple on hit."},
+      {name:"Summon Spirit of Dread",cost:"Active",desc:"Summon (10 HP, 8 Parry, 30ft). 20ft Fear aura: Willpower vs Willpower each turn or Fear."},
+      {name:"Shadow God's Motions",cost:"1 Action",desc:"Teleport 30ft in any direction. No AoO."},
+      {name:"After Images",cost:"Reaction",desc:"+3 Parry. On successful dodge, make a Step. Each dodged attack triggers 1 Step."},
+      {name:"Immaterial Forma",cost:"2 Mana/round upkeep",desc:"Self buff: +1 Parry and +2 Base Movement Speed. One self buff at a time."}
+    ] },
+      master:{ training:{name:"Master Figment Training", effect:"none", desc:"Access to Master-tier Figment spells."}, techniques:[
+      {name:"Master Clarity Training",cost:"Passive",desc:"Gain +1 Parry. Unlocks Speculo (4 Mana Free Action): copy a witnessed spell within reach, retain for 1 hour (up to 3 spells)."},
+      {name:"Bewildering Shadow Garden",cost:"3 Actions",desc:"30ft radius illusion zone for 1 minute. Pulsing Stun + Root (1 round) on Willpower vs Willpower fail."},
+      {name:"Chaos",cost:"Active",desc:"Target takes 3 Confusion stacks and Cripple. Willpower vs Willpower save."},
+      {name:"Hypnotic Gaze",cost:"2-3 Actions",desc:"Willpower vs Willpower; on fail, target loses 1-2 Actions next turn and must use them as directed. Mind Alteration."},
+      {name:"Sleep",cost:"3 Actions",desc:"Paralyze target for 1 minute (1 Action upkeep each turn within range). Willpower vs Willpower save."},
+      {name:"Seizure",cost:"Active",desc:"Willpower vs Willpower: on fail, Manashock. Can also Dispel a magical tile effect."},
+      {name:"Lunacy",cost:"Active",desc:"Silences target for 1 round. Willpower vs Willpower save."},
+      {name:"Slothful Blade",cost:"Active",desc:"1d6 + Willpower Stamina damage + 3 Confusion stacks. Mind Alteration. Willpower vs Willpower save."},
+      {name:"Tindalos Wormhole",cost:"Free Action",desc:"Teleport 30ft in any direction. No AoO. Once per round."},
+      {name:"Tranquil Mind",cost:"Free Action / 1 Action",desc:"Free Action: +4 and Advantage vs Magical CC. As Action: cleanse CC and grant 1 Stability stack."},
+      {name:"Shadow God's Body",cost:"Free Action / 1 Action",desc:"Free Action: +4 and Advantage vs Physical CC. As Action: cleanse CC and grant 1 Stability stack."},
+      {name:"Tindalos Agents",cost:"Active",desc:"Summon body double (15 HP, 12 Parry, 60ft). Swap places with Action/Reaction + 4 Mana (once per round). Attacks: 3 Confusion + Cripple."},
+      {name:"Divina Forma",cost:"3 Mana/round upkeep",desc:"Self buff: +2 Parry, +4 Movement. Pre-Battle: enter Stealth; first attack each defensive phase has Disadvantage. One self buff at a time."},
+      {name:"Diabolos Forma",cost:"3 Mana/round upkeep",desc:"Self buff: +2 Critical Range, +4 Movement. Pre-Battle: enter Stealth; first attack each defensive phase has Disadvantage. One self buff at a time."},
+      {name:"Invisibility",cost:"Free Action (Pre-Battle) / 1 Action",desc:"Pre-Battle: enter Stealth. As Action: all attacks targeting you this enemy phase have Disadvantage."},
+      {name:"Ad Nihilo",cost:"Free Action",desc:"Force a GM to re-roll any single dice roll for a different outcome."},
+      {name:"Erase",cost:"Reaction",desc:"After enemy attack phase resolves, turn their attacks into Glancing blows."},
+      {name:"Counterspell",cost:"Active / 4 Mana Reaction",desc:"Create 2 scrolls. As Reaction when enemy casts in range: sacrifice scroll, Willpower vs Willpower to nullify spell."},
+      {name:"Mark For Death",cost:"Active",desc:"Mark target. Each DoT stack applied adds to mark. Trigger (Action) converts all stacks to Confusion + Aggravate. Can cast from invisibility."},
+      {name:"Shadow God's Blade",cost:"1 Action",desc:"Summon 3 scrawl bracelets. During attack, sacrifice one: on HP damage, inflict target with a slotted single-target Figment spell."},
+      {name:"Doppler",cost:"Active",desc:"Touch target's face to memorize appearance. Recast to assume their shape for hours."},
+      {name:"Shadow God's Fingers",cost:"Active",desc:"On hit, steal an active self buff from target. They cannot reuse it until caster releases or it expires. Half spell range. Auto-acquired with Shadow Thief perk."}
+    ] },
     },
   },
   {
@@ -705,9 +964,55 @@ const SKILL_TREES = [
       {name:"Thaumic Power",   desc:"2 self-buffs on 1 Concentration slot (master+adept only); +2 penalty to all ability costs while active."},
     ],
     tiers:{
-      novice:{ training:{name:"Novice Thaumaturgy Training", effect:"none", desc:"Access to Novice-tier Thaumaturgy spells."}, techniques:[] },
-      adept:{ training:{name:"Adept Thaumaturgy Training", effect:"none", desc:"Access to Adept-tier Thaumaturgy spells."}, techniques:[] },
-      master:{ training:{name:"Master Thaumaturgy Training", effect:"none", desc:"Access to Master-tier Thaumaturgy spells."}, techniques:[] },
+      novice:{ training:{name:"Novice Thaumaturgy Training", effect:"none", desc:"Access to Novice-tier Thaumaturgy spells."}, techniques:[
+      {name:"Novice Runic Training",cost:"Passive",desc:"Mana flow improvement grants +1 Secondary Damage."},
+      {name:"Minor Magic Shield",cost:"1 Action",desc:"Give yourself or an ally a 5-point Damage Shield."},
+      {name:"Mending",cost:"Active",desc:"Repair a terrain tile, recovering 1d6 + Willpower HP."},
+      {name:"Create Small Structure",cost:"Active",desc:"Create 1 tile within range: crude Wall (10 HP), Pillar, or Barbed tile."},
+      {name:"Manifest Minor Weapon",cost:"1+ Actions",desc:"Create Club, Heavy Club, or Sling of magical energy using Mind for damage/accuracy. Attack enhancers cost Mana."},
+      {name:"Simple Mage Armor",cost:"Free Action (Pre-Battle)",desc:"Magical armor (no regular armor). Counts as any weight. +1 Physical and Magical Resistance. Lasts 1 hour."},
+      {name:"Cloud of Shards",cost:"Active",desc:"5ft radius metallic shard cloak on fixed tile for 2 rounds. 1d6 Physical damage per turn inside + 1 Bleed stack."}
+    ] },
+      adept:{ training:{name:"Adept Thaumaturgy Training", effect:"none", desc:"Access to Adept-tier Thaumaturgy spells."}, techniques:[
+      {name:"Adept Runic Training",cost:"Passive",desc:"+1 Secondary Damage. Can use Glyph spells to place Weapon Rune enchantments on summoned ethereal weapons."},
+      {name:"Create Structure",cost:"3 Actions",desc:"Create 5 connected tiles (Floor, Wall 20 HP, Pillar, or Barbed). Lasts 24 hours."},
+      {name:"Manifest Weapon",cost:"1+ Actions",desc:"Create a Simple weapon of magical energy using Mind for damage/accuracy. Attack enhancers cost Mana."},
+      {name:"Mage Armor",cost:"Free Action (Pre-Battle)",desc:"Magical armor. Counts as any weight. +2 Physical and Magical Resistance. Lasts 1 hour."},
+      {name:"Unstable Soulmass",cost:"1 Action, Magical Augment",desc:"Summon 2 soulmass orbs. Defensive: sacrifice 1 per phase for +1 Parry. Offensive: launch as Action attack (Mind+d6)."},
+      {name:"Banish",cost:"Active",desc:"Instantly kill a Summoned creature. Unguardable. Willpower vs Willpower save."},
+      {name:"Animate Weapons",cost:"Active",desc:"Animate a Simple Weapon (10 HP, 8 Parry, 30ft). Attacks with Mind accuracy. Has 5ft Guard Aura."},
+      {name:"Manifest Unstable Aegis",cost:"Reaction",desc:"Block: +3 Physical Resistance. Dodge: +3 Parry."},
+      {name:"Manifest Glyph",cost:"Free Action",desc:"Enchant held weapon with a Rune (temporarily overwrites existing). Can change ethereal weapon damage type."},
+      {name:"Glyph of Might",cost:"3 Mana/round upkeep",desc:"Pillar (30 HP), 10ft aura: +1 Primary Damage or Spell Power for allies. Banner buff."},
+      {name:"Glyph of Mending",cost:"3 Mana/round upkeep",desc:"Pillar (30 HP), 15ft aura: heal all friendlies for Willpower+1d4 at start of each caster turn. Banner buff."},
+      {name:"Glyph of Warding",cost:"3 Mana/round upkeep",desc:"Pillar (30 HP), 10ft aura: give allies 5 Damage Shields per round. Protects magical effects from Dispel. Banner buff."},
+      {name:"Glyphic Markings",cost:"Active",desc:"Place a Glyph aura onto a Summon (requires that Glyph slotted). One marking per summon."},
+      {name:"Mark of Disenchantment",cost:"Active",desc:"10ft radius rune for 2 rounds. Enemy units inside cannot receive positive spell effects."},
+      {name:"Evoke Bestial Aspect",cost:"2 Mana/round upkeep",desc:"Self buff: +1 Primary Damage and Accuracy. One self buff at a time."},
+      {name:"Evoke Serpentine Aspect",cost:"2 Mana/round upkeep",desc:"Self buff: +1 Parry and Physical Resistance. One self buff at a time."},
+      {name:"Evoke Abominable Aspect",cost:"2 Mana/round upkeep",desc:"Self buff: +1 Spell Power and Secondary Damage. One self buff at a time."},
+      {name:"Enlarge",cost:"2 Mana/round upkeep",desc:"Self buff: size +1, +1 Damage and Armor. One self buff at a time."}
+    ] },
+      master:{ training:{name:"Master Thaumaturgy Training", effect:"none", desc:"Access to Master-tier Thaumaturgy spells."}, techniques:[
+      {name:"Master Runic Training",cost:"Passive",desc:"+1 Secondary Damage. Spend 8 Mana to gain a slotted Thaumaturgy self buff's benefits for one attack phase (Attack Enhancer)."},
+      {name:"Create Greater Structure",cost:"6 Actions",desc:"Create 15 connected tiles (Floor, Wall 30 HP, Pillar, or Barbed). Lasts 24 hours."},
+      {name:"Manifest Ethereal Weapon",cost:"1+ Actions",desc:"Create Simple Weapon of raw magical energy (Magic damage, tangible). 2 Mana/round per weapon. Attack enhancers cost Mana."},
+      {name:"Perfect Mage Armor",cost:"Free Action (Pre-Battle)",desc:"Magical armor. Counts as any weight. +3 Physical and Magical Resistance. Lasts 1 hour."},
+      {name:"Manifest Perfect Aegis",cost:"Reaction",desc:"Block: +4 Physical Resistance. Dodge: +4 Parry."},
+      {name:"Perfect Soulmass",cost:"1 Action, Magical Augment",desc:"Summon 4 soulmass orbs. Defensive: sacrifice 1 per phase for +1 Parry. Offensive: launch as Action attack (Mind+d6)."},
+      {name:"Manifest Potent Glyph",cost:"1 Action",desc:"Enchant held weapon with a Spell enhancement (overwrites existing). Can change ethereal weapon damage type."},
+      {name:"Animated Weapon Swarm",cost:"Active",desc:"Swarm Summon: 5 animated weapons (5 HP, 8 Parry, 30ft speed, 1d6+Mind attack)."},
+      {name:"Glyph of Fury",cost:"4 Mana/round upkeep",desc:"Pillar (30 HP), 10ft aura: +1 Crit and Lethal quality for allies. Banner buff."},
+      {name:"Glyph of Defiance",cost:"4 Mana/round upkeep",desc:"Pillar (30 HP), 10ft aura: +2 Physical and Magical Resistance, +2 Parry for allies. Banner buff."},
+      {name:"Mark of Transference",cost:"Active",desc:"10ft radius rune. Enemies inside take Mind+d6 magical damage; caster gains equal Damage Shields."},
+      {name:"Evoke Primal Bestial Aspect",cost:"3 Mana/round upkeep",desc:"Self buff: +2 Primary Damage and Accuracy. Boost stamina-based attack enhancers with up to 4 extra Stamina. One self buff at a time."},
+      {name:"Evoke Perfect Serpentine Aspect",cost:"3 Mana/round upkeep",desc:"Self buff: +2 Parry and Physical Resistance. Shed Skin (Action, 8 Mana): Disadvantage on attackers this phase. One self buff at a time."},
+      {name:"Evoke Perfect Abominable Aspect",cost:"3 Mana/round upkeep",desc:"Self buff: +2 Spell Power and Secondary Damage. Pay 3 Mana for +1 per free hand during attack. Flight +2 movement. One self buff at a time."},
+      {name:"Greater Enlarge",cost:"3 Mana/round upkeep",desc:"Self buff: size +2, +2 Damage and Armor. One self buff at a time."},
+      {name:"Arcane Aspect",cost:"3 Mana/round upkeep",desc:"Self buff: +2 Primary Damage and Accuracy. Generate 2 Soulmass Orbs/turn (max 4, requires Soulmass slotted). One self buff at a time."},
+      {name:"Manifest Perfect Forcefield",cost:"3 Actions",desc:"Wall up to 20 spaces/100ft long, 4 spaces/20ft tall (dome/cube option). 50 HP/tile, recovers to full each turn. 10-turn cooldown. Allies fire through; caster controls passage."},
+      {name:"Replicate Magic Item",cost:"Regular cast + 1 minute",desc:"Analyze a held magic item, then create a perfect replica lasting 24 hours. Auto-acquired with Thaumic Battery perk."}
+    ] },
     },
   },
   {
@@ -719,9 +1024,47 @@ const SKILL_TREES = [
       {name:"Soulbeast",     desc:"Merge with a bonded Nature animal (takes Concentration slot); all attacks count as Flanking while merged."},
     ],
     tiers:{
-      novice:{ training:{name:"Novice Nature Training", effect:"none", desc:"Access to Novice-tier Nature spells."}, techniques:[] },
-      adept:{ training:{name:"Adept Nature Training", effect:"none", desc:"Access to Adept-tier Nature spells."}, techniques:[] },
-      master:{ training:{name:"Master Nature Training", effect:"none", desc:"Access to Master-tier Nature spells."}, techniques:[] },
+      novice:{ training:{name:"Novice Nature Training", effect:"none", desc:"Access to Novice-tier Nature spells."}, techniques:[
+      {name:"Novice Shamanic Training",cost:"Passive",desc:"Attune to nature spirits, gaining +5 Mana."},
+      {name:"Green Growth",cost:"Active",desc:"Create a 2x2 Forest tile within casting range."},
+      {name:"Forest Pathmaker",cost:"Free Action",desc:"Ignore Forest tile movement penalties for 2 turns. Not a self buff."},
+      {name:"Whisper of the Wild",cost:"Active",desc:"Summon a small animal (same level or below) as a Summon."},
+      {name:"Leaf Spike",cost:"Active",desc:"2d8 + Mind Physical Damage. Can crit (+1 crit). HP damage applies Bind. Willpower vs Vigor save."},
+      {name:"Soothing Spores",cost:"1 Action",desc:"Heal 1 target for 1 Willpower die. Healing reapplied at start of target's next round. Magical augment."}
+    ] },
+      adept:{ training:{name:"Adept Nature Training", effect:"none", desc:"Access to Adept-tier Nature spells."}, techniques:[
+      {name:"Adept Shamanic Training",cost:"Passive",desc:"Gain +5 Mana. When commanding summoned animals, spend Actions to grant them Actions."},
+      {name:"Lesser Chimeric Wildshape",cost:"Free Action / 1+ Actions",desc:"Chimeric form. Pre-Battle: 2 transformations. Each extra Action adds 1 more. Lasts 1 hour."},
+      {name:"Thorned Aegis",cost:"Reaction",desc:"Block: +3 Physical Resistance. Dodge: +3 Parry."},
+      {name:"Nature Release",cost:"Active",desc:"Turn a 4x4 grid within casting range to Forest tiles."},
+      {name:"Nature's Bounty",cost:"Active",desc:"Each Forest tile in 30ft radius yields 1 Juicy Fruit (restores 10 HP, Mana, Stamina when consumed)."},
+      {name:"Predatory Stalk",cost:"2 Mana/round upkeep",desc:"Self buff: +1 Primary Damage and Accuracy. One self buff at a time."},
+      {name:"Call of the Wild",cost:"Active",desc:"Summon a Medium animal (same level or below)."},
+      {name:"Leaf Spears",cost:"Active",desc:"3d8 + Mind Physical Damage. Can crit (+1 crit). HP damage applies Bind. Willpower vs Vigor save."},
+      {name:"Armor of Bark",cost:"2 Mana/round upkeep",desc:"Self buff: +1 Parry and Physical Resistance. One self buff at a time."},
+      {name:"Nature's Anger",cost:"Active / 3rd Action",desc:"Destroy 15ft cone of terrain (20ft radius with 3rd Action). Burning Forest becomes regular Forest."},
+      {name:"Rejuvenating Spores",cost:"1 Action",desc:"Heal 1 target for 2 Willpower dice. Healing reapplied at start of target's next round. Magical augment."},
+      {name:"Bloom Heal",cost:"Active",desc:"Heal 1 Willpower die + recover Stamina for half healed. 5ft radius affecting allies."},
+      {name:"Giant Growth",cost:"2 Mana/round upkeep",desc:"Self buff: +1 Accuracy, size +1 (no Parry penalty). One self buff at a time."}
+    ] },
+      master:{ training:{name:"Master Nature Training", effect:"none", desc:"Access to Master-tier Nature spells."}, techniques:[
+      {name:"Master Shamanic Training",cost:"Passive",desc:"Gain +5 Mana. Summons get a concentration slot for Self Buffs. Self Buffs can optionally apply to a Summon instead."},
+      {name:"Greater Chimeric Wildshape",cost:"Free Action / 1+ Actions",desc:"Chimeric form. Pre-Battle: 3 transformations. Each extra Action adds 1 more. Better stats than lesser. Lasts 1 hour."},
+      {name:"Deep Forest Resurgence",cost:"Active",desc:"Turn a 6x6 grid within casting range to Forest tiles."},
+      {name:"Predatory Stride",cost:"3 Mana/round upkeep",desc:"Self buff: +2 Primary Damage and Accuracy. Gain a Brave Action after each attack phase. One self buff at a time."},
+      {name:"Dryad Song",cost:"Free Action",desc:"While on a Forest tile, teleport to any connected Forest tile (must see destination)."},
+      {name:"Roar of the Wild",cost:"Active",desc:"Summon any animal (same level or below)."},
+      {name:"Leaf Dragon",cost:"Active",desc:"4d8 + Mind Physical Damage. Can crit (+2 crit). HP damage applies Bind. Willpower vs Vigor save."},
+      {name:"Rose Equinox",cost:"Active",desc:"6 wall tiles (10 HP each). Each emits 5ft poison cloud (6 Poison stacks) when created and when destroyed."},
+      {name:"Armor of Thorns",cost:"3 Mana/round upkeep",desc:"Self buff: +2 Parry and Physical Resistance. After being attacked, 5ft physical cloak (1d10) around caster. One self buff at a time."},
+      {name:"Nature's Wrath",cost:"Active / 3rd Action",desc:"Destroy 20ft cone (40ft radius with 3rd Action). Burning Forest becomes regular Forest."},
+      {name:"Reviving Spores",cost:"1 Action",desc:"Heal 1 target for 3 Willpower dice. Healing reapplied at start of target's next round. Magical augment."},
+      {name:"Blossom Heal",cost:"Active",desc:"Heal 2 Willpower dice + Stamina for half healed. 10ft radius, affects allies."},
+      {name:"Nature's Chorus",cost:"Any combination of Actions",desc:"Cast with Actions to grant those same Actions as Brave Actions to an adjacent ally immediately."},
+      {name:"Thorned Golem",cost:"3 Mana/round upkeep",desc:"Self buff: thorned golem armor. Leaf spells cost -4 Mana; +2 Physical Resistance; +2 Accuracy and Spell Power. No weapons; Nature spells in melee don't provoke AoOs."},
+      {name:"Colossification",cost:"3 Mana/round upkeep",desc:"Self buff: +2 Accuracy, +1 Parry, size +2 (no Parry penalty). One self buff at a time."},
+      {name:"Polymorph",cost:"Active",desc:"Transform self (keeps Attributes/feats, uses creature template) or enemy. Enemy: Willpower vs Willpower per turn/damage to break free. Auto-acquired with Druidcraft perk."}
+    ] },
     },
   },
 ];
@@ -937,6 +1280,18 @@ const SLOTTED_BONUS_TECHS = {
   "Perfected Stance":  {Acc:2, PrimDmg:2, Parry:2},
 };
 
+// ─── SPELL SLOT HELPERS ──────────────────────────────────────────────────────
+const calcBonusSpellSlots = (purchasedTrainings) => {
+  let bonus = 0;
+  for(const tree of SKILL_TREES) {
+    if(tree.type !== "magic") continue;
+    for(const tier of ["novice","adept","master"]) {
+      if(purchasedTrainings.has(`${tree.id}:${tier}`)) bonus += 5;
+    }
+  }
+  return bonus;
+};
+
 // ─── MAIN APP ────────────────────────────────────────────────────────────────
 const EMPTY_CHAR = {
   name:"", race:"", age:"", location:"", appearance:"", personality:"", history:"",
@@ -947,15 +1302,15 @@ const EMPTY_CHAR = {
   stats:{Strength:"d4",Dexterity:"d4",Vigor:"d4",Mind:"d4",Willpower:"d4"},
   attrs:{HP:20,Stamina:10,Mana:0},
   attrPointsUsed:0,
-  skills:{}, techniques:{}, purchasedTrainings:new Set(), masterPerks:{}, slottedTechniques:new Set(),
+  skills:{}, techniques:{}, purchasedTrainings:new Set(), masterPerks:{}, slottedTechniques:new Set(), slottedSpells:new Set(),
   equipment:{weapon:null,offhand:null,armor:null,items:[],catalyst:null,jewelry:[]},
   money:500,
 };
 
 // Serialize Set → array for storage/export
-const charToJSON = (c) => ({...c, purchasedTrainings: [...(c.purchasedTrainings||[])], slottedTechniques: [...(c.slottedTechniques||[])]});
+const charToJSON = (c) => ({...c, purchasedTrainings: [...(c.purchasedTrainings||[])], slottedTechniques: [...(c.slottedTechniques||[])], slottedSpells: [...(c.slottedSpells||[])]});
 // Restore array → Set on load
-const charFromJSON = (obj) => ({...EMPTY_CHAR, ...obj, purchasedTrainings: new Set(obj.purchasedTrainings||[]), slottedTechniques: new Set(obj.slottedTechniques||[])});
+const charFromJSON = (obj) => ({...EMPTY_CHAR, ...obj, purchasedTrainings: new Set(obj.purchasedTrainings||[]), slottedTechniques: new Set(obj.slottedTechniques||[]), slottedSpells: new Set(obj.slottedSpells||[])});
 
 const SAVE_SLOTS = ["slot_1","slot_2","slot_3"];
 
@@ -1161,7 +1516,42 @@ function App() {
     });
     return used;
   })();
+  // ── Master Perk helper (needed for manaPlus5 below) ──────────────────────
+  const hasPerk = (skillId, perkName) => {
+    const val = char.masterPerks[skillId];
+    if(!val) return false;
+    const arr = Array.isArray(val) ? val : [val];
+    return arr.includes(perkName);
+  };
+  // Mana +5 perks (must be computed before finalMana)
+  const manaPlus5 =
+    (hasPerk("spellcrafting","Blessing of Mana") ? 5 : 0) +
+    (hasPerk("anima","Energy") ? 5 : 0) +
+    (hasPerk("void","Arcane Spirit") ? 5 : 0) +
+    (hasPerk("holy","Holy Might") ? 5 : 0) +
+    (hasPerk("dark","Sorcerer") ? 5 : 0) +
+    (hasPerk("figment","Shadow Thief") ? 5 : 0) +
+    (hasPerk("thaumaturgy","Thaumic Battery") ? 5 : 0) +
+    (hasPerk("nature","Druidcraft") ? 5 : 0);
   const finalMana     = char.attrs.Mana + (trainBonuses.Mana||0) + manaPlus5;
+  // Spell slot budget (needs finalMana)
+  const bonusSpellSlots = calcBonusSpellSlots(char.purchasedTrainings);
+  const totalSpellSlots = finalMana + bonusSpellSlots;
+  const spellSlotsUsed = (() => {
+    let used = 0;
+    (char.slottedSpells||new Set()).forEach(key => {
+      const [skillId, spellName] = key.split("||");
+      const tree = SKILL_TREES.find(t=>t.id===skillId);
+      if(!tree) return;
+      for(const tier of ["novice","adept","master"]) {
+        if((tree.tiers[tier]?.techniques||[]).some(t=>t.name===spellName)) {
+          used += TIER_SLOT_COST[tier]; return;
+        }
+      }
+      used += 2;
+    });
+    return used;
+  })();
   const finalDmgShield= calcDmgShield(char.stats.Vigor);
   const baseParry     = calcParry(char.stats.Dexterity);
   const armorParryB   = char.equipment.armor?.parry||0;
@@ -1245,14 +1635,6 @@ function App() {
     return fx;
   })();
 
-  // ── Master Perk helpers ──────────────────────────────────────────────────
-  const hasPerk = (skillId, perkName) => {
-    const val = char.masterPerks[skillId];
-    if(!val) return false;
-    const arr = Array.isArray(val) ? val : [val];
-    return arr.includes(perkName);
-  };
-
   // Brute: STR replaces DEX for melee accuracy
   const hasBrute = hasPerk("cqc", "Brute");
   // Eagle Eye: DEX replaces STR for ranged damage
@@ -1261,16 +1643,6 @@ function App() {
   const hasPrimalMass = hasPerk("savagery", "Primal Mass");
   // Punishing Draw: +2 Acc & Dmg on initiating attack (show as flat bonus on sheet)
   const hasPunishingDraw = hasPerk("endurance", "Punishing Draw");
-  // Mana +5 perks
-  const manaPlus5 =
-    (hasPerk("spellcrafting","Blessing of Mana") ? 5 : 0) +
-    (hasPerk("anima","Energy") ? 5 : 0) +
-    (hasPerk("void","Arcane Spirit") ? 5 : 0) +
-    (hasPerk("holy","Holy Might") ? 5 : 0) +
-    (hasPerk("dark","Sorcerer") ? 5 : 0) +
-    (hasPerk("figment","Shadow Thief") ? 5 : 0) +
-    (hasPerk("thaumaturgy","Thaumic Battery") ? 5 : 0) +
-    (hasPerk("nature","Druidcraft") ? 5 : 0);
 
 
   // Savage Fighting: Parry bonuses from Unarmored techniques also add to Primary Damage
@@ -1329,7 +1701,7 @@ function App() {
     return true;
   };
 
-  const derived = {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots};
+  const derived = {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots};
 
   return (
     <div style={{minHeight:"100vh",background:"var(--bg-page-grad)",color:"var(--text-body)",fontFamily:"'Palatino Linotype',Palatino,Georgia,serif",display:"flex",flexDirection:"column"}}>
@@ -1570,8 +1942,8 @@ function StepRole({char,setC}){
           return(
             <button key={r} onClick={()=>setC("role",r)} style={{border:sel?"1px solid #c8a84a":"1px solid var(--border-cebee8)",background:sel?"var(--bg-sel)":"var(--bg-sel-unsel)",color:"inherit",padding:"18px",cursor:"pointer",textAlign:"left",fontFamily:"inherit",borderRadius:3,transition:"all 0.2s"}}>
               <div style={{fontSize:22,marginBottom:6}}>{d.icon}</div>
-              <div style={{fontWeight:700,fontSize:14,color:sel?"#2a1848":"#6a50a0",marginBottom:6,letterSpacing:"0.05em"}}>{r.toUpperCase()}</div>
-              <div style={{fontSize:11,color:sel?"#c8bca0":"#3a2a5a",lineHeight:1.5}}>{d.desc}</div>
+              <div style={{fontWeight:700,fontSize:14,color:sel?"var(--text-value-hi)":"var(--text-sub)",marginBottom:6,letterSpacing:"0.05em"}}>{r.toUpperCase()}</div>
+              <div style={{fontSize:11,color:sel?"var(--text-label)":"var(--text-desc)",lineHeight:1.5}}>{d.desc}</div>
             </button>
           );
         })}
@@ -1590,8 +1962,8 @@ function StepBoon({char,setC}){
           const sel=char.boon?.name===b.name;
           return(
             <button key={b.name} onClick={()=>setC("boon",b)} style={{border:sel?"1px solid #c8a84a":"1px solid var(--border-cebee8)",background:sel?"var(--bg-sel)":"var(--bg-sel-unsel)",color:"inherit",padding:"16px",cursor:"pointer",textAlign:"left",fontFamily:"inherit",borderRadius:3,transition:"all 0.2s"}}>
-              <div style={{fontWeight:700,fontSize:13,color:sel?"#2a1848":"#6a50a0",marginBottom:6}}>{b.name}</div>
-              <div style={{fontSize:11,color:sel?"#c8bca0":"#3a2a5a",lineHeight:1.5}}>{b.desc}</div>
+              <div style={{fontWeight:700,fontSize:13,color:sel?"var(--text-value-hi)":"var(--text-sub)",marginBottom:6}}>{b.name}</div>
+              <div style={{fontSize:11,color:sel?"var(--text-label)":"var(--text-desc)",lineHeight:1.5}}>{b.desc}</div>
             </button>
           );
         })}
@@ -1783,23 +2155,32 @@ function StepSkills({char,setChar,spLeft,totalSP,moneyLeft,skillSilverSpent}){
     return{...c,skills:{...c.skills,[id]:rank},techniques:newTechs,masterPerks:newMPs,purchasedTrainings:newPT};
   });
 
-  // Which skill tree (if any) currently owns the training line?
-  const trainingTreeId = (() => {
-    for(const tree of SKILL_TREES) {
+  // Which skill tree (if any) currently owns the training line? (separate for physical/magic)
+  const physicalTrainingTreeId = (() => {
+    for(const tree of SKILL_TREES.filter(t=>t.type==="physical")) {
       const tiers = ["novice","adept","master"];
       if(tiers.some(t => char.purchasedTrainings.has(`${tree.id}:${t}`))) return tree.id;
     }
     return null;
   })();
+  const magicTrainingTreeId = (() => {
+    for(const tree of SKILL_TREES.filter(t=>t.type==="magic")) {
+      const tiers = ["novice","adept","master"];
+      if(tiers.some(t => char.purchasedTrainings.has(`${tree.id}:${t}`))) return tree.id;
+    }
+    return null;
+  })();
+  const trainingTreeId = physicalTrainingTreeId || magicTrainingTreeId;
 
   const toggleTraining=(skillId,tier)=>setChar(c=>{
     const key=`${skillId}:${tier}`;
     const silverCost=TIER_SILVER[tier];
     const already=c.purchasedTrainings.has(key);
     if(!already){
-      // Block if a DIFFERENT tree already owns the training line
+      // Block if a DIFFERENT tree of the SAME TYPE already owns the training line
       const tiers2=["novice","adept","master"];
-      const ownerTree=SKILL_TREES.find(t=>t.id!==skillId&&tiers2.some(ti=>c.purchasedTrainings.has(`${t.id}:${ti}`)));
+      const thisTree=SKILL_TREES.find(t=>t.id===skillId);
+      const ownerTree=SKILL_TREES.find(t=>t.id!==skillId&&t.type===thisTree?.type&&tiers2.some(ti=>c.purchasedTrainings.has(`${t.id}:${ti}`)));
       if(ownerTree)return c;
       // Check silver
       const equipSpent=[c.equipment.weapon?.cost||0,c.equipment.offhand?.cost||0,c.equipment.armor?.cost||0,c.equipment.catalyst?.cost||0,...c.equipment.items.map(i=>i.cost),...c.equipment.jewelry.map(j=>j.cost)].reduce((a,b)=>a+b,0);
@@ -1871,7 +2252,8 @@ function StepSkills({char,setChar,spLeft,totalSP,moneyLeft,skillSilverSpent}){
       </div>
       {isVoA&&<Banner>Vow of Ash: Cannot invest in Magic skills.</Banner>}
       {isRoE&&<Banner>Rite of Embers: Cannot invest in Physical skills.</Banner>}
-      {trainingTreeId&&<Banner style={{borderColor:"#4a9a30",background:"var(--bg-panel-alt)",color:"var(--text-teal)"}}>Training line locked to: <strong>{SKILL_TREES.find(t=>t.id===trainingTreeId)?.name}</strong>. Refund its trainings to switch trees.</Banner>}
+      {physicalTrainingTreeId&&<Banner style={{borderColor:"#4a9a30",background:"var(--bg-panel-alt)",color:"var(--text-teal)"}}>Physical training locked to: <strong>{SKILL_TREES.find(t=>t.id===physicalTrainingTreeId)?.name}</strong>. Refund its trainings to switch.</Banner>}
+      {magicTrainingTreeId&&<Banner style={{borderColor:"#7060b0",background:"var(--bg-panel-alt)",color:"#a080e0"}}>Magic training locked to: <strong>{SKILL_TREES.find(t=>t.id===magicTrainingTreeId)?.name}</strong>. Refund its trainings to switch. Spells in other trees are still accessible via skill rank.</Banner>}
 
       {[["Physical Skills",phys],["Magic Skills",magic]].map(([title,trees])=>(
         <div key={title} style={{marginTop:18}}>
@@ -1920,7 +2302,8 @@ function StepSkills({char,setChar,spLeft,totalSP,moneyLeft,skillSilverSpent}){
                       const techniques=tierData.techniques;
                       const trainingKey=`${tree.id}:${tier}`;
                       const trainingBought=char.purchasedTrainings.has(trainingKey);
-                      const trainingLocked=!trainingBought&&trainingTreeId!==null&&trainingTreeId!==tree.id;
+                      const sameTypeTrainingTreeId = tree.type==="magic" ? magicTrainingTreeId : physicalTrainingTreeId;
+                      const trainingLocked=!trainingBought&&sameTypeTrainingTreeId!==null&&sameTypeTrainingTreeId!==tree.id;
                       const silverCost=TIER_SILVER[tier];
                       return(
                         <div key={tier} style={{marginBottom:18}}>
@@ -1934,7 +2317,7 @@ function StepSkills({char,setChar,spLeft,totalSP,moneyLeft,skillSilverSpent}){
                           <button onClick={()=>!trainingLocked&&toggleTraining(tree.id,tier)} style={{
                             width:"100%",
                             border:trainingBought?"1px solid var(--accent-gold)":"1px solid var(--border-cebee8)",
-                            background:trainingBought?"linear-gradient(135deg,rgba(76,200,224,0.15),rgba(20,10,40,0.98))":trainingLocked?"rgba(30,22,48,0.7)":"var(--bg-panel)",
+                            background:trainingBought?"var(--training-bought)":trainingLocked?"var(--training-locked)":"var(--bg-panel)",
                             color:"inherit",padding:"9px 12px",
                             cursor:trainingLocked?"not-allowed":"pointer",
                             textAlign:"left",fontFamily:"inherit",borderRadius:3,marginBottom:8,
@@ -1943,7 +2326,7 @@ function StepSkills({char,setChar,spLeft,totalSP,moneyLeft,skillSilverSpent}){
                           }}>
                             <span style={{fontSize:10,color:trainingBought?"var(--text-train-bought)":trainingLocked?"var(--text-train-locked)":"var(--text-train-norm)",whiteSpace:"nowrap",marginTop:1}}>⚡ TRAINING</span>
                             <div style={{flex:1}}>
-                              <span style={{fontSize:11,color:trainingBought?"#1e1430":trainingLocked?"var(--text-head)":"var(--text-sub)",fontWeight:600}}>{training.name}</span>
+                              <span style={{fontSize:11,color:trainingBought?"var(--text-train-bought)":trainingLocked?"var(--text-head)":"var(--text-sub)",fontWeight:600}}>{training.name}</span>
                               <span style={{fontSize:10,color:trainingBought?"var(--text-train-bought)":trainingLocked?"var(--text-train-locked)":"var(--text-train-norm)",marginLeft:6}}>{training.desc}</span>
                             </div>
                             <span style={{fontSize:10,color:trainingBought?"var(--text-train-bought)":trainingLocked?"var(--text-train-locked)":"var(--text-train-norm)",whiteSpace:"nowrap",marginLeft:8}}>
@@ -1951,7 +2334,12 @@ function StepSkills({char,setChar,spLeft,totalSP,moneyLeft,skillSilverSpent}){
                             </span>
                           </button>
 
-                          {/* Techniques */}
+                          {/* Techniques / Spells */}
+                          {tree.type==="magic"&&!trainingBought&&techniques.length>0&&(
+                            <div style={{fontSize:10,color:"#a080e0",marginBottom:6,padding:"4px 8px",background:"rgba(112,80,180,0.1)",borderRadius:3,border:"1px solid rgba(112,80,180,0.25)"}}>
+                              ✦ Spells are accessible via skill rank. Training is optional — each tier purchased adds +5 Mana spell slots.
+                            </div>
+                          )}
                           {techniques.length>0&&(
                             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                               {techniques.map(tech=>{
@@ -1959,18 +2347,18 @@ function StepSkills({char,setChar,spLeft,totalSP,moneyLeft,skillSilverSpent}){
                                 return(
                                   <button key={tech.name} onClick={()=>toggleTechnique(tree.id,tier,tech.name)} style={{
                                     border:sel?"1px solid #c8a84a":"1px solid var(--border-soft)",
-                                    background:sel?"var(--bg-sel)":"rgba(38,28,58,0.85)",
+                                    background:sel?"var(--bg-sel)":"var(--bg-panel)",
                                     color:"inherit",padding:"8px 10px",cursor:"pointer",
                                     textAlign:"left",fontFamily:"inherit",borderRadius:3,
                                   }}>
                                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:3}}>
-                                      <span style={{fontSize:11,fontWeight:600,color:sel?"#2a1848":"#6a50a0"}}>{tech.name}</span>
+                                      <span style={{fontSize:11,fontWeight:600,color:sel?"var(--text-value-hi)":"var(--text-body)"}}>{tech.name}</span>
                                       <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2,marginLeft:4,flexShrink:0}}>
-                                        <span style={{fontSize:9,color:sel?"#c9a84c":"#3a2a5a"}}>{sel?"✓":silverCost+"s"}</span>
+                                        <span style={{fontSize:9,color:sel?"var(--accent-gold)":"var(--text-muted)"}}>{sel?"✓":silverCost+"s"}</span>
                                         <span style={{fontSize:8,color:"var(--text-sm-btn)"}}>{tech.cost}</span>
                                       </div>
                                     </div>
-                                    <div style={{fontSize:10,color:sel?"#c8bca0":"#2e2248",lineHeight:1.4}}>{tech.desc}</div>
+                                    <div style={{fontSize:10,color:sel?"var(--text-label)":"var(--text-desc)",lineHeight:1.4}}>{tech.desc}</div>
                                   </button>
                                 );
                               })}
@@ -2004,8 +2392,8 @@ function StepSkills({char,setChar,spLeft,totalSP,moneyLeft,skillSilverSpent}){
                                             textAlign:"left",fontFamily:"inherit",borderRadius:3,
                                             opacity:takenOther?0.4:1,
                                           }}>
-                                            <div style={{fontSize:11,fontWeight:700,color:sel?"#d4a030":"#4a3a6a",marginBottom:4}}>{p.name}</div>
-                                            <div style={{fontSize:10,color:sel?"#c8bca0":"#2e2248",lineHeight:1.4}}>{p.desc}</div>
+                                            <div style={{fontSize:11,fontWeight:700,color:sel?"#d4a030":"var(--text-sub)",marginBottom:4}}>{p.name}</div>
+                                            <div style={{fontSize:10,color:sel?"var(--text-label)":"var(--text-desc)",lineHeight:1.4}}>{p.desc}</div>
                                           </button>
                                         );
                                       })}
@@ -2084,8 +2472,8 @@ function StepEquipment({char,setChar,moneyLeft}){
                         <td style={tdS}>{w.cost}s</td>
                         <td style={tdS}>
                           <div style={{display:"flex",gap:3}}>
-                            <button onClick={()=>setEq("weapon",isMW?null:w)} style={{...mic,background:isMW?"#e8d8ff":"transparent",color:isMW?"#c9a84c":"#2e2248"}}>Main</button>
-                            <button onClick={()=>setEq("offhand",isOH?null:w)} style={{...mic,background:isOH?"#e8d8ff":"transparent",color:isOH?"#c9a84c":"#2e2248"}}>Off</button>
+                            <button onClick={()=>setEq("weapon",isMW?null:w)} style={{...mic,background:isMW?"var(--bg-sel)":"transparent",color:isMW?"#c9a84c":"var(--text-td)"}}>Main</button>
+                            <button onClick={()=>setEq("offhand",isOH?null:w)} style={{...mic,background:isOH?"var(--bg-sel)":"transparent",color:isOH?"#c9a84c":"var(--text-td)"}}>Off</button>
                           </div>
                         </td>
                       </tr>
@@ -2113,7 +2501,7 @@ function StepEquipment({char,setChar,moneyLeft}){
                 <td style={tdS}>{a.minStr}</td>
                 <td style={tdS}>{a.wt}</td>
                 <td style={tdS}>{a.cost}s</td>
-                <td style={tdS}><button onClick={()=>setEq("armor",sel?null:a)} style={{...mic,background:sel?"#e8d8ff":"transparent",color:sel?"#c9a84c":"#2e2248"}}>{sel?"Equipped":"Equip"}</button></td>
+                <td style={tdS}><button onClick={()=>setEq("armor",sel?null:a)} style={{...mic,background:sel?"var(--bg-sel)":"transparent",color:sel?"#c9a84c":"var(--text-td)"}}>{sel?"Equipped":"Equip"}</button></td>
               </tr>);
             })}</tbody>
           </table>
@@ -2130,7 +2518,7 @@ function StepEquipment({char,setChar,moneyLeft}){
                 <td style={tdS}>{s.minStr}</td>
                 <td style={tdS}>{s.wt}</td>
                 <td style={tdS}>{s.cost}s</td>
-                <td style={tdS}><button onClick={()=>setEq("offhand",sel?null:s)} style={{...mic,background:sel?"#e8d8ff":"transparent",color:sel?"#c9a84c":"#2e2248"}}>{sel?"Equipped":"Equip"}</button></td>
+                <td style={tdS}><button onClick={()=>setEq("offhand",sel?null:s)} style={{...mic,background:sel?"var(--bg-sel)":"transparent",color:sel?"#c9a84c":"var(--text-td)"}}>{sel?"Equipped":"Equip"}</button></td>
               </tr>);
             })}</tbody>
           </table>
@@ -2151,7 +2539,7 @@ function StepEquipment({char,setChar,moneyLeft}){
                 <td style={{...tdS,color:"var(--text-row-label)"}}>{c.props}</td>
                 <td style={tdS}>{c.minMind}</td>
                 <td style={tdS}>{c.cost}s</td>
-                <td style={tdS}><button onClick={()=>setEq("catalyst",sel?null:c)} style={{...mic,background:sel?"#e8d8ff":"transparent",color:sel?"#c9a84c":"#2e2248"}}>{sel?"Equipped":"Equip"}</button></td>
+                <td style={tdS}><button onClick={()=>setEq("catalyst",sel?null:c)} style={{...mic,background:sel?"var(--bg-sel)":"transparent",color:sel?"#c9a84c":"var(--text-td)"}}>{sel?"Equipped":"Equip"}</button></td>
               </tr>);
             })}</tbody>
           </table>
@@ -2185,7 +2573,7 @@ function StepEquipment({char,setChar,moneyLeft}){
 
 // ─── STEP SUMMARY ─────────────────────────────────────────────────────────────
 function StepSummary({char,setChar,derived,totalSP}){
-  const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots}=derived;
+  const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots}=derived;
   const fmt = ({die,bonus}) => bonus>0?`${die} (+${bonus})`:bonus<0?`${die} (${bonus})`:die;
   const RANK_LABELS=["","Novice","Adept","Master"];
   const TIERS=["novice","adept","master"];
@@ -2202,7 +2590,7 @@ function StepSummary({char,setChar,derived,totalSP}){
       ``,`DERIVED:`,
       `  Melee Accuracy: ${finalMeleeAcc.die}${finalMeleeAcc.bonus!==0?" (+"+ finalMeleeAcc.bonus+")":""}  |  Primary Damage: ${finalMeleeDmg.die}${finalMeleeDmg.bonus!==0?" (+"+finalMeleeDmg.bonus+")":""}`,
       `  Parry: ${finalParry}  |  Armor: ${finalArmor}  |  Ward: ${finalWard}`,
-      `  Movement: ${finalMove}  |  Carry Cap: ${finalStamina} wt  |  Tech Slots: ${slotsUsed}/${totalTechSlots}${bonusTechSlots>0?" (+"+bonusTechSlots+" training bonus)":""}  |  Spell Slots: ${finalMana}`,
+      `  Movement: ${finalMove}  |  Carry Cap: ${finalStamina} wt  |  Tech Slots: ${slotsUsed}/${totalTechSlots}${bonusTechSlots>0?" (+"+bonusTechSlots+" training bonus)":""}  |  Spell Slots: ${spellSlotsUsed}/${totalSpellSlots}`,
       ``,`SKILLS:`,
       ...SKILL_TREES.filter(t=>char.skills[t.id]>0).map(t=>{
         const rank=char.skills[t.id];
@@ -2240,7 +2628,7 @@ function StepSummary({char,setChar,derived,totalSP}){
           {[["Name",char.name||"—"],["Race",char.race||"—"],["Level",`${char.level||1} (${char.exp||0}/10 EXP)`],["Role",char.role||"—"],["Boon",char.boon?.name||"—"]].map(([k,v])=><Row key={k} label={k} val={v}/>)}
         </Card>
         <Card title="Attributes">
-          {[["HP",finalHP,true],["Stamina",finalStamina,true],["Mana",finalMana,true],["Dmg Shield Cap",finalDmgShield,true],["Tech Slots",`${slotsUsed}/${totalTechSlots}${bonusTechSlots>0?" (+"+bonusTechSlots+")":""}`],["Spell Slots",finalMana+""]].map(([k,v,h])=><Row key={k} label={k} val={v} hi={h}/>)}
+          {[["HP",finalHP,true],["Stamina",finalStamina,true],["Mana",finalMana,true],["Dmg Shield Cap",finalDmgShield,true],["Tech Slots",`${slotsUsed}/${totalTechSlots}${bonusTechSlots>0?" (+"+bonusTechSlots+")":""}`],["Spell Slots",`${spellSlotsUsed}/${totalSpellSlots}${bonusSpellSlots>0?" (+"+bonusSpellSlots+")":""}`]].map(([k,v,h])=><Row key={k} label={k} val={v} hi={h}/>)}
         </Card>
         <Card title="Stats">
           {STATS.map(s=><Row key={s} label={s} val={char.stats[s]} hi/>)}
@@ -2381,6 +2769,79 @@ function StepSummary({char,setChar,derived,totalSP}){
                 </div>
             }
             {slottable.length>0&&<div style={{marginTop:8,fontSize:10,color:"var(--text-muted)",borderTop:"1px solid var(--border-row)",paddingTop:8}}>Click to slot/unslot. Passive techniques are always active and shown in the Skills section below.</div>}
+          </Card>
+        );
+      })()}
+      {/* Spell Loadout */}
+      {(() => {
+        const magicTrees = SKILL_TREES.filter(t=>t.type==="magic");
+        const slottable = [];
+        for(const tree of magicTrees) {
+          if(!char.skills[tree.id]) continue;
+          const rank = char.skills[tree.id];
+          const tiers = ["novice","adept","master"].slice(0,rank);
+          for(const tier of tiers) {
+            const spells = (char.techniques[tree.id]||{})[tier]||[];
+            for(const spellName of spells) {
+              const spellDef = (tree.tiers[tier]?.techniques||[]).find(t=>t.name===spellName);
+              if(!spellDef) continue;
+              slottable.push({skillId:tree.id, skillName:tree.name, tier, spellName, cost:spellDef.cost, desc:spellDef.desc, slotCost:TIER_SLOT_COST[tier]});
+            }
+          }
+        }
+        const toggleSpell = (skillId, spellName) => {
+          const key = `${skillId}||${spellName}`;
+          setChar(c => {
+            const cur = new Set(c.slottedSpells||[]);
+            if(cur.has(key)) { cur.delete(key); } else { cur.add(key); }
+            return {...c, slottedSpells:cur};
+          });
+        };
+        const slotsLeft = totalSpellSlots - spellSlotsUsed;
+        const tierColor = {novice:"var(--text-teal)",adept:"#c8a84a",master:"#e05a6a"};
+        const hasMagic = SKILL_TREES.some(t=>t.type==="magic"&&char.skills[t.id]>0);
+        if(!hasMagic) return null;
+        return (
+          <Card title="Spell Loadout">
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12,paddingBottom:8,borderBottom:"1px solid var(--border-row)"}}>
+              <div style={{fontSize:12,color:"var(--text-head)"}}>
+                Mana: <span style={{fontWeight:700,color:"#9a70d8"}}>{totalSpellSlots}</span>
+              </div>
+              <div style={{fontSize:12,color:"var(--text-head)"}}>
+                Slots: <span style={{fontWeight:700,color:slotsLeft<0?"var(--text-danger)":slotsLeft===0?"#c8a84a":"var(--text-value-hi)"}}>{spellSlotsUsed}</span>
+                <span style={{color:"var(--text-muted)"}}> / {totalSpellSlots}</span>
+              </div>
+              {bonusSpellSlots>0&&<div style={{fontSize:10,color:"var(--text-teal)",background:"var(--bg-tag)",padding:"1px 6px",borderRadius:3}}>+{bonusSpellSlots} from trainings</div>}
+              <div style={{flex:1,height:4,background:"var(--bg-pip-off)",borderRadius:2,overflow:"hidden"}}>
+                <div style={{height:"100%",width:`${Math.min(100,totalSpellSlots>0?spellSlotsUsed/totalSpellSlots*100:0)}%`,background:slotsLeft<0?"var(--text-danger)":"#9a70d8",transition:"width 0.3s",borderRadius:2}}/>
+              </div>
+              <div style={{fontSize:10,color:"var(--text-muted)"}}>Novice=2 · Adept=3 · Master=4 slots</div>
+            </div>
+            {slottable.length===0
+              ? <div style={{fontSize:11,color:"var(--text-muted)",fontStyle:"italic"}}>No spells purchased yet.</div>
+              : <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                  {slottable.map(({skillId,skillName,tier,spellName,cost,desc,slotCost})=>{
+                    const key=`${skillId}||${spellName}`;
+                    const slotted=(char.slottedSpells||new Set()).has(key);
+                    const wouldExceed = !slotted && (spellSlotsUsed+slotCost>totalSpellSlots);
+                    return(
+                      <div key={key} onClick={()=>toggleSpell(skillId,spellName)}
+                        style={{padding:"8px 10px",border:`1px solid ${slotted?"var(--accent-gold)":wouldExceed?"var(--text-danger)":"var(--border-cebee8)"}`,borderRadius:3,cursor:"pointer",background:slotted?"var(--bg-tbl-sel)":wouldExceed?"rgba(139,26,42,0.05)":"var(--bg-card)",transition:"all 0.15s",opacity:wouldExceed&&!slotted?0.7:1}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:3}}>
+                          <span style={{fontSize:11,fontWeight:600,color:slotted?"var(--accent-gold)":"var(--text-head)",lineHeight:1.2}}>{spellName}</span>
+                          <div style={{display:"flex",gap:4,alignItems:"center",flexShrink:0,marginLeft:6}}>
+                            <span style={{fontSize:9,color:tierColor[tier],background:"var(--bg-tag)",padding:"1px 4px",borderRadius:2,textTransform:"uppercase"}}>{tier}</span>
+                            <span style={{fontSize:9,background:slotted?"var(--accent-gold)":"var(--bg-panel-alt)",color:slotted?"#1a1030":"var(--text-muted)",padding:"1px 5px",borderRadius:2,fontWeight:600}}>{slotCost} slot{slotCost!==1?"s":""}</span>
+                          </div>
+                        </div>
+                        <div style={{fontSize:9,color:"var(--text-muted)",marginBottom:2}}>{skillName} · {cost}</div>
+                        <div style={{fontSize:10,color:"var(--text-label)",lineHeight:1.4}}>{desc}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+            }
+            {slottable.length>0&&<div style={{marginTop:8,fontSize:10,color:"var(--text-muted)",borderTop:"1px solid var(--border-row)",paddingTop:8}}>Click to slot/unslot. Trainings are always active and require no slots.</div>}
           </Card>
         );
       })()}
