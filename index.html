@@ -1130,6 +1130,8 @@ function App() {
     // CQC master perks
     if(perkIs("cqc","Lethality"))       fx.push("Lethality: melee HP dmg → 2 Bleed (Aggravate on crit)");
     if(perkIs("cqc","Crush Armor"))     fx.push("Crush Armor: 1st melee attack AP=½STR; crits apply Rend");
+    // Endurance master perk - conditional bonus
+    if(perkIs("endurance","Punishing Draw")) fx.push("Punishing Draw: +2 Acc & Dmg on first attack when initiating combat");
     // Marksmanship master perks
     if(perkIs("marksmanship","Barbed Shots")) fx.push("Barbed Shots: ranged HP dmg → 2 Bleed (Aggravate on crit)");
     // Savagery weapon enchants (only highest applies)
@@ -1137,9 +1139,10 @@ function App() {
     else if(hasTech("savagery","Sanguine Edge")) fx.push("Sanguine Edge: weapon HP dmg → 2 Bleed");
     else if(hasTech("savagery","Red Rust"))    fx.push("Red Rust: weapon HP dmg → 1 Bleed");
     // Tactics training passives
-    const tacRank = char.skills["tactics"]||0;
-    if(tacRank>=2) fx.push("Tactics Adept: CC landing inflicts Rend");
-    if(tacRank>=3) fx.push("Tactics Master: CC landing deals STR dmg to Stamina");
+    const hasTacAdept  = char.purchasedTrainings.has("tactics:adept");
+    const hasTacMaster = char.purchasedTrainings.has("tactics:master");
+    if(hasTacAdept)  fx.push("Tactics Adept: CC landing inflicts Rend");
+    if(hasTacMaster) fx.push("Tactics Master: CC landing deals STR dmg to Stamina");
     // Catalyst on-hit props
     const cat = char.equipment.catalyst;
     if(cat?.props) {
@@ -1214,8 +1217,8 @@ function App() {
   })();
   const savageFightingBonus = hasSavageFighting ? unarmoredParryBonus : 0;
 
-  const accBonus  = trainBonuses.Acc + boonOffensive + weaponAccBonus + jewelryAccBonus + (hasPunishingDraw ? 2 : 0);
-  const dmgBonus  = trainBonuses.PrimDmg + boonOffensive + weaponDmgBonus + jewelryDmgBonus + sizeB.primDmg + savageFightingBonus + (hasPunishingDraw ? 2 : 0);
+  const accBonus  = trainBonuses.Acc + boonOffensive + weaponAccBonus + jewelryAccBonus;
+  const dmgBonus  = trainBonuses.PrimDmg + boonOffensive + weaponDmgBonus + jewelryDmgBonus + sizeB.primDmg + savageFightingBonus;
   // Brute: use STR for melee accuracy die. Eagle Eye: use DEX for ranged dmg die. Primal Mass: use VIG for melee dmg die.
   const meleeAccDie = hasBrute ? char.stats.Strength : char.stats.Dexterity;
   const meleeDmgDie = hasPrimalMass ? char.stats.Vigor : char.stats.Strength;
@@ -2166,7 +2169,7 @@ function StepSummary({char,setChar,derived,totalSP}){
           {[
             ["Reach", `${finalReach} space${finalReach>1?"s":""}${size>=2?" (size 2+)":""}`],
             ["Accuracy", fmt(finalMeleeAcc)+(hasBrute?" [Brute: STR die]":""), true],
-            ["Perk Notes", [hasBrute?"Brute: STR→Acc":null, hasPrimalMass?"Primal Mass: VIG→Dmg":null, hasEagleEye?"Eagle Eye: DEX→Ranged Dmg":null, hasPunishingDraw?"Punishing Draw: +2 Acc&Dmg on initiate":null].filter(Boolean).join(", ")||"—"],
+            ["Perk Notes", [hasBrute?"Brute: STR→Acc":null, hasPrimalMass?"Primal Mass: VIG→Dmg":null, hasEagleEye?"Eagle Eye: DEX→Ranged Dmg":null].filter(Boolean).join(", ")||"—"],
             ["Primary Damage", (()=>{
               const w = char.equipment.weapon;
               const bonus = dmgBonus;
