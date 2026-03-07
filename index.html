@@ -1239,6 +1239,7 @@ const techSlotCost = (skillId, techName) => {
 const calcBonusTechSlots = (purchasedTrainings) => {
   let bonus = 0;
   for(const tree of SKILL_TREES) {
+    if(tree.type !== "physical") continue;
     for(const tier of ["novice","adept","master"]) {
       if(purchasedTrainings.has(`${tree.id}:${tier}`)) bonus += 5;
     }
@@ -2682,9 +2683,9 @@ function StepSummary({char,setChar,derived,totalSP}){
       </div>
       {/* Technique Loadout */}
       {(() => {
-        // Collect all slottable (non-passive) techniques the character has purchased
+        // Collect all slottable (non-passive) techniques the character has purchased — physical trees only
         const slottable = [];
-        for(const tree of SKILL_TREES) {
+        for(const tree of SKILL_TREES.filter(t=>t.type==="physical")) {
           if(!char.skills[tree.id]) continue;
           const rank = char.skills[tree.id];
           const tiers = ["novice","adept","master"].slice(0,rank);
@@ -2723,7 +2724,7 @@ function StepSummary({char,setChar,derived,totalSP}){
               <div style={{fontSize:10,color:"var(--text-muted)"}}>Novice=2 · Adept=3 · Master=4 slots</div>
             </div>
             {slottable.length===0
-              ? <div style={{fontSize:11,color:"var(--text-muted)",fontStyle:"italic"}}>No slottable techniques purchased. Passive techniques are always active once purchased.</div>
+              ? <div style={{fontSize:11,color:"var(--text-muted)",fontStyle:"italic"}}>No slottable physical techniques purchased. Passive techniques are always active once purchased.</div>
               : <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                   {slottable.map(({skillId,skillName,tier,techName,cost,desc,slotCost})=>{
                     const key=`${skillId}||${techName}`;
