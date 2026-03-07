@@ -621,7 +621,7 @@ const SKILL_TREES = [
       {name:"Wizard",           desc:"Learn spells from other schools using Spellcrafting for scaling (+2 slot cost penalty). No Training spells."},
     ],
     tiers:{
-      novice:{ training:{name:"Novice Spellcrafting Training", effect:"none", desc:"Access to Novice-tier Magic Techniques."}, techniques:[
+      novice:{ training:null, techniques:[
       {name:"Redirect Flow",cost:"Passive",desc:"Reshape any of your magical area effects. New shape must cover same tiles, all connected. Partial tiles count as half."},
       {name:"Spellblade's Focus",cost:"Passive",desc:"When using Catch Your Breath or Meditation, you can also roll the other dice for recovery."},
       {name:"Mana Reinforcement",cost:"Passive",desc:"Choose whether to use Mana or Stamina to pay for Attack/Spell Enhancers and Defensive Actions."},
@@ -629,7 +629,7 @@ const SKILL_TREES = [
       {name:"Mana Weaving",cost:"Passive",desc:"When casting spells with at least 1 hand free, add +2 Accuracy and Spell Power to your cast."},
       {name:"Visualization",cost:"Active",desc:"Cast spells purely by visualizing the pattern. Allows casting spells while hands are occupied."}
     ] },
-      adept:{ training:{name:"Adept Spellcrafting Training", effect:"none", desc:"Access to Adept-tier Magic Techniques."}, techniques:[
+      adept:{ training:null, techniques:[
       {name:"Spellblade's Honed Focus",cost:"Passive",desc:"Roll both Catch Your Breath and Meditation dice for recovery. Use Mind, Willpower, or Vigor (highest) for those dice."},
       {name:"Mana Abjuration",cost:"Passive",desc:"Use Mana or Stamina for Enhancers and Defensive Actions. Use half of Mind as Parry instead of Dexterity."},
       {name:"Quickened Spell",cost:"Spell Enhancer",desc:"Reduce casting time of offensive/control spells by 1 Action (min 1). Doubles total spell cost."},
@@ -645,7 +645,7 @@ const SKILL_TREES = [
       {name:"Arcane Chains",cost:"Spell Enhancer",desc:"Adds +2 effective Willpower to a CC effect when casting it on an opponent."},
       {name:"Magical Charge",cost:"4 Mana / 2 upkeep",desc:"Self buff granting +1 Accuracy and Spell Power. One self buff active at a time."}
     ] },
-      master:{ training:{name:"Master Spellcrafting Training", effect:"none", desc:"Access to Master-tier Magic Techniques."}, techniques:[
+      master:{ training:null, techniques:[
       {name:"Spell Eater",cost:"8 Mana, Reaction",desc:"10ft aura for 1 defensive phase. Spells become Glancing blows inside. On successful Block/Dodge of a spell, absorb it to recover 1 Willpower die of Mana."},
       {name:"Mana Augmentation",cost:"Passive",desc:"Use Mana or Stamina for Enhancers and Defensive Actions. Use Mind/2 as Parry. Use Willpower instead of Vigor for Damage Shield cap."},
       {name:"Spell Clash",cost:"Reaction",desc:"While targeted by a single-target damaging spell, cast your own to clash. Loser takes both spells as one combined attack."},
@@ -665,8 +665,7 @@ const SKILL_TREES = [
       {name:"Magnitude", desc:"Attune to one element (Infernal/Aqua/Terra/Vacuum/Thunderous Soul). Cannot cast other element types."},
     ],
     tiers:{
-      novice:{ training:{name:"Novice Anima Training", effect:"none", desc:"Access to Novice-tier Anima spells."}, techniques:[
-      {name:"Novice Requiem Training",cost:"Passive",desc:"Gain +1 Accuracy and Spell Power when casting spells."},
+      novice:{ training:{name:"Novice Requiem Training", effect:"spellBonus", key:"AccSpellPower", value:1, desc:"Adds +1 to your Accuracy and Spell Power when casting spells."}, techniques:[
       {name:"Novice Fire Manipulation",cost:"Active",desc:"1d6 + Mind Fire Damage. Applies 1 stack of Searing on HP damage."},
       {name:"Novice Water Manipulation",cost:"Active",desc:"1d6 + Mind Water Damage. Additional 1d6 Stamina Damage on HP damage (not affected by Spell Power)."},
       {name:"Novice Earth Manipulation",cost:"Active",desc:"1d6 + Mind Physical Damage."},
@@ -675,8 +674,7 @@ const SKILL_TREES = [
       {name:"Elemental Mine",cost:"Novice + spell cost",desc:"Set a rune on an adjacent surface. Explodes on contact or command, 5ft radius using an inscribed elemental manipulation spell."},
       {name:"Sand Embrace",cost:"1 Mana/round, Free Action",desc:"10ft cloak: instantly Guard all allies within. Magical Augment. (Terra Soul perk required)"}
     ] },
-      adept:{ training:{name:"Adept Anima Training", effect:"none", desc:"Access to Adept-tier Anima spells."}, techniques:[
-      {name:"Adept Requiem Training",cost:"Passive",desc:"Gain +1 Accuracy and Spell Power when casting. -1 Mana cost reduction when casting."},
+      adept:{ training:{name:"Adept Requiem Training", effect:"spellBonus", key:"AccSpellPower", value:1, desc:"Adds +1 to your Accuracy and Spell Power when casting spells. Gain -1 Mana reduction when casting spells."}, techniques:[
       {name:"Adept Fire Manipulation",cost:"Active",desc:"2d6 + Mind Fire Damage. Applies 2 stacks of Searing on HP damage."},
       {name:"Adept Water Manipulation",cost:"Active",desc:"2d6 + Mind Water Damage. Additional 1d8 Stamina Damage on HP damage (not affected by Spell Power)."},
       {name:"Adept Earth Manipulation",cost:"Active",desc:"2d6 + Mind Physical Damage."},
@@ -694,8 +692,7 @@ const SKILL_TREES = [
       {name:"Streak",cost:"1 Action",desc:"Teleport 30ft in any direction. No AoO. (Lightning)"},
       {name:"Redirect",cost:"Reaction",desc:"Absorb enemy magic projectile and reflect it back. Willpower vs Willpower check. Auto-acquired with Energy perk."}
     ] },
-      master:{ training:{name:"Master Anima Training", effect:"none", desc:"Access to Master-tier Anima spells."}, techniques:[
-      {name:"Master Requiem Training",cost:"Passive",desc:"Gain +1 Accuracy and Spell Power. Can use Last Candle for 8 mana: gain another Action immediately."},
+      master:{ training:{name:"Master Requiem Training", effect:"spellBonus", key:"AccSpellPower", value:1, desc:"Adds +1 to your Accuracy and Spell Power when casting spells. Become able to use the Last Candle feat for 8 mana, giving the user another Action immediately."}, techniques:[
       {name:"Master Fire Manipulation",cost:"Active",desc:"3d6 + Mind Fire Damage. Applies 3 stacks of Searing on HP damage."},
       {name:"Master Water Manipulation",cost:"Active",desc:"3d6 + Mind Water Damage. Additional 1d10 Stamina Damage on HP damage (not affected by Spell Power)."},
       {name:"Master Earth Manipulation",cost:"Active",desc:"3d6 + Mind Physical Damage. Gains Pierce effect."},
@@ -735,8 +732,7 @@ const SKILL_TREES = [
       {name:"Arcane Chaos",  desc:"+2 spaces to Teleportation, Forced Movement, Range Enhancers, and effective Void spell range."},
     ],
     tiers:{
-      novice:{ training:{name:"Novice Void Training", effect:"none", desc:"Access to Novice-tier Void spells."}, techniques:[
-      {name:"Novice Arcane Training",cost:"Passive",desc:"Gain +1 Accuracy."},
+      novice:{ training:{name:"Novice Arcane Training", effect:"accBonus", value:1, desc:"Train your eyes to see the flow of mana, peering at the world through an enlightened perspective, gaining +1 to your Accuracy."}, techniques:[
       {name:"Void Sheath",cost:"Draw Action",desc:"Access items inside your Dimensional Treasury during your Draw Phase."},
       {name:"Relocation Gate",cost:"Active",desc:"Teleport 60ft to a visible location. Can be used on a willing ally."},
       {name:"Push",cost:"1 Action",desc:"Telekinetic blast pushes an adjacent target 1 space back. No AoO. Willpower vs Vigor save."},
@@ -745,8 +741,7 @@ const SKILL_TREES = [
       {name:"Surge",cost:"Active",desc:"1d6 + Mind gravity damage. Applies Slow on hit if target fails Willpower vs Vigor save."},
       {name:"Projected Stasis",cost:"Active",desc:"10ft radius Difficult Terrain field at casting location for 2 rounds. Dismiss as Free Action."}
     ] },
-      adept:{ training:{name:"Adept Void Training", effect:"none", desc:"Access to Adept-tier Void spells."}, techniques:[
-      {name:"Adept Arcane Training",cost:"Passive",desc:"Gain +1 Accuracy. Night's Sky available for 4 mana: +2 Primary Damage and Accuracy (Attack/Spell Enhancer)."},
+      adept:{ training:{name:"Adept Arcane Training", effect:"accBonus", value:1, desc:"Train your eyes to see the flow of mana, gaining +1 to your Accuracy. Become able to use Night's Sky for 4 mana, adding +2 to Primary Damage and Accuracy on the attack phase. This is an Attack/Spell Enhancing effect."}, techniques:[
       {name:"Door to Emptiness",cost:"Active",desc:"Launch 2 weapons from Dimensional Treasury. Each makes 1 attack using weapon dice + Mind. Weapons return after."},
       {name:"Perfect Balance",cost:"Active",desc:"Buff self or adjacent ally: ignore Difficult Terrain, walk on water. Lasts 1 minute. Magical augment."},
       {name:"Planar Step",cost:"1 Action",desc:"Teleport 30ft in any direction. No AoO."},
@@ -763,8 +758,7 @@ const SKILL_TREES = [
       {name:"Structured Stasis",cost:"Active",desc:"20ft radius Difficult Terrain field for 2 rounds. Dismiss as Free Action."},
       {name:"Drifter's Sheathe",cost:"Free Action",desc:"Summon weapon from pocket dimension. Also perform any Interact Action as a Free Action (except Use Alchemical Item). Auto-acquired with Arcane Spirit perk."}
     ] },
-      master:{ training:{name:"Master Void Training", effect:"none", desc:"Access to Master-tier Void spells."}, techniques:[
-      {name:"Master Arcane Training",cost:"Passive",desc:"Gain +1 Accuracy. Night's Sky upgrades to Astra (8 mana): retains bonuses, plus True Hit and +1 crit (Attack/Spell Enhancer)."},
+      master:{ training:{name:"Master Arcane Training", effect:"accBonus", value:1, desc:"Train your eyes to see the flow of mana, gaining +1 to your Accuracy. Night's Sky can become Astra now, by using it with 8 mana — you retain the previous bonuses, but now also gain True Hit and +1 crit on the ensuing attack phase. This is an Attack/Spell enhancing effect."}, techniques:[
       {name:"Gates of Emptiness",cost:"Active",desc:"Launch 3 weapons from Dimensional Treasury. Each makes 1 attack using weapon dice + Mind. Weapons return after."},
       {name:"Walking on Air",cost:"Active",desc:"Buff self or adjacent ally: Flight speed equal to Movement Speed for 1 minute. Magical augment."},
       {name:"Blink",cost:"Free Action",desc:"Teleport 30ft in any direction. No AoO. Once per round."},
@@ -791,8 +785,7 @@ const SKILL_TREES = [
       {name:"Divine Mind",     desc:"Spend a 3rd Action on a holy cast to empower it — increased magnitude and up to 4 targets."},
     ],
     tiers:{
-      novice:{ training:{name:"Novice Holy Training", effect:"none", desc:"Access to Novice-tier Holy spells."}, techniques:[
-      {name:"Novice Celestial Training",cost:"Passive",desc:"Gain +5 Maximum Health."},
+      novice:{ training:{name:"Novice Celestial Training", effect:"statBonus", key:"HP", value:5, desc:"Trains the caster's body to absorb and retain holy energy inside themselves, granting +5 Maximum Health."}, techniques:[
       {name:"Heal",cost:"Active",desc:"Heal 2 targets (including caster) for 1d4 + Willpower. Remove 1 negative effect from each."},
       {name:"Balm",cost:"1 Action",desc:"Heal 1 target (including caster) for 1d4 + Willpower. Remove 1 negative effect."},
       {name:"Shine",cost:"Active",desc:"1d6 + Mind Holy Damage. Applies 1 Searing on HP damage (2 vs Creatures of Darkness)."},
@@ -800,8 +793,7 @@ const SKILL_TREES = [
       {name:"Guardian Angel",cost:"Free Action",desc:"Instantly Guard an ally within 5ft."},
       {name:"Manifest Minor Relic",cost:"1+ Actions",desc:"Create Club, Heavy Club, or Sling from saint bones. Uses Mind for damage/accuracy. Attack enhancers cost Mana."}
     ] },
-      adept:{ training:{name:"Adept Holy Training", effect:"none", desc:"Access to Adept-tier Holy spells."}, techniques:[
-      {name:"Adept Celestial Training",cost:"Passive",desc:"+5 Health. Enables Healing Light: cast any Heal line spell as a Reaction after taking damage."},
+      adept:{ training:{name:"Adept Celestial Training", effect:"statBonus", key:"HP", value:5, desc:"Trains the caster's body to absorb and retain holy energy inside themselves. +5 Health. Enables use of the Healing Light feat, allowing them to cast any spell of the Heal line as a Reaction after taking damage from an attack phase, after your damage taken is resolved."}, techniques:[
       {name:"Mend",cost:"Active",desc:"Heal 3 targets (including caster) for 2d4 + Willpower. Remove 1 negative effect from each."},
       {name:"Recover",cost:"1 Action",desc:"Heal 1 target (including caster) for 2d4 + Willpower. Remove 1 negative effect."},
       {name:"Magic Barrier",cost:"Active",desc:"+3 Magic Resistance for 3 rounds. Magical Augment."},
@@ -814,8 +806,7 @@ const SKILL_TREES = [
       {name:"Sacred Oath",cost:"2 Mana/round upkeep",desc:"Self buff: +1 Physical Resistance and Primary Damage or Spell Power. One self buff at a time."},
       {name:"Daylight",cost:"Active",desc:"2d6 + Mind Holy Damage. Heals caster for 50% of holy damage (HP damage heals HP; DS heals DS)."}
     ] },
-      master:{ training:{name:"Master Holy Training", effect:"none", desc:"Access to Master-tier Holy spells."}, techniques:[
-      {name:"Master Celestial Training",cost:"Passive",desc:"+5 Maximum Health. Unlocks Radiant Dawn: channel self buff as 10ft aura for allies (double casting + upkeep). Banner buff."},
+      master:{ training:{name:"Master Celestial Training", effect:"statBonus", key:"HP", value:5, desc:"Trains the caster's body to absorb and retain holy energy inside themselves, gaining +5 Maximum Health. The caster becomes able to use the Radiant Dawn Feat — channel the power of one of their Holy self buffs into a 10ft radius aura benefiting all allies within range. Activating it doubles the casting and upkeep costs for that self buff. This is a Banner buff."}, techniques:[
       {name:"Catharsis",cost:"Active",desc:"Heal 4 targets (including caster) for 3d4 + Willpower. Remove 2 negative effects from each."},
       {name:"Fortify",cost:"1 Action",desc:"Heal 1 target (including caster) for 3d4 + Willpower. Remove 2 negative effects."},
       {name:"Great Magic Barrier",cost:"3 Mana/round, Self Buff",desc:"10ft radius aura. Magical projectiles, targeted AoE, and cloaks/explosions through it become Glancing blows."},
@@ -842,8 +833,7 @@ const SKILL_TREES = [
       {name:"Necromancer", desc:"All summons gain 5 DS on summon; summon attacks deal +1d6 Dark Secondary damage."},
     ],
     tiers:{
-      novice:{ training:{name:"Novice Dark Training", effect:"none", desc:"Access to Novice-tier Dark spells."}, techniques:[
-      {name:"Novice Abyssal Training",cost:"Passive",desc:"Increase rolls to apply CC and Target Number to Break Free from your CC by +1."},
+      novice:{ training:{name:"Novice Abyssal Training", effect:"ccBonus", value:1, desc:"Your power is steeped in a suffocating darkness that is incredibly hard to shake off. Increase your rolls to apply CC, as well as the Target Number required to Break Free from CC you applied by +1."}, techniques:[
       {name:"Flux",cost:"Active",desc:"1d6 + Mind Dark Damage. Applies 2 Poison stacks on HP damage. May suffer 1 Poison to apply 1 extra stack."},
       {name:"Harm",cost:"Active",desc:"1d6 + Mind Magic Damage. Applies 2 Bleed stacks on HP damage. May suffer 1 Bleed to apply 1 extra stack."},
       {name:"Curse of Obscured Vision",cost:"Active",desc:"-1 Accuracy to target for 2 rounds. Mind Alteration. Willpower vs Willpower save."},
@@ -852,8 +842,7 @@ const SKILL_TREES = [
       {name:"Summon Fragment Phantom",cost:"Active",desc:"Summon (10 HP, 6 Parry, 30ft). 1d6+5 damage. Hits apply Bleed; if Bleed present, also Poison."},
       {name:"Umbra",cost:"Active",desc:"Pull all DoT stacks in 10ft radius to you, healing those units. Unwilling: Willpower vs Willpower save."}
     ] },
-      adept:{ training:{name:"Adept Dark Training", effect:"none", desc:"Access to Adept-tier Dark spells."}, techniques:[
-      {name:"Adept Abyssal Training",cost:"Passive",desc:"Increase CC rolls and Break Free TN by +1. On successfully applying CC, also apply 2 Poison stacks."},
+      adept:{ training:{name:"Adept Abyssal Training", effect:"ccBonus", value:1, desc:"Your power is steeped in a suffocating darkness that is incredibly hard to shake off. Increase your rolls to apply CC, as well as the Target Number required to Break Free from CC you applied by +1. When successfully applying a CC effect to a target, also apply 2 stacks of Poison to them."}, techniques:[
       {name:"Ruin",cost:"Active",desc:"2d6 + Mind Dark Damage. Applies 3 Poison stacks on HP damage. May suffer 2 Poison for 2 extra stacks."},
       {name:"Injure",cost:"Active",desc:"2d6 + Mind Magic Damage. Applies 3 Bleed stacks on HP damage. May suffer 2 Bleed for 2 extra stacks."},
       {name:"Manashock Curse",cost:"Active",desc:"Willpower vs Willpower; on fail, target gets Manashocked."},
@@ -871,8 +860,7 @@ const SKILL_TREES = [
       {name:"Transcend Meek Flesh",cost:"2 Mana/round upkeep",desc:"Self buff: +2 Spell Power. Pay 1d4 Bleed per cast for +1 Spell Power that cast. One self buff at a time."},
       {name:"Create Blood Weapon",cost:"Interact Action",desc:"Create a Simple weapon from your blood. HP damage applies 1 Bleed; suffer 1 Bleed for 1 extra stack. Cannot enchant."}
     ] },
-      master:{ training:{name:"Master Dark Training", effect:"none", desc:"Access to Master-tier Dark spells."}, techniques:[
-      {name:"Master Abyssal Training",cost:"Passive",desc:"Increase CC rolls and Break Free TN by +3. Single-target Magical CC creates 5ft cloak; nearby enemies also targeted."},
+      master:{ training:{name:"Master Abyssal Training", effect:"ccBonus", value:3, desc:"Your power is steeped in a suffocating darkness that is incredibly hard to shake off. Increase your rolls to apply CC, as well as the Target Number required to Break Free from CC you applied by +3. When targeting an enemy unit with a single target Magical CC effect, create a 5ft cloak around them — all other enemy units caught within the radius are now also targets for that CC effect."}, techniques:[
       {name:"Aversa",cost:"Active",desc:"3d6 + Mind Dark Damage. Applies 5 Poison stacks on HP damage. May suffer 3 Poison for 3 extra stacks."},
       {name:"Disfigure",cost:"Active",desc:"3d6 + Mind Magic Damage. Applies 3 Bleed stacks on HP damage. May suffer 3 Bleed for 3 extra stacks."},
       {name:"Manashock Hex",cost:"Active",desc:"Applies Fumble, then Willpower vs Willpower: on fail, Manashock. Can also Dispel a magical tile effect."},
@@ -906,16 +894,14 @@ const SKILL_TREES = [
       {name:"Conqueror",    desc:"Figment debuffs become 10ft AoEs; +1 magnitude to all Figment spells (+1 Stack where applicable)."},
     ],
     tiers:{
-      novice:{ training:{name:"Novice Figment Training", effect:"none", desc:"Access to Novice-tier Figment spells."}, techniques:[
-      {name:"Novice Clarity Training",cost:"Passive",desc:"Gain +1 Parry."},
+      novice:{ training:{name:"Novice Clarity Training", effect:"parryBonus", value:1, desc:"Gain clarity over the world, able to observe motion through predictions, gaining +1 Parry."}, techniques:[
       {name:"Minor Illusion",cost:"Active",desc:"Conjure a 5ft illusory image or sound lasting 1 minute. Targets see through on Willpower vs Willpower save."},
       {name:"Fury",cost:"Active",desc:"Target takes 1 Confusion stack and Cripple. Willpower vs Willpower save."},
       {name:"Drunkard's Pace",cost:"Active",desc:"Inflicts Slow on target. Willpower vs Willpower save."},
       {name:"Empty Mind",cost:"Free Action Reaction",desc:"During cleansing phase, add +2 to Breaking Free against Magical CC."},
       {name:"Shadow God's Stance",cost:"Free Action Reaction",desc:"During cleansing phase, add +2 to Breaking Free against Physical CC."}
     ] },
-      adept:{ training:{name:"Adept Figment Training", effect:"none", desc:"Access to Adept-tier Figment spells."}, techniques:[
-      {name:"Adept Clarity Training",cost:"Passive",desc:"Gain +1 Parry. Unlocks Phasing: Step as a Free Action for 4 Mana."},
+      adept:{ training:{name:"Adept Clarity Training", effect:"parryBonus", value:1, desc:"Gain clarity over the world, able to observe motion through predictions, gaining +1 to Parry. Gain the Phasing spell, allowing you to Step as a free action when cast. This feat costs 4 mana to use."}, techniques:[
       {name:"Illusory Circus",cost:"Active",desc:"20ft radius illusion zone for 1 minute. Enemy interactions trigger 1 Confusion stack. Willpower vs Willpower to see through. Move fragment 5 spaces with Action."},
       {name:"Furor",cost:"Active",desc:"Target takes 2 Confusion stacks and Cripple. Willpower vs Willpower save."},
       {name:"Fear",cost:"Active",desc:"Willpower vs Willpower; on fail, target is Stunned. Mind Alteration."},
@@ -929,8 +915,7 @@ const SKILL_TREES = [
       {name:"After Images",cost:"Reaction",desc:"+3 Parry. On successful dodge, make a Step. Each dodged attack triggers 1 Step."},
       {name:"Immaterial Forma",cost:"2 Mana/round upkeep",desc:"Self buff: +1 Parry and +2 Base Movement Speed. One self buff at a time."}
     ] },
-      master:{ training:{name:"Master Figment Training", effect:"none", desc:"Access to Master-tier Figment spells."}, techniques:[
-      {name:"Master Clarity Training",cost:"Passive",desc:"Gain +1 Parry. Unlocks Speculo (4 Mana Free Action): copy a witnessed spell within reach, retain for 1 hour (up to 3 spells)."},
+      master:{ training:{name:"Master Clarity Training", effect:"parryBonus", value:1, desc:"Gain clarity over the world, able to observe motion through predictions, gaining +1 to Parry. The caster becomes able to use the Speculo feat — copy a spell witnessed within spell reach by paying 4 mana as a Free Action. The caster temporarily learns that spell using the original caster's modifiers, but considers their own variable modifiers at time of casting. The caster may retain the spell's information for 1 hour and can retain up to 3 spells this way."}, techniques:[
       {name:"Bewildering Shadow Garden",cost:"3 Actions",desc:"30ft radius illusion zone for 1 minute. Pulsing Stun + Root (1 round) on Willpower vs Willpower fail."},
       {name:"Chaos",cost:"Active",desc:"Target takes 3 Confusion stacks and Cripple. Willpower vs Willpower save."},
       {name:"Hypnotic Gaze",cost:"2-3 Actions",desc:"Willpower vs Willpower; on fail, target loses 1-2 Actions next turn and must use them as directed. Mind Alteration."},
@@ -964,8 +949,7 @@ const SKILL_TREES = [
       {name:"Thaumic Power",   desc:"2 self-buffs on 1 Concentration slot (master+adept only); +2 penalty to all ability costs while active."},
     ],
     tiers:{
-      novice:{ training:{name:"Novice Thaumaturgy Training", effect:"none", desc:"Access to Novice-tier Thaumaturgy spells."}, techniques:[
-      {name:"Novice Runic Training",cost:"Passive",desc:"Mana flow improvement grants +1 Secondary Damage."},
+      novice:{ training:{name:"Novice Runic Training", effect:"secDmgBonus", value:1, desc:"The study of thaumic sigils and patterns improves the user's mana flow, which increases their magical output, gaining +1 Secondary Damage."}, techniques:[
       {name:"Minor Magic Shield",cost:"1 Action",desc:"Give yourself or an ally a 5-point Damage Shield."},
       {name:"Mending",cost:"Active",desc:"Repair a terrain tile, recovering 1d6 + Willpower HP."},
       {name:"Create Small Structure",cost:"Active",desc:"Create 1 tile within range: crude Wall (10 HP), Pillar, or Barbed tile."},
@@ -973,8 +957,7 @@ const SKILL_TREES = [
       {name:"Simple Mage Armor",cost:"Free Action (Pre-Battle)",desc:"Magical armor (no regular armor). Counts as any weight. +1 Physical and Magical Resistance. Lasts 1 hour."},
       {name:"Cloud of Shards",cost:"Active",desc:"5ft radius metallic shard cloak on fixed tile for 2 rounds. 1d6 Physical damage per turn inside + 1 Bleed stack."}
     ] },
-      adept:{ training:{name:"Adept Thaumaturgy Training", effect:"none", desc:"Access to Adept-tier Thaumaturgy spells."}, techniques:[
-      {name:"Adept Runic Training",cost:"Passive",desc:"+1 Secondary Damage. Can use Glyph spells to place Weapon Rune enchantments on summoned ethereal weapons."},
+      adept:{ training:{name:"Adept Runic Training", effect:"secDmgBonus", value:1, desc:"The study of thaumic sigils and patterns improves the user's mana flow, which increases their magical output, gaining +1 Secondary Damage. The further mastery over arcane constructs now allows the caster to use their Glyph spells to place enchantments onto summoned ethereal weapons, instead of simply changing their damage type. These glyphs must be of the Weapon Rune type."}, techniques:[
       {name:"Create Structure",cost:"3 Actions",desc:"Create 5 connected tiles (Floor, Wall 20 HP, Pillar, or Barbed). Lasts 24 hours."},
       {name:"Manifest Weapon",cost:"1+ Actions",desc:"Create a Simple weapon of magical energy using Mind for damage/accuracy. Attack enhancers cost Mana."},
       {name:"Mage Armor",cost:"Free Action (Pre-Battle)",desc:"Magical armor. Counts as any weight. +2 Physical and Magical Resistance. Lasts 1 hour."},
@@ -993,8 +976,7 @@ const SKILL_TREES = [
       {name:"Evoke Abominable Aspect",cost:"2 Mana/round upkeep",desc:"Self buff: +1 Spell Power and Secondary Damage. One self buff at a time."},
       {name:"Enlarge",cost:"2 Mana/round upkeep",desc:"Self buff: size +1, +1 Damage and Armor. One self buff at a time."}
     ] },
-      master:{ training:{name:"Master Thaumaturgy Training", effect:"none", desc:"Access to Master-tier Thaumaturgy spells."}, techniques:[
-      {name:"Master Runic Training",cost:"Passive",desc:"+1 Secondary Damage. Spend 8 Mana to gain a slotted Thaumaturgy self buff's benefits for one attack phase (Attack Enhancer)."},
+      master:{ training:{name:"Master Runic Training", effect:"secDmgBonus", value:1, desc:"The study of thaumic sigils and patterns improves the user's mana flow, which increases their magical output, gaining +1 Secondary Damage. The caster may spend 8 mana in order to gain one of the Thaumaturgy self buffs' benefits for one attack phase that they have already learned and have slotted. This counts as an Attack Enhancer."}, techniques:[
       {name:"Create Greater Structure",cost:"6 Actions",desc:"Create 15 connected tiles (Floor, Wall 30 HP, Pillar, or Barbed). Lasts 24 hours."},
       {name:"Manifest Ethereal Weapon",cost:"1+ Actions",desc:"Create Simple Weapon of raw magical energy (Magic damage, tangible). 2 Mana/round per weapon. Attack enhancers cost Mana."},
       {name:"Perfect Mage Armor",cost:"Free Action (Pre-Battle)",desc:"Magical armor. Counts as any weight. +3 Physical and Magical Resistance. Lasts 1 hour."},
@@ -1024,16 +1006,14 @@ const SKILL_TREES = [
       {name:"Soulbeast",     desc:"Merge with a bonded Nature animal (takes Concentration slot); all attacks count as Flanking while merged."},
     ],
     tiers:{
-      novice:{ training:{name:"Novice Nature Training", effect:"none", desc:"Access to Novice-tier Nature spells."}, techniques:[
-      {name:"Novice Shamanic Training",cost:"Passive",desc:"Attune to nature spirits, gaining +5 Mana."},
+      novice:{ training:{name:"Novice Shamanic Training", effect:"statBonus", key:"Mana", value:5, desc:"Attune yourself to the spirits of the wilds, allowing the bountiful energy of nature to fill you, gaining +5 Mana."}, techniques:[
       {name:"Green Growth",cost:"Active",desc:"Create a 2x2 Forest tile within casting range."},
       {name:"Forest Pathmaker",cost:"Free Action",desc:"Ignore Forest tile movement penalties for 2 turns. Not a self buff."},
       {name:"Whisper of the Wild",cost:"Active",desc:"Summon a small animal (same level or below) as a Summon."},
       {name:"Leaf Spike",cost:"Active",desc:"2d8 + Mind Physical Damage. Can crit (+1 crit). HP damage applies Bind. Willpower vs Vigor save."},
       {name:"Soothing Spores",cost:"1 Action",desc:"Heal 1 target for 1 Willpower die. Healing reapplied at start of target's next round. Magical augment."}
     ] },
-      adept:{ training:{name:"Adept Nature Training", effect:"none", desc:"Access to Adept-tier Nature spells."}, techniques:[
-      {name:"Adept Shamanic Training",cost:"Passive",desc:"Gain +5 Mana. When commanding summoned animals, spend Actions to grant them Actions."},
+      adept:{ training:{name:"Adept Shamanic Training", effect:"statBonus", key:"Mana", value:5, desc:"Attune yourself to the spirits of the wilds, allowing the bountiful energy of nature to fill you, gaining +5 Mana. Additionally, when commanding a Summoned Animal, you can spend more actions to grant it more actions in return, the only limit being how many actions you have."}, techniques:[
       {name:"Lesser Chimeric Wildshape",cost:"Free Action / 1+ Actions",desc:"Chimeric form. Pre-Battle: 2 transformations. Each extra Action adds 1 more. Lasts 1 hour."},
       {name:"Thorned Aegis",cost:"Reaction",desc:"Block: +3 Physical Resistance. Dodge: +3 Parry."},
       {name:"Nature Release",cost:"Active",desc:"Turn a 4x4 grid within casting range to Forest tiles."},
@@ -1047,8 +1027,7 @@ const SKILL_TREES = [
       {name:"Bloom Heal",cost:"Active",desc:"Heal 1 Willpower die + recover Stamina for half healed. 5ft radius affecting allies."},
       {name:"Giant Growth",cost:"2 Mana/round upkeep",desc:"Self buff: +1 Accuracy, size +1 (no Parry penalty). One self buff at a time."}
     ] },
-      master:{ training:{name:"Master Nature Training", effect:"none", desc:"Access to Master-tier Nature spells."}, techniques:[
-      {name:"Master Shamanic Training",cost:"Passive",desc:"Gain +5 Mana. Summons get a concentration slot for Self Buffs. Self Buffs can optionally apply to a Summon instead."},
+      master:{ training:{name:"Master Shamanic Training", effect:"statBonus", key:"Mana", value:5, desc:"Attune yourself to the spirits of the wilds, allowing the bountiful energy of nature to fill you, gaining +5 Mana. Additionally, you get the Primal Awakening feature, granting a concentration slot to a Summon you control, allowing them to benefit from Self Buffs. Furthermore, whenever you cast a Self Buff while you control a Summon you can choose to have the Summon get the benefits of the Self Buff rather than yourself. Applying a Self-Buff in this manner will take up the Summon's concentration slot."}, techniques:[
       {name:"Greater Chimeric Wildshape",cost:"Free Action / 1+ Actions",desc:"Chimeric form. Pre-Battle: 3 transformations. Each extra Action adds 1 more. Better stats than lesser. Lasts 1 hour."},
       {name:"Deep Forest Resurgence",cost:"Active",desc:"Turn a 6x6 grid within casting range to Forest tiles."},
       {name:"Predatory Stride",cost:"3 Mana/round upkeep",desc:"Self buff: +2 Primary Damage and Accuracy. Gain a Brave Action after each attack phase. One self buff at a time."},
@@ -1192,6 +1171,7 @@ function getTrainingBonuses(purchasedTrainings) {
     for(const tier of tiers) {
       if(!purchasedTrainings.has(`${tree.id}:${tier}`)) continue;
       const training = tree.tiers[tier].training;
+      if(!training) continue;
       if(training.effect === "statBonus") {
         bonuses[training.key] = (bonuses[training.key]||0) + training.value;
       }
@@ -2176,6 +2156,9 @@ function StepSkills({char,setChar,spLeft,totalSP,moneyLeft,skillSilverSpent}){
     const key=`${skillId}:${tier}`;
     const silverCost=TIER_SILVER[tier];
     const already=c.purchasedTrainings.has(key);
+    // Block if this tree has no training for this tier
+    const thisTreeDef=SKILL_TREES.find(t=>t.id===skillId);
+    if(!already && !thisTreeDef?.tiers[tier]?.training) return c;
     if(!already){
       // Block if a DIFFERENT tree of the SAME TYPE already owns the training line
       const tiers2=["novice","adept","master"];
@@ -2314,7 +2297,7 @@ function StepSkills({char,setChar,spLeft,totalSP,moneyLeft,skillSilverSpent}){
                           </div>
 
                           {/* Training — purchasable, locked if another tree owns the training line */}
-                          <button onClick={()=>!trainingLocked&&toggleTraining(tree.id,tier)} style={{
+                          {training&&(<button onClick={()=>!trainingLocked&&toggleTraining(tree.id,tier)} style={{
                             width:"100%",
                             border:trainingBought?"1px solid var(--accent-gold)":"1px solid var(--border-cebee8)",
                             background:trainingBought?"var(--training-bought)":trainingLocked?"var(--training-locked)":"var(--bg-panel)",
@@ -2332,10 +2315,10 @@ function StepSkills({char,setChar,spLeft,totalSP,moneyLeft,skillSilverSpent}){
                             <span style={{fontSize:10,color:trainingBought?"var(--text-train-bought)":trainingLocked?"var(--text-train-locked)":"var(--text-train-norm)",whiteSpace:"nowrap",marginLeft:8}}>
                               {trainingBought?"✓ Purchased":trainingLocked?"🔒 Locked":`${silverCost}s`}
                             </span>
-                          </button>
+                          </button>)}
 
                           {/* Techniques / Spells */}
-                          {tree.type==="magic"&&!trainingBought&&techniques.length>0&&(
+                          {tree.type==="magic"&&training&&!trainingBought&&techniques.length>0&&(
                             <div style={{fontSize:10,color:"#a080e0",marginBottom:6,padding:"4px 8px",background:"rgba(112,80,180,0.1)",borderRadius:3,border:"1px solid rgba(112,80,180,0.25)"}}>
                               ✦ Spells are accessible via skill rank. Training is optional — each tier purchased adds +5 Mana spell slots.
                             </div>
@@ -2861,7 +2844,7 @@ function StepSummary({char,setChar,derived,totalSP}){
                 </div>
                 {TIERS.slice(0,rank).filter(tier=>char.purchasedTrainings.has(`${tree.id}:${tier}`)).map(tier=>(
                   <div key={tier} style={{fontSize:10,color:"#4cc8e0",marginBottom:2}}>
-                    ⚡ {tree.tiers[tier].training.name}: {tree.tiers[tier].training.desc}
+                    ⚡ {tree.tiers[tier].training?.name}: {tree.tiers[tier].training?.desc}
                   </div>
                 ))}
                 {Object.entries(char.techniques[tree.id]||{}).map(([tier,techs])=>
