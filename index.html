@@ -883,6 +883,60 @@ function calcSkillSilverSpent(skills, purchasedTrainings, techniques) {
   return total;
 }
 
+
+// ─── TECHNIQUE SLOT HELPERS ──────────────────────────────────────────────────
+// Per combat guide: Novice=2 slots, Adept=3 slots, Master=4 slots
+// Trainings cost no slots (always on). Passives are always on once purchased.
+const TIER_SLOT_COST = {novice:2, adept:3, master:4};
+
+const isPassiveTech = (cost) => {
+  const c = cost.toLowerCase();
+  return c.startsWith("passive") || c === "free action";
+};
+
+// Get which tier a technique belongs to for a given skill tree
+const getTechTier = (skillId, techName) => {
+  const tree = SKILL_TREES.find(t=>t.id===skillId);
+  if(!tree) return null;
+  for(const tier of ["novice","adept","master"]) {
+    const techs = tree.tiers[tier]?.techniques || [];
+    if(techs.some(t=>t.name===techName)) return tier;
+  }
+  return null;
+};
+
+// Slot cost for a technique = its tier cost
+const techSlotCost = (skillId, techName) => {
+  const tier = getTechTier(skillId, techName);
+  return tier ? TIER_SLOT_COST[tier] : 2;
+};
+
+// Total bonus technique slots from purchased trainings
+// +5 per training tier purchased for that skill (max +15 per skill, but global pool)
+const calcBonusTechSlots = (purchasedTrainings) => {
+  let bonus = 0;
+  for(const tree of SKILL_TREES) {
+    for(const tier of ["novice","adept","master"]) {
+      if(purchasedTrainings.has(`${tree.id}:${tier}`)) bonus += 5;
+    }
+  }
+  return bonus;
+};
+
+// Techniques that grant persistent bonuses ONLY when slotted (not just purchased)
+const SLOTTED_BONUS_TECHS = {
+  "Reflexes":          {Parry:1, PhysRes:1},
+  "Trained Reflexes":  {Parry:2, PhysRes:2},
+  "Limit Breaker":     {Acc:2, PrimDmg:2},
+  "Breaker":           {Acc:1, PrimDmg:1},
+  "Rudimentary CQC Style":          {Acc:1, PrimDmg:1},
+  "Masterful CQC Style":            {Acc:3, PrimDmg:3},
+  "Rudimentary Marksmanship Style": {Acc:1, PrimDmg:1},
+  "Masterful Marksmanship Style":   {Acc:3, PrimDmg:3},
+  "Practiced Stance":  {Acc:1, PrimDmg:1},
+  "Perfected Stance":  {Acc:2, PrimDmg:2, Parry:2},
+};
+
 // ─── MAIN APP ────────────────────────────────────────────────────────────────
 const EMPTY_CHAR = {
   name:"", race:"", age:"", location:"", appearance:"", personality:"", history:"",
@@ -893,15 +947,15 @@ const EMPTY_CHAR = {
   stats:{Strength:"d4",Dexterity:"d4",Vigor:"d4",Mind:"d4",Willpower:"d4"},
   attrs:{HP:20,Stamina:10,Mana:0},
   attrPointsUsed:0,
-  skills:{}, techniques:{}, purchasedTrainings:new Set(), masterPerks:{},
+  skills:{}, techniques:{}, purchasedTrainings:new Set(), masterPerks:{}, slottedTechniques:new Set(),
   equipment:{weapon:null,offhand:null,armor:null,items:[],catalyst:null,jewelry:[]},
   money:500,
 };
 
 // Serialize Set → array for storage/export
-const charToJSON = (c) => ({...c, purchasedTrainings: [...(c.purchasedTrainings||[])]});
+const charToJSON = (c) => ({...c, purchasedTrainings: [...(c.purchasedTrainings||[])], slottedTechniques: [...(c.slottedTechniques||[])]});
 // Restore array → Set on load
-const charFromJSON = (obj) => ({...EMPTY_CHAR, ...obj, purchasedTrainings: new Set(obj.purchasedTrainings||[])});
+const charFromJSON = (obj) => ({...EMPTY_CHAR, ...obj, purchasedTrainings: new Set(obj.purchasedTrainings||[]), slottedTechniques: new Set(obj.slottedTechniques||[])});
 
 const SAVE_SLOTS = ["slot_1","slot_2","slot_3"];
 
@@ -1056,6 +1110,21 @@ function App() {
   };
 
   const trainBonuses = getTrainingBonuses(char.purchasedTrainings);
+
+  // Slotted technique persistent bonuses
+  const slottedTechBonuses = (() => {
+    const b = {HP:0,Stamina:0,Mana:0,Parry:0,PhysRes:0,PrimDmg:0,Acc:0};
+    (char.slottedTechniques||new Set()).forEach(key => {
+      // key format: "skillId||techName"
+      const techName = key.split("||")[1];
+      const bonus = SLOTTED_BONUS_TECHS[techName];
+      if(bonus) Object.entries(bonus).forEach(([k,v]) => { b[k] = (b[k]||0) + v; });
+    });
+    return b;
+  })();
+
+  // (slot budget calculated below after finalStamina)
+
   const skillSilverSpent = calcSkillSilverSpent(char.skills, char.purchasedTrainings, char.techniques);
 
   // stat point budget — Gigantic gets STR & VIG d6 free (they're mandatory minimums)
@@ -1081,12 +1150,23 @@ function App() {
   const vigorHPBonus  = calcVigorHP(char.stats.Vigor);
   const finalHP       = char.attrs.HP + trainBonuses.HP + vigorHPBonus;
   const finalStamina  = char.attrs.Stamina + trainBonuses.Stamina;
+  // Technique slot budget (needs finalStamina)
+  const bonusTechSlots = calcBonusTechSlots(char.purchasedTrainings);
+  const totalTechSlots = finalStamina + bonusTechSlots;
+  const slotsUsed = (() => {
+    let used = 0;
+    (char.slottedTechniques||new Set()).forEach(key => {
+      const [skillId, techName] = key.split("||");
+      used += techSlotCost(skillId, techName);
+    });
+    return used;
+  })();
   const finalMana     = char.attrs.Mana + (trainBonuses.Mana||0) + manaPlus5;
   const finalDmgShield= calcDmgShield(char.stats.Vigor);
   const baseParry     = calcParry(char.stats.Dexterity);
   const armorParryB   = char.equipment.armor?.parry||0;
   const shieldParryB  = (char.equipment.offhand?.parry)||0;
-  const finalParry    = baseParry + armorParryB + shieldParryB + trainBonuses.Parry + (char.boon?.name==="Blessing of Power"?1:0) + sizeB.parry;
+  const finalParry    = baseParry + armorParryB + shieldParryB + trainBonuses.Parry + slottedTechBonuses.Parry + (char.boon?.name==="Blessing of Power"?1:0) + sizeB.parry;
 
   // Movement Speed — base 6, +Improved Movement, +Disciplined Movement (doesn't stack), +Bodyglove armor bonus
   const maTechs = Object.values(char.techniques["martial_arts"]||{}).flat();
@@ -1217,8 +1297,8 @@ function App() {
   })();
   const savageFightingBonus = hasSavageFighting ? unarmoredParryBonus : 0;
 
-  const accBonus  = trainBonuses.Acc + boonOffensive + weaponAccBonus + jewelryAccBonus;
-  const dmgBonus  = trainBonuses.PrimDmg + boonOffensive + weaponDmgBonus + jewelryDmgBonus + sizeB.primDmg + savageFightingBonus;
+  const accBonus  = trainBonuses.Acc + slottedTechBonuses.Acc + boonOffensive + weaponAccBonus + jewelryAccBonus;
+  const dmgBonus  = trainBonuses.PrimDmg + slottedTechBonuses.PrimDmg + boonOffensive + weaponDmgBonus + jewelryDmgBonus + sizeB.primDmg + savageFightingBonus;
   // Brute: use STR for melee accuracy die. Eagle Eye: use DEX for ranged dmg die. Primal Mass: use VIG for melee dmg die.
   const meleeAccDie = hasBrute ? char.stats.Strength : char.stats.Dexterity;
   const meleeDmgDie = hasPrimalMass ? char.stats.Vigor : char.stats.Strength;
@@ -1249,7 +1329,7 @@ function App() {
     return true;
   };
 
-  const derived = {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove};
+  const derived = {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots};
 
   return (
     <div style={{minHeight:"100vh",background:"var(--bg-page-grad)",color:"var(--text-body)",fontFamily:"'Palatino Linotype',Palatino,Georgia,serif",display:"flex",flexDirection:"column"}}>
@@ -2105,7 +2185,7 @@ function StepEquipment({char,setChar,moneyLeft}){
 
 // ─── STEP SUMMARY ─────────────────────────────────────────────────────────────
 function StepSummary({char,setChar,derived,totalSP}){
-  const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove}=derived;
+  const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots}=derived;
   const fmt = ({die,bonus}) => bonus>0?`${die} (+${bonus})`:bonus<0?`${die} (${bonus})`:die;
   const RANK_LABELS=["","Novice","Adept","Master"];
   const TIERS=["novice","adept","master"];
@@ -2122,7 +2202,7 @@ function StepSummary({char,setChar,derived,totalSP}){
       ``,`DERIVED:`,
       `  Melee Accuracy: ${finalMeleeAcc.die}${finalMeleeAcc.bonus!==0?" (+"+ finalMeleeAcc.bonus+")":""}  |  Primary Damage: ${finalMeleeDmg.die}${finalMeleeDmg.bonus!==0?" (+"+finalMeleeDmg.bonus+")":""}`,
       `  Parry: ${finalParry}  |  Armor: ${finalArmor}  |  Ward: ${finalWard}`,
-      `  Movement: ${finalMove}  |  Carry Cap: ${finalStamina}  |  Tech Slots: ${finalStamina}  |  Spell Slots: ${finalMana}`,
+      `  Movement: ${finalMove}  |  Carry Cap: ${finalStamina} wt  |  Tech Slots: ${slotsUsed}/${totalTechSlots}${bonusTechSlots>0?" (+"+bonusTechSlots+" training bonus)":""}  |  Spell Slots: ${finalMana}`,
       ``,`SKILLS:`,
       ...SKILL_TREES.filter(t=>char.skills[t.id]>0).map(t=>{
         const rank=char.skills[t.id];
@@ -2160,7 +2240,7 @@ function StepSummary({char,setChar,derived,totalSP}){
           {[["Name",char.name||"—"],["Race",char.race||"—"],["Level",`${char.level||1} (${char.exp||0}/10 EXP)`],["Role",char.role||"—"],["Boon",char.boon?.name||"—"]].map(([k,v])=><Row key={k} label={k} val={v}/>)}
         </Card>
         <Card title="Attributes">
-          {[["HP",finalHP,true],["Stamina",finalStamina,true],["Mana",finalMana,true],["Dmg Shield Cap",finalDmgShield,true],["Tech Slots",finalStamina+""],["Spell Slots",finalMana+""]].map(([k,v,h])=><Row key={k} label={k} val={v} hi={h}/>)}
+          {[["HP",finalHP,true],["Stamina",finalStamina,true],["Mana",finalMana,true],["Dmg Shield Cap",finalDmgShield,true],["Tech Slots",`${slotsUsed}/${totalTechSlots}${bonusTechSlots>0?" (+"+bonusTechSlots+")":""}`],["Spell Slots",finalMana+""]].map(([k,v,h])=><Row key={k} label={k} val={v} hi={h}/>)}
         </Card>
         <Card title="Stats">
           {STATS.map(s=><Row key={s} label={s} val={char.stats[s]} hi/>)}
@@ -2229,6 +2309,81 @@ function StepSummary({char,setChar,derived,totalSP}){
           ].map(([k,v,h])=><Row key={k} label={k} val={v} hi={h}/>)}
         </Card>
       </div>
+      {/* Technique Loadout */}
+      {(() => {
+        // Collect all slottable (non-passive) techniques the character has purchased
+        const slottable = [];
+        for(const tree of SKILL_TREES) {
+          if(!char.skills[tree.id]) continue;
+          const rank = char.skills[tree.id];
+          const tiers = ["novice","adept","master"].slice(0,rank);
+          for(const tier of tiers) {
+            const techs = (char.techniques[tree.id]||{})[tier]||[];
+            for(const techName of techs) {
+              // Find tech cost to check if passive
+              const techDef = (tree.tiers[tier]?.techniques||[]).find(t=>t.name===techName);
+              if(!techDef || isPassiveTech(techDef.cost)) continue;
+              slottable.push({skillId:tree.id, skillName:tree.name, tier, techName, cost:techDef.cost, desc:techDef.desc, slotCost:TIER_SLOT_COST[tier]});
+            }
+          }
+        }
+        const toggleSlot = (skillId, techName) => {
+          const key = `${skillId}||${techName}`;
+          setChar(c => {
+            const cur = new Set(c.slottedTechniques||[]);
+            if(cur.has(key)) { cur.delete(key); }
+            else { cur.add(key); }
+            return {...c, slottedTechniques:cur};
+          });
+        };
+        const slotsLeft = totalTechSlots - slotsUsed;
+        const tierColor = {novice:"var(--text-teal)",adept:"#c8a84a",master:"#e05a6a"};
+        return (
+          <Card title="Technique Loadout">
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12,paddingBottom:8,borderBottom:"1px solid var(--border-row)"}}>
+              <div style={{fontSize:12,color:"var(--text-head)"}}>
+                Slots: <span style={{fontWeight:700,color:slotsLeft<0?"var(--text-danger)":slotsLeft===0?"#c8a84a":"var(--text-value-hi)"}}>{slotsUsed}</span>
+                <span style={{color:"var(--text-muted)"}}> / {totalTechSlots}</span>
+              </div>
+              {bonusTechSlots>0&&<div style={{fontSize:10,color:"var(--text-teal)",background:"var(--bg-tag)",padding:"1px 6px",borderRadius:3}}>+{bonusTechSlots} from trainings</div>}
+              <div style={{flex:1,height:4,background:"var(--bg-pip-off)",borderRadius:2,overflow:"hidden"}}>
+                <div style={{height:"100%",width:`${Math.min(100,totalTechSlots>0?slotsUsed/totalTechSlots*100:0)}%`,background:slotsLeft<0?"var(--text-danger)":"var(--accent-teal)",transition:"width 0.3s",borderRadius:2}}/>
+              </div>
+              <div style={{fontSize:10,color:"var(--text-muted)"}}>Novice=2 · Adept=3 · Master=4 slots</div>
+            </div>
+            {slottable.length===0
+              ? <div style={{fontSize:11,color:"var(--text-muted)",fontStyle:"italic"}}>No slottable techniques purchased. Passive techniques are always active once purchased.</div>
+              : <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                  {slottable.map(({skillId,skillName,tier,techName,cost,desc,slotCost})=>{
+                    const key=`${skillId}||${techName}`;
+                    const slotted=(char.slottedTechniques||new Set()).has(key);
+                    const wouldExceed = !slotted && (slotsUsed+slotCost>totalTechSlots);
+                    return(
+                      <div key={key} onClick={()=>toggleSlot(skillId,techName)}
+                        style={{padding:"8px 10px",border:`1px solid ${slotted?"var(--accent-gold)":wouldExceed?"var(--text-danger)":"var(--border-cebee8)"}`,borderRadius:3,cursor:"pointer",background:slotted?"var(--bg-tbl-sel)":wouldExceed?"rgba(139,26,42,0.05)":"var(--bg-card)",transition:"all 0.15s",opacity:wouldExceed&&!slotted?0.7:1}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:3}}>
+                          <span style={{fontSize:11,fontWeight:600,color:slotted?"var(--accent-gold)":"var(--text-head)",lineHeight:1.2}}>{techName}</span>
+                          <div style={{display:"flex",gap:4,alignItems:"center",flexShrink:0,marginLeft:6}}>
+                            <span style={{fontSize:9,color:tierColor[tier],background:"var(--bg-tag)",padding:"1px 4px",borderRadius:2,textTransform:"uppercase"}}>{tier}</span>
+                            <span style={{fontSize:9,background:slotted?"var(--accent-gold)":"var(--bg-panel-alt)",color:slotted?"#1a1030":"var(--text-muted)",padding:"1px 5px",borderRadius:2,fontWeight:600}}>{slotCost} slot{slotCost!==1?"s":""}</span>
+                          </div>
+                        </div>
+                        <div style={{fontSize:9,color:"var(--text-muted)",marginBottom:2}}>{skillName} · {cost}</div>
+                        <div style={{fontSize:10,color:"var(--text-label)",lineHeight:1.4}}>{desc}</div>
+                        {slotted && SLOTTED_BONUS_TECHS[techName] && Object.keys(SLOTTED_BONUS_TECHS[techName]).length>0 && (
+                          <div style={{marginTop:4,fontSize:9,color:"var(--text-teal)",borderTop:"1px solid var(--border-row)",paddingTop:3}}>
+                            ★ Active bonus: {Object.entries(SLOTTED_BONUS_TECHS[techName]).map(([k,v])=>`+${v} ${k}`).join(", ")}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+            }
+            {slottable.length>0&&<div style={{marginTop:8,fontSize:10,color:"var(--text-muted)",borderTop:"1px solid var(--border-row)",paddingTop:8}}>Click to slot/unslot. Passive techniques are always active and shown in the Skills section below.</div>}
+          </Card>
+        );
+      })()}
       {/* Skills with techniques */}
       <Card title="Skills, Techniques & Master Perks">
         {SKILL_TREES.filter(t=>char.skills[t.id]>0).length===0
