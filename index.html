@@ -660,7 +660,7 @@ const SKILL_TREES = [
     id:"anima", name:"Anima Magic", type:"magic",
     desc:"Fire, Water, Earth, Air & Lightning. Master perk: Energy, Domination, or Magnitude (Elemental Soul).",
     masterPerks:[
-      {name:"Energy",    desc:"+5 Mana pool. Gain the Redirect spell."},
+      {name:"Energy",    desc:"+5 Mana pool. Gain the Redirect spell.", autoSpell:{tier:"adept", name:"Redirect"}},
       {name:"Domination",desc:"Active spells cost 1 less Mana/round to upkeep. Touch Magic with Anima spells."},
       {name:"Magnitude", desc:"Attune to one element (Infernal/Aqua/Terra/Vacuum/Thunderous Soul). Cannot cast other element types."},
     ],
@@ -727,7 +727,7 @@ const SKILL_TREES = [
     id:"void", name:"Void Magic", type:"magic",
     desc:"Telekinesis, teleportation & gravity. Master perk: Arcane Spirit, Arcane Order, or Arcane Chaos.",
     masterPerks:[
-      {name:"Arcane Spirit", desc:"+5 Mana pool. Gain Drifter's Sheathe spell."},
+      {name:"Arcane Spirit", desc:"+5 Mana pool. Gain Drifter's Sheathe spell.", autoSpell:{tier:"adept", name:"Drifter's Sheathe"}},
       {name:"Arcane Order",  desc:"Active spells cost 1 less Mana/round to upkeep. Touch Magic with Void spells."},
       {name:"Arcane Chaos",  desc:"+2 spaces to Teleportation, Forced Movement, Range Enhancers, and effective Void spell range."},
     ],
@@ -780,7 +780,7 @@ const SKILL_TREES = [
     id:"holy", name:"Holy Magic", type:"magic",
     desc:"Healing, wards & holy damage. Master perk: Holy Might, Angelic Radiance, or Divine Mind.",
     masterPerks:[
-      {name:"Holy Might",      desc:"+5 Mana pool. Gain Mitotic Regeneration spell."},
+      {name:"Holy Might",      desc:"+5 Mana pool. Gain Mitotic Regeneration spell.", autoSpell:{tier:"master", name:"Mitotic Regeneration"}},
       {name:"Angelic Radiance",desc:"Touch Magic with Holy spells. Create CQC/Marksmanship weapons via Manifest Relic spells."},
       {name:"Divine Mind",     desc:"Spend a 3rd Action on a holy cast to empower it — increased magnitude and up to 4 targets."},
     ],
@@ -828,7 +828,7 @@ const SKILL_TREES = [
     id:"dark", name:"Dark Magic", type:"magic",
     desc:"Curses, DoTs & necromancy. Master perk: Sorcerer, Hexer, or Necromancer.",
     masterPerks:[
-      {name:"Sorcerer",    desc:"+5 Mana pool. Gain the Empathy spell."},
+      {name:"Sorcerer",    desc:"+5 Mana pool. Gain the Empathy spell.", autoSpell:{tier:"master", name:"Empathy"}},
       {name:"Hexer",       desc:"Active spells cost 1 less Mana/round upkeep. Touch Magic with Elder spells."},
       {name:"Necromancer", desc:"All summons gain 5 DS on summon; summon attacks deal +1d6 Dark Secondary damage."},
     ],
@@ -889,7 +889,7 @@ const SKILL_TREES = [
     id:"figment", name:"Figment Magic", type:"magic",
     desc:"Illusions & mind control. Master perk: Shadow Thief, Diplomat, or Conqueror.",
     masterPerks:[
-      {name:"Shadow Thief", desc:"+5 Mana pool. Gain Shadow God's Fingers spell."},
+      {name:"Shadow Thief", desc:"+5 Mana pool. Gain Shadow God's Fingers spell.", autoSpell:{tier:"master", name:"Shadow God's Fingers"}},
       {name:"Diplomat",     desc:"Cast Figment spells stealthily (3 Actions) — opponent cannot perform defensive action."},
       {name:"Conqueror",    desc:"Figment debuffs become 10ft AoEs; +1 magnitude to all Figment spells (+1 Stack where applicable)."},
     ],
@@ -944,7 +944,7 @@ const SKILL_TREES = [
     id:"thaumaturgy", name:"Thaumaturgy", type:"magic",
     desc:"Constructs, glyphs & runic weapons. Master perk: Thaumic Battery, Thaumic Might, or Thaumic Power.",
     masterPerks:[
-      {name:"Thaumic Battery", desc:"+5 Mana pool. Gain Replicate Magic Item spell."},
+      {name:"Thaumic Battery", desc:"+5 Mana pool. Gain Replicate Magic Item spell.", autoSpell:{tier:"master", name:"Replicate Magic Item"}},
       {name:"Thaumic Might",   desc:"Successful Thaumic weapon hits generate DS = weapon's damage dice. Create CQC/Marksman weapons via Manifest Weapons spells."},
       {name:"Thaumic Power",   desc:"2 self-buffs on 1 Concentration slot (master+adept only); +2 penalty to all ability costs while active."},
     ],
@@ -1001,7 +1001,7 @@ const SKILL_TREES = [
     id:"nature", name:"Nature Magic", type:"magic",
     desc:"Summons, terrain & druidic power. Master perk: Druidcraft, Nature's Wrath, or Soulbeast.",
     masterPerks:[
-      {name:"Druidcraft",    desc:"+5 Mana pool. Gain the Polymorph spell."},
+      {name:"Druidcraft",    desc:"+5 Mana pool. Gain the Polymorph spell.", autoSpell:{tier:"master", name:"Polymorph"}},
       {name:"Nature's Wrath",desc:"Active spells cost 1 less Mana/round upkeep. Touch Magic with Nature spells."},
       {name:"Soulbeast",     desc:"Merge with a bonded Nature animal (takes Concentration slot); all attacks count as Flanking while merged."},
     ],
@@ -1168,6 +1168,59 @@ const JEWELRY_DATA=[
   {name:"Ring of Magic Resistance",bonus:"Ward+3",cost:250},
 ];
 
+// ─── WEAPON ADD-ONS ──────────────────────────────────────────────────────────
+// Gun Modifications — only for weapons with "Gun" property
+// Simple Guns: 1 mod max. Marksman Guns: 2 mods max. Lasgun: 1 mod, Scope/Long Barrel/Extended Mag only.
+const GUN_MODS_DATA = [
+  {name:"Extended Magazine", effect:"Ammo +6",  props:{ammoBonus:6},  cost:120},
+  {name:"Scope",             effect:"Accuracy +2", props:{accBonus:2}, cost:120},
+  {name:"Long Barrel",       effect:"Range +4",  props:{rangeBonus:4}, cost:120},
+  {name:"Incendiary Rounds", effect:"Searing (2) on hit", props:{searing:2}, cost:120},
+  {name:"High Caliber",      effect:"Die size +1, AP +2", props:{dieUp:1,ap:2}, cost:120},
+  {name:"Enhanced Fire Rate", effect:"Automatic +2 (or grants Automatic(3) if none)", props:{autoBonus:2}, cost:120},
+  {name:"Bayonet",           effect:"Treat as Spear (2H Guns only)", props:{bayonet:true}, cost:40},
+];
+// Lasgun can only use these three mods:
+const LASGUN_MOD_WHITELIST = ["Scope","Long Barrel","Extended Magazine"];
+
+// Weapon Rune Enchantments — melee/non-Gun weapons only. One rune at a time.
+const WEAPON_RUNES_DATA = [
+  {name:"Rune of Flame",    dmg:"+1d6 Fire",      effect:"Searing (1)",         cost:250},
+  {name:"Rune of Waves",    dmg:"+1d6 Water",     effect:"Stamina Drain (1d6)", cost:250},
+  {name:"Rune of Wind",     dmg:"+1d6 Wind",      effect:"Accuracy +1",         cost:250},
+  {name:"Rune of Storms",   dmg:"+1d6 Lightning", effect:"Deadly",              cost:250},
+  {name:"Rune of Tempest",  dmg:"+1d6 Lightning", effect:"Fatal",               cost:250},
+  {name:"Rune of Earth",    dmg:"+1d6 Physical",  effect:"AP 2",                cost:250},
+  {name:"Rune of Darkness", dmg:"+1d6 Dark",      effect:"Mana Drain (1d6)",    cost:250},
+  {name:"Rune of Light",    dmg:"+1d6 Holy",      effect:"Blessed, Health Drain (Holy)", cost:250},
+  {name:"Demon",            dmg:"—",              effect:"Dmg+3, Accuracy+2, Crit+1. Special: wielder takes weapon dice dmg each attack; if no dmg dealt, takes 2× dice. Bypasses shields. 2 Actions to roll 1d20 on demon table.", cost:0, special:true},
+];
+
+// Weapon Spell Enchantments — melee/non-Gun weapons only. One spell enchant at a time (separate from rune).
+const WEAPON_SPELLS_DATA = [
+  {name:"Tremor",        effect:"Activated(1): On hit & HP dmg, knock target Prone (Weapon vs Vigor save)", cost:300},
+  {name:"Scorpion's Sting", effect:"Activated(3): Grant Poison(1) to weapon for 1 turn", cost:300},
+  {name:"Eruption",      effect:"Activated(3): Deal XdY Magic dmg in 10ft cloak around wielder on hit", cost:300},
+  {name:"Phantom Range", effect:"Activated(3): Grant Reach+5 for 1 turn; attacks count as projectiles", cost:300},
+];
+
+// Mithril Silver upgrade — melee/non-Gun weapons only. Separate toggle.
+const MITHRIL_WEAPON_COST = (weaponType) => {
+  // 1H = 2 ingots, Vers = 3 ingots, 2H = 4 ingots. Price per ingot = 125
+  if(!weaponType) return 250;
+  if(weaponType==="2h") return 500;
+  if(weaponType==="vers") return 375;
+  return 250; // 1h default
+};
+// Helper to determine weapon category for Mithril cost
+const getWeaponHandedness = (w) => {
+  if(!w) return "1h";
+  const p = w.props||"";
+  if(p.includes("Two-Handed")) return "2h";
+  if(p.includes("Versatile")) return "vers";
+  return "1h";
+};
+
 // ─── STEPS ───────────────────────────────────────────────────────────────────
 const STEPS=[
   {id:"identity",   label:"Identity",   icon:"⚔"},
@@ -1315,6 +1368,10 @@ const EMPTY_CHAR = {
   attrPointsUsed:0,
   skills:{}, techniques:{}, purchasedTrainings:new Set(), masterPerks:{}, slottedTechniques:new Set(), slottedSpells:new Set(),
   equipment:{weapon:null,offhand:null,armor:null,items:[],catalyst:null,jewelry:[]},
+  // Main hand add-ons
+  weaponRune:null, weaponSpell:null, weaponMithril:false, weaponMods:[],
+  // Off-hand add-ons
+  offhandRune:null, offhandSpell:null, offhandMithril:false, offhandMods:[],
   money:500,
 };
 
@@ -1550,7 +1607,17 @@ function App() {
   const totalSpellSlots = finalMana + bonusSpellSlots;
   const spellSlotsUsed = (() => {
     let used = 0;
+    // Build set of auto-spell keys (granted by master perks, no slot cost)
+    const autoKeys = new Set();
+    for(const tree of SKILL_TREES) {
+      const perks = Array.isArray(char.masterPerks[tree.id]) ? char.masterPerks[tree.id] : char.masterPerks[tree.id] ? [char.masterPerks[tree.id]] : [];
+      for(const perkName of perks) {
+        const perkDef = (tree.masterPerks||[]).find(p=>p.name===perkName);
+        if(perkDef?.autoSpell) autoKeys.add(`${tree.id}||${perkDef.autoSpell.name}`);
+      }
+    }
     (char.slottedSpells||new Set()).forEach(key => {
+      if(autoKeys.has(key)) return; // auto-spells cost no slots
       const [skillId, spellName] = key.split("||");
       const tree = SKILL_TREES.find(t=>t.id===skillId);
       if(!tree) return;
@@ -1582,13 +1649,24 @@ function App() {
 
   // Weapon bonuses (parse Acc+N and Dmg+N from props string)
   const weaponAccBonus = (() => {
-    const m = char.equipment.weapon?.props?.match(/Acc\+(\d+)/);
-    return m ? parseInt(m[1]) : 0;
+    const w = char.equipment.weapon;
+    const base = w?.props?.match(/Acc\+(\d+)/);
+    let bonus = base ? parseInt(base[1]) : 0;
+    // Mithril Silver: +1 Acc (non-gun only)
+    if(char.weaponMithril && w && !(w.props||"").includes("Gun")) bonus += 1;
+    // Gun mod: Scope +2 Acc
+    if((char.weaponMods||[]).includes("Scope")) bonus += 2;
+    return bonus;
   })();
   const weaponDmgBonus = (() => {
-    const m = char.equipment.weapon?.props?.match(/Dmg\+(\d+)/);
-    return m ? parseInt(m[1]) : 0;
+    const w = char.equipment.weapon;
+    const base = w?.props?.match(/Dmg\+(\d+)/);
+    let bonus = base ? parseInt(base[1]) : 0;
+    // Mithril Silver: +1 Dmg (non-gun only)
+    if(char.weaponMithril && w && !(w.props||"").includes("Gun")) bonus += 1;
+    return bonus;
   })();
+  const gunModRangeBonus = (char.weaponMods||[]).includes("Long Barrel") ? 4 : 0;
   const jewelryAccBonus = char.equipment.jewelry.reduce((t,j) => {
     const m = j.bonus?.match(/Accuracy\+(\d+)/); return t + (m ? parseInt(m[1]) : 0);
   }, 0);
@@ -1692,6 +1770,37 @@ function App() {
   const finalSpellAcc = { die: char.stats.Mind };
   const finalSpellPower = { die: char.stats.Mind, bonus: boonOffensive };
 
+  // Helper: does the equipped weapon have the Gun property?
+  const isGunWeapon = (w) => w && (w.props||"").includes("Gun");
+  const isSimpleGun = (w) => {
+    if(!isGunWeapon(w)) return false;
+    // Simple Ranged guns
+    const simpleNames = ["Pistol","Musket","Boomstick","Autogun"];
+    return simpleNames.includes(w.name);
+  };
+  const equippedGunModSlots = (w) => {
+    if(!isGunWeapon(w)) return 0;
+    if(w.name==="Lasgun") return 1;
+    if(isSimpleGun(w)) return 1;
+    return 2; // Marksman guns
+  };
+
+  // Weapon add-on silver costs (main hand + off-hand)
+  const weaponAddonCost = (() => {
+    let total = 0;
+    // Main hand
+    if(char.weaponRune) { const r=WEAPON_RUNES_DATA.find(x=>x.name===char.weaponRune); if(r&&!r.special) total+=r.cost; }
+    if(char.weaponSpell) { const s=WEAPON_SPELLS_DATA.find(x=>x.name===char.weaponSpell); if(s) total+=s.cost; }
+    if(char.weaponMithril && char.equipment.weapon) total+=MITHRIL_WEAPON_COST(getWeaponHandedness(char.equipment.weapon));
+    for(const m of (char.weaponMods||[])) { const md=GUN_MODS_DATA.find(x=>x.name===m); if(md) total+=md.cost; }
+    // Off-hand
+    if(char.offhandRune) { const r=WEAPON_RUNES_DATA.find(x=>x.name===char.offhandRune); if(r&&!r.special) total+=r.cost; }
+    if(char.offhandSpell) { const s=WEAPON_SPELLS_DATA.find(x=>x.name===char.offhandSpell); if(s) total+=s.cost; }
+    if(char.offhandMithril && char.equipment.offhand) total+=MITHRIL_WEAPON_COST(getWeaponHandedness(char.equipment.offhand));
+    for(const m of (char.offhandMods||[])) { const md=GUN_MODS_DATA.find(x=>x.name===m); if(md) total+=md.cost; }
+    return total;
+  })();
+
   // equipment + skill money
   const moneySpent = [
     char.equipment.weapon?.cost||0,
@@ -1700,6 +1809,7 @@ function App() {
     char.equipment.catalyst?.cost||0,
     ...char.equipment.items.map(i=>i.cost),
     ...char.equipment.jewelry.map(j=>j.cost),
+    weaponAddonCost,
   ].reduce((a,b)=>a+b,0);
   const moneyLeft = char.money - moneySpent - skillSilverSpent;
 
@@ -1712,7 +1822,8 @@ function App() {
     return true;
   };
 
-  const derived = {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots};
+  const gunModAmmoBonus = (char.weaponMods||[]).includes("Extended Magazine") ? 6 : 0;
+  const derived = {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive};
 
   return (
     <div style={{minHeight:"100vh",background:"var(--bg-page-grad)",color:"var(--text-body)",fontFamily:"'Palatino Linotype',Palatino,Georgia,serif",display:"flex",flexDirection:"column"}}>
@@ -2197,7 +2308,7 @@ function StepSkills({char,setChar,spLeft,totalSP,moneyLeft,skillSilverSpent}){
       const ownerTree=SKILL_TREES.find(t=>t.id!==skillId&&t.type===thisTree?.type&&tiers2.some(ti=>c.purchasedTrainings.has(`${t.id}:${ti}`)));
       if(ownerTree)return c;
       // Check silver
-      const equipSpent=[c.equipment.weapon?.cost||0,c.equipment.offhand?.cost||0,c.equipment.armor?.cost||0,c.equipment.catalyst?.cost||0,...c.equipment.items.map(i=>i.cost),...c.equipment.jewelry.map(j=>j.cost)].reduce((a,b)=>a+b,0);
+      const addonCost=(()=>{let t=0;if(c.weaponRune){const r=WEAPON_RUNES_DATA.find(x=>x.name===c.weaponRune);if(r&&!r.special)t+=r.cost;}if(c.weaponSpell){const s=WEAPON_SPELLS_DATA.find(x=>x.name===c.weaponSpell);if(s)t+=s.cost;}if(c.weaponMithril&&c.equipment.weapon)t+=MITHRIL_WEAPON_COST(getWeaponHandedness(c.equipment.weapon));for(const m of(c.weaponMods||[])){const md=GUN_MODS_DATA.find(x=>x.name===m);if(md)t+=md.cost;}return t;})(); const equipSpent=[c.equipment.weapon?.cost||0,c.equipment.offhand?.cost||0,c.equipment.armor?.cost||0,c.equipment.catalyst?.cost||0,...c.equipment.items.map(i=>i.cost),...c.equipment.jewelry.map(j=>j.cost),addonCost].reduce((a,b)=>a+b,0);
       const currentSkillSpent=calcSkillSilverSpent(c.skills,c.purchasedTrainings,c.techniques);
       if(equipSpent+currentSkillSpent+silverCost>c.money)return c;
     }
@@ -2211,7 +2322,7 @@ function StepSkills({char,setChar,spLeft,totalSP,moneyLeft,skillSilverSpent}){
     const exists=cur.includes(techName);
     const silverCost=TIER_SILVER[tier];
     if(!exists){
-      const equipSpent=[c.equipment.weapon?.cost||0,c.equipment.offhand?.cost||0,c.equipment.armor?.cost||0,c.equipment.catalyst?.cost||0,...c.equipment.items.map(i=>i.cost),...c.equipment.jewelry.map(j=>j.cost)].reduce((a,b)=>a+b,0);
+      const addonCost=(()=>{let t=0;if(c.weaponRune){const r=WEAPON_RUNES_DATA.find(x=>x.name===c.weaponRune);if(r&&!r.special)t+=r.cost;}if(c.weaponSpell){const s=WEAPON_SPELLS_DATA.find(x=>x.name===c.weaponSpell);if(s)t+=s.cost;}if(c.weaponMithril&&c.equipment.weapon)t+=MITHRIL_WEAPON_COST(getWeaponHandedness(c.equipment.weapon));for(const m of(c.weaponMods||[])){const md=GUN_MODS_DATA.find(x=>x.name===m);if(md)t+=md.cost;}return t;})(); const equipSpent=[c.equipment.weapon?.cost||0,c.equipment.offhand?.cost||0,c.equipment.armor?.cost||0,c.equipment.catalyst?.cost||0,...c.equipment.items.map(i=>i.cost),...c.equipment.jewelry.map(j=>j.cost),addonCost].reduce((a,b)=>a+b,0);
       const currentSkillSpent=calcSkillSilverSpent(c.skills,c.purchasedTrainings,c.techniques);
       if(equipSpent+currentSkillSpent+silverCost>c.money)return c;
     }
@@ -2235,16 +2346,46 @@ function StepSkills({char,setChar,spLeft,totalSP,moneyLeft,skillSilverSpent}){
   };
 
   const setMasterPerk = (skillId, perkName, slotIndex) => setChar(c => {
-    const cur = getPerks(skillId);
+    const tree = SKILL_TREES.find(t=>t.id===skillId);
+    const cur = Array.isArray(c.masterPerks[skillId]) ? c.masterPerks[skillId] : c.masterPerks[skillId] ? [c.masterPerks[skillId]] : [];
     let next = [...cur];
-    if(next[slotIndex] === perkName) {
-      next[slotIndex] = undefined; // deselect
+    const isDeselect = next[slotIndex] === perkName;
+
+    // Handle auto-spells: remove old perk's auto-spell if it had one
+    let newTechs = {...c.techniques};
+    let newSlottedSpells = new Set(c.slottedSpells||[]);
+    const oldPerkName = next[slotIndex];
+    if(oldPerkName && tree) {
+      const oldPerkDef = (tree.masterPerks||[]).find(p=>p.name===oldPerkName);
+      if(oldPerkDef?.autoSpell) {
+        const {tier:aTier, name:aName} = oldPerkDef.autoSpell;
+        const tierSpells = ((newTechs[skillId]||{})[aTier]||[]).filter(s=>s!==aName);
+        newTechs = {...newTechs, [skillId]:{...(newTechs[skillId]||{}), [aTier]:tierSpells}};
+        newSlottedSpells.delete(`${skillId}||${aName}`);
+      }
+    }
+
+    if(isDeselect) {
+      next[slotIndex] = undefined;
     } else {
       next[slotIndex] = perkName;
+      // Add new perk's auto-spell if it has one
+      if(tree) {
+        const newPerkDef = (tree.masterPerks||[]).find(p=>p.name===perkName);
+        if(newPerkDef?.autoSpell) {
+          const {tier:aTier, name:aName} = newPerkDef.autoSpell;
+          const existing = (newTechs[skillId]||{})[aTier]||[];
+          if(!existing.includes(aName)) {
+            newTechs = {...newTechs, [skillId]:{...(newTechs[skillId]||{}), [aTier]:[...existing, aName]}};
+          }
+          newSlottedSpells.add(`${skillId}||${aName}`);
+        }
+      }
     }
+
     // remove undefined trailing entries
     while(next.length && !next[next.length-1]) next.pop();
-    return {...c, masterPerks:{...c.masterPerks,[skillId]:next}};
+    return {...c, masterPerks:{...c.masterPerks,[skillId]:next}, techniques:newTechs, slottedSpells:newSlottedSpells};
   });
 
   const phys=SKILL_TREES.filter(s=>s.type==="physical");
@@ -2434,12 +2575,44 @@ function StepSkills({char,setChar,spLeft,totalSP,moneyLeft,skillSilverSpent}){
 // ─── STEP EQUIPMENT ──────────────────────────────────────────────────────────
 function StepEquipment({char,setChar,moneyLeft}){
   const [tab,setTab]=useState("weapons");
-  const setEq=(key,val)=>setChar(c=>({...c,equipment:{...c.equipment,[key]:val}}));
+  const [enchSlot,setEnchSlot]=useState("main"); // "main" or "offhand"
+  const setEq=(key,val)=>setChar(c=>{
+    // When changing weapon, clear add-ons that may not apply to new weapon
+    if(key==="weapon") {
+      const newIsGun = val && (val.props||"").includes("Gun");
+      const wasGun = c.equipment.weapon && (c.equipment.weapon.props||"").includes("Gun");
+      if(newIsGun !== wasGun || !val) {
+        return {...c, equipment:{...c.equipment,[key]:val}, weaponRune:null, weaponSpell:null, weaponMithril:false, weaponMods:[]};
+      }
+      if(newIsGun && val) {
+        const newMax = val.name==="Lasgun"?1:["Pistol","Musket","Boomstick","Autogun"].includes(val.name)?1:2;
+        const filteredMods = (c.weaponMods||[])
+          .filter(m=>val.name!=="Lasgun"||LASGUN_MOD_WHITELIST.includes(m))
+          .slice(0,newMax);
+        return {...c, equipment:{...c.equipment,[key]:val}, weaponMods:filteredMods};
+      }
+    }
+    if(key==="offhand") {
+      const newIsGun = val && (val.props||"").includes("Gun");
+      const wasGun = c.equipment.offhand && (c.equipment.offhand.props||"").includes("Gun");
+      if(newIsGun !== wasGun || !val) {
+        return {...c, equipment:{...c.equipment,[key]:val}, offhandRune:null, offhandSpell:null, offhandMithril:false, offhandMods:[]};
+      }
+      if(newIsGun && val) {
+        const newMax = val.name==="Lasgun"?1:["Pistol","Musket","Boomstick","Autogun"].includes(val.name)?1:2;
+        const filteredMods = (c.offhandMods||[])
+          .filter(m=>val.name!=="Lasgun"||LASGUN_MOD_WHITELIST.includes(m))
+          .slice(0,newMax);
+        return {...c, equipment:{...c.equipment,[key]:val}, offhandMods:filteredMods};
+      }
+    }
+    return {...c, equipment:{...c.equipment,[key]:val}};
+  });
   const toggleList=(list,item)=>setChar(c=>{
     const exists=c.equipment[list].find(i=>i.name===item.name);
     return{...c,equipment:{...c.equipment,[list]:exists?c.equipment[list].filter(i=>i.name!==item.name):[...c.equipment[list],item]}};
   });
-  const TABS=["weapons","armor","catalysts","jewelry","alchemical"];
+  const TABS=["weapons","armor","catalysts","jewelry","alchemical","enchantments"];
 
   return(
     <div>
@@ -2581,13 +2754,147 @@ function StepEquipment({char,setChar,moneyLeft}){
           })}
         </div>
       )}
+      {tab==="enchantments"&&(()=>{
+        const isMain = enchSlot==="main";
+        const wpn = isMain ? char.equipment.weapon : char.equipment.offhand;
+        const isGun = wpn && (wpn.props||"").includes("Gun");
+        const maxMods = !wpn ? 0 : wpn.name==="Lasgun" ? 1 : ["Pistol","Musket","Boomstick","Autogun"].includes(wpn.name) ? 1 : isGun ? 2 : 0;
+        const mithrilCost = wpn ? MITHRIL_WEAPON_COST(getWeaponHandedness(wpn)) : 0;
+        const modsKey = isMain ? "weaponMods" : "offhandMods";
+        const runeKey = isMain ? "weaponRune" : "offhandRune";
+        const spellKey = isMain ? "weaponSpell" : "offhandSpell";
+        const mithrilKey = isMain ? "weaponMithril" : "offhandMithril";
+        const currentMods = char[modsKey]||[];
+        const currentRune = char[runeKey];
+        const currentSpell = char[spellKey];
+        const currentMithril = char[mithrilKey];
+
+        const hasMainWpn = !!char.equipment.weapon;
+        const hasOffWpn = !!char.equipment.offhand;
+        // Off-hand shields and catalysts can't be enchanted as weapons
+        const offIsWeapon = hasOffWpn && !char.equipment.offhand?.parry && !char.equipment.offhand?.minMind;
+
+        const toggleMod = (modName) => setChar(c=>{
+          const cur = c[modsKey]||[];
+          if(cur.includes(modName)) return {...c, [modsKey]: cur.filter(m=>m!==modName)};
+          if(cur.length >= maxMods) return c;
+          if(wpn?.name==="Lasgun" && !LASGUN_MOD_WHITELIST.includes(modName)) return c;
+          return {...c, [modsKey]:[...cur,modName]};
+        });
+        const setRune = (name) => setChar(c=>({...c, [runeKey]: c[runeKey]===name?null:name}));
+        const setSpell = (name) => setChar(c=>({...c, [spellKey]: c[spellKey]===name?null:name}));
+        const toggleMithril = () => setChar(c=>({...c, [mithrilKey]:!c[mithrilKey]}));
+
+        const secHdr = (label,note) => (
+          <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:8,marginTop:16}}>
+            <div style={{fontSize:10,color:"var(--text-row-label)",letterSpacing:"0.12em",fontWeight:700}}>{label}</div>
+            {note&&<div style={{fontSize:9,color:"var(--text-muted)",fontStyle:"italic"}}>{note}</div>}
+          </div>
+        );
+        const addonBtn = (sel,onClick,title,sub,cost,disabled,disabledNote) => (
+          <button onClick={disabled?undefined:onClick} style={{border:`1px solid ${sel?"#c8a84a":disabled?"var(--border-light)":"var(--border-cebee8)"}`,background:sel?"var(--bg-sel)":disabled?"var(--bg-panel)":"var(--bg-sel-unsel)",color:"inherit",padding:"12px",cursor:disabled?"not-allowed":"pointer",textAlign:"left",fontFamily:"inherit",borderRadius:3,opacity:disabled?0.5:1}}>
+            <div style={{fontWeight:600,color:sel?"#c9a84c":disabled?"var(--text-muted)":"var(--text-head)",marginBottom:3,fontSize:11}}>{title}</div>
+            <div style={{fontSize:10,color:sel?"#c8b898":"var(--text-label)",lineHeight:1.5}}>{sub}</div>
+            <div style={{fontSize:9,color:sel?"var(--accent-gold)":"var(--text-muted)",marginTop:3}}>{disabled?disabledNote:`${cost} Silver`}</div>
+          </button>
+        );
+
+        return (
+          <div>
+            {/* Slot selector */}
+            <div style={{display:"flex",gap:8,marginBottom:12}}>
+              {[["main","⚔ Main Hand", char.equipment.weapon?.name||"None"],["offhand","🗡 Off-Hand", char.equipment.offhand?.name||"None"]].map(([slot,label,wpnName])=>{
+                const active = enchSlot===slot;
+                return (
+                  <button key={slot} onClick={()=>setEnchSlot(slot)} style={{flex:1,padding:"10px 12px",border:`1px solid ${active?"#c8a84a":"var(--border-main)"}`,background:active?"var(--bg-sel)":"var(--bg-panel)",color:"inherit",cursor:"pointer",fontFamily:"inherit",borderRadius:3,textAlign:"left"}}>
+                    <div style={{fontSize:10,color:active?"#c8a84a":"var(--text-row-label)",fontWeight:700,letterSpacing:"0.08em"}}>{label}</div>
+                    <div style={{fontSize:11,color:active?"#e8d8b0":"var(--text-muted)",marginTop:2}}>{wpnName}</div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Header: active weapon info */}
+            {wpn
+              ? <div style={{padding:"8px 14px",background:"var(--bg-card)",border:"1px solid var(--border-main)",borderRadius:3,marginBottom:14,fontSize:11}}>
+                  Modifying: <strong style={{color:"#c8a84a"}}>{wpn.name}</strong>
+                  {isGun && <span style={{marginLeft:8,color:"var(--text-teal)",fontSize:9,background:"var(--bg-tag)",padding:"1px 5px",borderRadius:2}}>GUN — {currentMods.length}/{maxMods} mods</span>}
+                  {!isGun && <span style={{marginLeft:8,color:"#9a70d8",fontSize:9,background:"var(--bg-tag)",padding:"1px 5px",borderRadius:2}}>MELEE/RANGED — Enchantable</span>}
+                </div>
+              : <div style={{fontSize:11,color:"var(--text-muted)",fontStyle:"italic",textAlign:"center",padding:"20px 0",border:"1px dashed var(--border-light)",borderRadius:3,marginBottom:14}}>
+                  {enchSlot==="main" ? "No main hand weapon equipped." : !offIsWeapon && hasOffWpn ? "Off-hand item (shield/catalyst) cannot be modified here." : "No off-hand weapon equipped."}
+                  {" "}Go to the Weapons tab to select one.
+                </div>
+            }
+
+            {/* GUN MODS */}
+            {wpn && isGun && (<>
+              {secHdr("GUN MODIFICATIONS", `${currentMods.length}/${maxMods} slots used${wpn.name==="Lasgun"?" — Lasgun: Scope, Long Barrel, Extended Mag only":""}`)}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                {GUN_MODS_DATA.map(mod=>{
+                  const sel = currentMods.includes(mod.name);
+                  const atCap = !sel && currentMods.length >= maxMods;
+                  const lasgUnlock = wpn.name==="Lasgun" && !LASGUN_MOD_WHITELIST.includes(mod.name);
+                  const disabled = atCap || lasgUnlock;
+                  return addonBtn(sel,()=>toggleMod(mod.name),mod.name,mod.effect,mod.cost,disabled,lasgUnlock?"Lasgun restriction":atCap?"Mod slots full":"");
+                })}
+              </div>
+              {currentMods.length>0&&(
+                <div style={{marginTop:10,padding:"8px 12px",background:"rgba(76,200,224,0.07)",border:"1px solid var(--accent-teal)",borderRadius:3,fontSize:10}}>
+                  <span style={{color:"var(--accent-teal)",fontWeight:600}}>Active Mods: </span>
+                  {currentMods.map((m,i)=><span key={m}>{m}{i<currentMods.length-1?", ":""}</span>)}
+                </div>
+              )}
+            </>)}
+
+            {/* MELEE / NON-GUN ENCHANTMENTS */}
+            {wpn && !isGun && (<>
+              {secHdr("MITHRIL SILVER UPGRADE", `+1 Accuracy, +1 Damage — ${mithrilCost} Silver`)}
+              <div style={{marginBottom:12}}>
+                {addonBtn(currentMithril,toggleMithril,"Mithril Silver",`Acc+1, Dmg+1 on ${wpn.name}`,mithrilCost,false,"")}
+              </div>
+
+              {secHdr("WEAPON RUNE ENCHANTMENT","One rune at a time — adds elemental secondary damage")}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:4}}>
+                {WEAPON_RUNES_DATA.map(r=>{
+                  const sel = currentRune===r.name;
+                  return addonBtn(sel,()=>setRune(r.name),r.name,`${r.dmg} · ${r.effect}`,r.special?"Special price":r.cost,false,"");
+                })}
+              </div>
+              {currentRune&&(
+                <div style={{marginTop:4,padding:"6px 10px",background:"rgba(154,112,216,0.08)",border:"1px solid #9a70d8",borderRadius:3,fontSize:10}}>
+                  <span style={{color:"#9a70d8",fontWeight:600}}>Rune active: </span>{currentRune}
+                </div>
+              )}
+
+              {secHdr("WEAPON SPELL ENCHANTMENT","One spell enchant at a time — activated abilities")}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                {WEAPON_SPELLS_DATA.map(s=>{
+                  const sel = currentSpell===s.name;
+                  return addonBtn(sel,()=>setSpell(s.name),s.name,s.effect,s.cost,false,"");
+                })}
+              </div>
+              {currentSpell&&(
+                <div style={{marginTop:6,padding:"6px 10px",background:"rgba(200,168,74,0.08)",border:"1px solid var(--accent-gold)",borderRadius:3,fontSize:10}}>
+                  <span style={{color:"var(--accent-gold)",fontWeight:600}}>Spell active: </span>{currentSpell}
+                </div>
+              )}
+            </>)}
+
+            {/* Rules reminder */}
+            <div style={{marginTop:20,padding:"10px 14px",background:"var(--bg-panel)",border:"1px solid var(--border-light)",borderRadius:3,fontSize:10,color:"var(--text-muted)",lineHeight:1.7}}>
+              <strong style={{color:"var(--text-label)"}}>Rules:</strong> Gun weapons <em>cannot</em> be enchanted — only modified. Simple Guns hold 1 mod; Marksman Guns hold 2 mods. The Lasgun can only use Scope, Long Barrel, or Extended Magazine. Crossbows count as non-Gun and can receive rune/spell enchantments. One Weapon Rune and one Weapon Spell Enchantment may be active at the same time per weapon. Mithril Silver gives +1 Accuracy and +1 Damage on top of the base weapon.
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
 
 // ─── STEP SUMMARY ─────────────────────────────────────────────────────────────
 function StepSummary({char,setChar,derived,totalSP}){
-  const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots}=derived;
+  const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive}=derived;
   const fmt = ({die,bonus}) => bonus>0?`${die} (+${bonus})`:bonus<0?`${die} (${bonus})`:die;
   const RANK_LABELS=["","Novice","Adept","Master"];
   const TIERS=["novice","adept","master"];
@@ -2616,7 +2923,15 @@ function StepSummary({char,setChar,derived,totalSP}){
       }),
       ``,`EQUIPMENT:`,
       `  Weapon: ${char.equipment.weapon?.name||"—"}`,
+      ...(char.weaponMithril&&char.equipment.weapon&&!(char.equipment.weapon.props||"").includes("Gun")?[`    └ Mithril Silver: Acc+1, Dmg+1`]:[]),
+      ...(char.weaponRune?[`    └ Rune: ${char.weaponRune} — ${WEAPON_RUNES_DATA.find(r=>r.name===char.weaponRune)?.dmg||""} · ${WEAPON_RUNES_DATA.find(r=>r.name===char.weaponRune)?.effect||""}`]:[]),
+      ...(char.weaponSpell?[`    └ Spell Enchant: ${char.weaponSpell} — ${WEAPON_SPELLS_DATA.find(s=>s.name===char.weaponSpell)?.effect||""}`]:[]),
+      ...((char.weaponMods||[]).map(m=>`    └ Mod: ${m} — ${GUN_MODS_DATA.find(x=>x.name===m)?.effect||""}`)),
       `  Off-hand: ${char.equipment.offhand?.name||"—"}`,
+      ...(char.offhandMithril&&char.equipment.offhand&&!(char.equipment.offhand.props||"").includes("Gun")?[`    └ Mithril Silver: Acc+1, Dmg+1`]:[]),
+      ...(char.offhandRune?[`    └ Rune: ${char.offhandRune} — ${WEAPON_RUNES_DATA.find(r=>r.name===char.offhandRune)?.dmg||""} · ${WEAPON_RUNES_DATA.find(r=>r.name===char.offhandRune)?.effect||""}`]:[]),
+      ...(char.offhandSpell?[`    └ Spell Enchant: ${char.offhandSpell} — ${WEAPON_SPELLS_DATA.find(s=>s.name===char.offhandSpell)?.effect||""}`]:[]),
+      ...((char.offhandMods||[]).map(m=>`    └ Mod: ${m} — ${GUN_MODS_DATA.find(x=>x.name===m)?.effect||""}`)),
       `  Armor: ${char.equipment.armor?.name||"—"}`,
       `  Catalyst: ${char.equipment.catalyst?.name||"—"}`,
       `  Jewelry: ${char.equipment.jewelry.map(j=>j.name).join(", ")||"—"}`,
@@ -2648,45 +2963,228 @@ function StepSummary({char,setChar,derived,totalSP}){
           {STATS.map(s=><Row key={s} label={s} val={char.stats[s]} hi/>)}
         </Card>
         <Card title="Melee Attack">
-          {[
-            ["Reach", `${finalReach} space${finalReach>1?"s":""}${size>=2?" (size 2+)":""}`],
-            ["Accuracy", fmt(finalMeleeAcc)+(hasBrute?" [Brute: STR die]":""), true],
-            ["Perk Notes", [hasBrute?"Brute: STR→Acc":null, hasPrimalMass?"Primal Mass: VIG→Dmg":null, hasEagleEye?"Eagle Eye: DEX→Ranged Dmg":null].filter(Boolean).join(", ")||"—"],
-            ["Primary Damage", (()=>{
-              const w = char.equipment.weapon;
-              const bonus = dmgBonus;
-              const bonusStr = bonus>0?` (+${bonus})`:bonus<0?` (${bonus})`:"";
-              const sizeStr = size>1?` [+${sizeB.primDmg} size]`:"";
-              if(!w) return `${meleeDmgDie}${bonusStr}${sizeStr}`;
-              const raw = w.dmg;
+          {(()=>{
+            // ── helpers ──
+            const fmtBonus = (n) => n>0?` (+${n})`:n<0?` (${n})`:"";
+            const fmtAcc   = ({die,bonus}) => bonus!==0?`${die} (${bonus>0?"+":""}${bonus})`:die;
+            // Build per-weapon acc/dmg display for a given slot
+            const weaponBlock = (wpn, modsArr, runeN, spellN, mithrilOn, ohSlot, label) => {
+              if(!wpn) return <div style={{fontSize:11,color:"var(--text-muted)",fontStyle:"italic",marginBottom:6}}>{label}: —</div>;
+              const isGun = (wpn.props||"").includes("Gun");
+              const isRanged = isGun || (wpn.props||"").includes("Bow(") || (wpn.props||"").includes("Trigger(") || (wpn.props||"").includes("Throwing(");
+              if(isRanged) return null; // ranged weapons go in Ranged Attack card
+
+              // Acc: die from DEX (or STR if Brute on main), modifier breakdown
+              const accDie = (!ohSlot && hasBrute) ? char.stats.Strength : char.stats.Dexterity;
+              // weapon-specific acc bonus (from props + mithril)
+              const wpnAccBase = wpn.props?.match(/Acc\+(\d+)/);
+              let wpnAcc = wpnAccBase ? parseInt(wpnAccBase[1]) : 0;
+              if(mithrilOn && !isGun) wpnAcc += 1;
+              // shared bonuses (training, tech slots, jewelry, boon) — already in accBonus but we recompute without weapon to show breakdown
+              const sharedAcc = trainBonuses.Acc + slottedTechBonuses.Acc + boonOffensive + jewelryAccBonus;
+              const totalAcc = sharedAcc + wpnAcc;
+
+              // Dmg die
+              const dmgDieRaw = (!ohSlot && hasPrimalMass) ? char.stats.Vigor : char.stats.Strength;
+              const wpnDmgBase = wpn.props?.match(/Dmg\+(\d+)/);
+              let wpnDmg = wpnDmgBase ? parseInt(wpnDmgBase[1]) : 0;
+              if(mithrilOn && !isGun) wpnDmg += 1;
+              const sharedDmg = trainBonuses.PrimDmg + slottedTechBonuses.PrimDmg + boonOffensive + jewelryDmgBonus + sizeB.primDmg + (!ohSlot?savageFightingBonus:0);
+              const totalDmg = sharedDmg + wpnDmg;
+
+              // Dmg formula from weapon
+              const raw = wpn.dmg;
               const elemMatch = raw.match(/^(.+?)\s+([A-Z][a-z]+)$/);
               const dmgCore = elemMatch ? elemMatch[1] : raw;
               const elem = elemMatch ? ` ${elemMatch[2]}` : "";
               const statPlusMatch = dmgCore.match(/^(Str|Mind)\+(.+)$/);
               const statOnlyMatch = dmgCore.match(/^(Str|Mind)$/);
+              let dmgStr;
               if(statPlusMatch) {
-                const statDie = statPlusMatch[1]==="Str" ? meleeDmgDie : char.stats.Mind;
-                return `${statDie} + ${statPlusMatch[2]}${elem}${bonusStr}${sizeStr}`;
+                const sd = statPlusMatch[1]==="Str"?dmgDieRaw:char.stats.Mind;
+                dmgStr = `${sd} + ${statPlusMatch[2]}${elem}`;
               } else if(statOnlyMatch) {
-                const statDie = statOnlyMatch[1]==="Str" ? meleeDmgDie : char.stats.Mind;
-                return `${statDie}${elem}${bonusStr}${sizeStr}`;
+                const sd = statOnlyMatch[1]==="Str"?dmgDieRaw:char.stats.Mind;
+                dmgStr = `${sd}${elem}`;
               } else {
-                return `${dmgCore}${elem}${bonusStr}${sizeStr}`;
+                dmgStr = `${dmgCore}${elem}`;
               }
-            })(), true],
-            ["Parry", `${finalParry}`+(size>1?` [${sizeB.parry} size]`:""), true],
-            ["Armor", `${finalArmor}`+(size>1?` [+${sizeB.armor} size]`:""), true],
-            ["Ward", finalWard, true],
-            ["Dmg Shield Cap", finalDmgShield, true],
-          ].map(([k,v,h])=><Row key={k} label={k} val={v} hi={h}/>)}
-          {passiveOnHitEffects.length>0&&(
-            <div style={{marginTop:8,borderTop:"1px solid #e8d8f0",paddingTop:8}}>
-              <div style={{fontSize:10,color:"#c8a84a",letterSpacing:"0.1em",marginBottom:4}}>ON-HIT EFFECTS</div>
-              {passiveOnHitEffects.map((fx,i)=>(
-                <div key={i} style={{fontSize:11,color:"var(--text-label)",padding:"2px 0",borderBottom:"1px solid #2a1f42"}}>{fx}</div>
-              ))}
-            </div>
-          )}
+              if(totalDmg!==0) dmgStr += ` (${totalDmg>0?"+":""}${totalDmg})`;
+
+              // Add-ons
+              const rune = runeN ? WEAPON_RUNES_DATA.find(r=>r.name===runeN) : null;
+              const spell = spellN ? WEAPON_SPELLS_DATA.find(s=>s.name===spellN) : null;
+              const hasAddons = mithrilOn || rune || spell;
+              const addonColor = {rune:"#9a70d8", spell:"#c8a84a", mithril:"#c8a84a", mod:"var(--accent-teal)"};
+
+              return (
+                <div style={{marginBottom:10,padding:"8px 10px",background:"var(--bg-panel)",border:"1px solid var(--border-light)",borderRadius:3}}>
+                  <div style={{fontSize:10,color:"var(--text-row-label)",letterSpacing:"0.1em",fontWeight:700,marginBottom:5}}>{label}: <span style={{color:"#c8a84a",fontWeight:700,fontSize:11}}>{wpn.name}</span></div>
+                  <div style={{display:"grid",gridTemplateColumns:"auto 1fr",gap:"2px 10px",fontSize:11}}>
+                    <div style={{color:"var(--text-muted)",fontSize:10}}>Accuracy</div>
+                    <div style={{color:"var(--text-hi)",fontWeight:600}}>{accDie}{fmtBonus(totalAcc)}</div>
+                    <div style={{color:"var(--text-muted)",fontSize:10}}>Damage</div>
+                    <div style={{color:"var(--text-hi)",fontWeight:600}}>{dmgStr}</div>
+                    {wpn.props && wpn.props!=="-" && <>
+                      <div style={{color:"var(--text-muted)",fontSize:10}}>Props</div>
+                      <div style={{color:"var(--text-label)",fontSize:10}}>{wpn.props}</div>
+                    </>}
+                  </div>
+                  {(rune||spell||mithrilOn) && (
+                    <div style={{marginTop:6,paddingTop:5,borderTop:"1px solid var(--border-row)"}}>
+                      {mithrilOn && <div style={{fontSize:10,color:"#c8a84a",marginBottom:2}}>✦ Mithril Silver — Acc+1, Dmg+1</div>}
+                      {rune && <div style={{fontSize:10,color:"#9a70d8",marginBottom:2}}>◈ {rune.name} — {rune.dmg!=="—"?rune.dmg+" · ":""}{rune.effect}</div>}
+                      {spell && <div style={{fontSize:10,color:"var(--accent-gold)",marginBottom:2}}>⚡ {spell.name} — {spell.effect}</div>}
+                    </div>
+                  )}
+                </div>
+              );
+            };
+
+            const mainBlock = weaponBlock(char.equipment.weapon, char.weaponMods||[], char.weaponRune, char.weaponSpell, char.weaponMithril, false, "MAIN HAND");
+            const offBlock  = weaponBlock(char.equipment.offhand, char.offhandMods||[], char.offhandRune, char.offhandSpell, char.offhandMithril, true, "OFF-HAND");
+            const noMelee = !mainBlock && !offBlock;
+
+            return (<>
+              {noMelee && <div style={{fontSize:11,color:"var(--text-muted)",fontStyle:"italic",marginBottom:8}}>No melee weapon equipped.</div>}
+              {mainBlock}{offBlock}
+              {[
+                ["Reach", `${finalReach} space${finalReach>1?"s":""}${size>=2?" (size 2+)":""}`],
+                ["Parry", `${finalParry}`+(size>1?` [${sizeB.parry} size]`:"")+((char.equipment.offhand?.parry)?` [+${char.equipment.offhand.parry} shield]`:""), true],
+                ["Armor", `${finalArmor}`+(size>1?` [+${sizeB.armor} size]`:""), true],
+                ["Ward",  finalWard, true],
+              ].map(([k,v,h])=><Row key={k} label={k} val={v} hi={h}/>)}
+              {passiveOnHitEffects.length>0&&(
+                <div style={{marginTop:8,borderTop:"1px solid #e8d8f0",paddingTop:8}}>
+                  <div style={{fontSize:10,color:"#c8a84a",letterSpacing:"0.1em",marginBottom:4}}>ON-HIT EFFECTS</div>
+                  {passiveOnHitEffects.map((fx,i)=>(
+                    <div key={i} style={{fontSize:11,color:"var(--text-label)",padding:"2px 0",borderBottom:"1px solid #2a1f42"}}>{fx}</div>
+                  ))}
+                </div>
+              )}
+            </>);
+          })()}
+        </Card>
+        <Card title="Ranged Attack">
+          {(()=>{
+            const fmtBonus = (n) => n>0?` (+${n})`:n<0?` (${n})`:"";
+            const parseRange = (propsStr) => {
+              const t = propsStr.match(/Trigger\((\d+)\)/);
+              const b = propsStr.match(/Bow\((\d+)\)/);
+              const r = propsStr.match(/Throwing\((\d+)\)/);
+              return t?parseInt(t[1]):b?parseInt(b[1]):r?parseInt(r[1]):null;
+            };
+            const parseAmmo = (propsStr) => { const m=propsStr.match(/Ammo\((\d+)\)/); return m?parseInt(m[1]):null; };
+            const isRangedWpn = (w) => {
+              if(!w) return false;
+              const p = w.props||"";
+              return p.includes("Gun")||p.includes("Bow(")||p.includes("Trigger(")||p.includes("Throwing(");
+            };
+
+            const rangedWeaponBlock = (wpn, modsArr, runeN, spellN, mithrilOn, ohSlot, label) => {
+              if(!wpn || !isRangedWpn(wpn)) return null;
+              const isGun = (wpn.props||"").includes("Gun");
+              const propsStr = wpn.props||"";
+
+              // Accuracy die: DEX always for ranged
+              const accDie = char.stats.Dexterity;
+              const wpnAccBase = propsStr.match(/Acc\+(\d+)/);
+              let wpnAcc = wpnAccBase ? parseInt(wpnAccBase[1]) : 0;
+              if(!isGun && mithrilOn) wpnAcc += 1;
+              // Scope mod: +2 acc
+              if(modsArr.includes("Scope")) wpnAcc += 2;
+              const sharedAcc = trainBonuses.Acc + slottedTechBonuses.Acc + boonOffensive + jewelryAccBonus;
+              const totalAcc = sharedAcc + wpnAcc;
+
+              // Damage die: STR normally, DEX if Eagle Eye (main hand only)
+              const dmgDieRaw = (!ohSlot && hasEagleEye) ? char.stats.Dexterity : char.stats.Strength;
+              const wpnDmgBase = propsStr.match(/Dmg\+(\d+)/);
+              let wpnDmg = wpnDmgBase ? parseInt(wpnDmgBase[1]) : 0;
+              if(!isGun && mithrilOn) wpnDmg += 1;
+              // High Caliber: die size +1 — noted in add-ons, not in base dmg
+              const sharedDmg = trainBonuses.PrimDmg + slottedTechBonuses.PrimDmg + boonOffensive + jewelryDmgBonus + sizeB.primDmg;
+              const totalDmg = sharedDmg + wpnDmg;
+
+              // Damage formula
+              const raw = wpn.dmg;
+              const elemMatch = raw.match(/^(.+?)\s+([A-Z][a-z]+)$/);
+              const dmgCore = elemMatch ? elemMatch[1] : raw;
+              const elem = elemMatch ? ` ${elemMatch[2]}` : "";
+              const statPlusMatch = dmgCore.match(/^(Str|Mind)\+(.+)$/);
+              const statOnlyMatch = dmgCore.match(/^(Str|Mind)$/);
+              let dmgStr;
+              if(statPlusMatch) {
+                const sd = statPlusMatch[1]==="Str"?dmgDieRaw:char.stats.Mind;
+                dmgStr = `${sd} + ${statPlusMatch[2]}${elem}`;
+              } else if(statOnlyMatch) {
+                const sd = statOnlyMatch[1]==="Str"?dmgDieRaw:char.stats.Mind;
+                dmgStr = `${sd}${elem}`;
+              } else { dmgStr = `${dmgCore}${elem}`; }
+              if(totalDmg!==0) dmgStr += ` (${totalDmg>0?"+":""}${totalDmg})`;
+
+              // Range
+              const baseRange = parseRange(propsStr);
+              const rangeBonus = modsArr.includes("Long Barrel") ? 4 : 0;
+              const rangeStr = baseRange !== null ? (rangeBonus>0?`${baseRange+rangeBonus} (base ${baseRange} +${rangeBonus})`:String(baseRange)) : "—";
+
+              // Ammo
+              const baseAmmo = parseAmmo(propsStr);
+              const ammoBonus = modsArr.includes("Extended Magazine") ? 6 : 0;
+              const ammoStr = baseAmmo !== null ? (ammoBonus>0?`${baseAmmo+ammoBonus} (base ${baseAmmo} +${ammoBonus})`:String(baseAmmo)) : null;
+
+              // Add-ons
+              const rune = runeN ? WEAPON_RUNES_DATA.find(r=>r.name===runeN) : null;
+              const spell = spellN ? WEAPON_SPELLS_DATA.find(s=>s.name===spellN) : null;
+
+              return (
+                <div style={{marginBottom:10,padding:"8px 10px",background:"var(--bg-panel)",border:"1px solid var(--border-light)",borderRadius:3}}>
+                  <div style={{fontSize:10,color:"var(--text-row-label)",letterSpacing:"0.1em",fontWeight:700,marginBottom:5}}>{label}: <span style={{color:"#c8a84a",fontWeight:700,fontSize:11}}>{wpn.name}</span>{isGun&&<span style={{marginLeft:6,fontSize:9,color:"var(--accent-teal)",background:"var(--bg-tag)",padding:"1px 4px",borderRadius:2}}>GUN</span>}</div>
+                  <div style={{display:"grid",gridTemplateColumns:"auto 1fr",gap:"2px 10px",fontSize:11}}>
+                    <div style={{color:"var(--text-muted)",fontSize:10}}>Accuracy</div>
+                    <div style={{color:"var(--text-hi)",fontWeight:600}}>{accDie}{fmtBonus(totalAcc)}</div>
+                    <div style={{color:"var(--text-muted)",fontSize:10}}>Damage</div>
+                    <div style={{color:"var(--text-hi)",fontWeight:600}}>{dmgStr}</div>
+                    <div style={{color:"var(--text-muted)",fontSize:10}}>Range</div>
+                    <div style={{color:"var(--text-hi)",fontWeight:600}}>{rangeStr} spaces</div>
+                    {ammoStr&&<><div style={{color:"var(--text-muted)",fontSize:10}}>Ammo</div><div style={{color:"var(--text-hi)",fontWeight:600}}>{ammoStr}</div></>}
+                    {propsStr && propsStr!=="-" && <>
+                      <div style={{color:"var(--text-muted)",fontSize:10}}>Props</div>
+                      <div style={{color:"var(--text-label)",fontSize:10}}>{propsStr}</div>
+                    </>}
+                  </div>
+                  {/* Gun mods */}
+                  {modsArr.length>0&&(
+                    <div style={{marginTop:6,paddingTop:5,borderTop:"1px solid var(--border-row)"}}>
+                      {modsArr.map(mn=>{
+                        const md=GUN_MODS_DATA.find(x=>x.name===mn);
+                        return md?<div key={mn} style={{fontSize:10,color:"var(--accent-teal)",marginBottom:2}}>🔧 {md.name} — {md.effect}</div>:null;
+                      })}
+                      {(!isGun&&mithrilOn) && <div style={{fontSize:10,color:"#c8a84a",marginBottom:2}}>✦ Mithril Silver — Acc+1, Dmg+1</div>}
+                      {rune && <div style={{fontSize:10,color:"#9a70d8",marginBottom:2}}>◈ {rune.name} — {rune.dmg!=="—"?rune.dmg+" · ":""}{rune.effect}</div>}
+                      {spell && <div style={{fontSize:10,color:"var(--accent-gold)",marginBottom:2}}>⚡ {spell.name} — {spell.effect}</div>}
+                    </div>
+                  )}
+                  {modsArr.length===0&&(rune||spell||(!isGun&&mithrilOn))&&(
+                    <div style={{marginTop:6,paddingTop:5,borderTop:"1px solid var(--border-row)"}}>
+                      {(!isGun&&mithrilOn) && <div style={{fontSize:10,color:"#c8a84a",marginBottom:2}}>✦ Mithril Silver — Acc+1, Dmg+1</div>}
+                      {rune && <div style={{fontSize:10,color:"#9a70d8",marginBottom:2}}>◈ {rune.name} — {rune.dmg!=="—"?rune.dmg+" · ":""}{rune.effect}</div>}
+                      {spell && <div style={{fontSize:10,color:"var(--accent-gold)",marginBottom:2}}>⚡ {spell.name} — {spell.effect}</div>}
+                    </div>
+                  )}
+                </div>
+              );
+            };
+
+            const mainBlock = rangedWeaponBlock(char.equipment.weapon, char.weaponMods||[], char.weaponRune, char.weaponSpell, char.weaponMithril, false, "MAIN HAND");
+            const offBlock  = rangedWeaponBlock(char.equipment.offhand, char.offhandMods||[], char.offhandRune, char.offhandSpell, char.offhandMithril, true, "OFF-HAND");
+
+            if(!mainBlock && !offBlock) {
+              return <div style={{fontSize:11,color:"var(--text-muted)",fontStyle:"italic",textAlign:"center",padding:"16px 0"}}>No ranged weapon equipped. Equip a ranged weapon in the Equipment tab.</div>;
+            }
+            return <>{mainBlock}{offBlock}
+              {hasEagleEye&&<div style={{fontSize:10,color:"var(--text-muted)",marginTop:4,fontStyle:"italic"}}>Eagle Eye: DEX die used for ranged damage.</div>}
+            </>;
+          })()}
         </Card>
         <Card title="Spell Attack">
           {[
@@ -2790,6 +3288,16 @@ function StepSummary({char,setChar,derived,totalSP}){
       {(() => {
         const magicTrees = SKILL_TREES.filter(t=>t.type==="magic");
         const slottable = [];
+        // Collect auto-spells granted by master perks
+        const autoSpellKeys = new Set();
+        for(const tree of magicTrees) {
+          if(!char.skills[tree.id]) continue;
+          const perks = Array.isArray(char.masterPerks[tree.id]) ? char.masterPerks[tree.id] : char.masterPerks[tree.id] ? [char.masterPerks[tree.id]] : [];
+          for(const perkName of perks) {
+            const perkDef = (tree.masterPerks||[]).find(p=>p.name===perkName);
+            if(perkDef?.autoSpell) autoSpellKeys.add(`${tree.id}||${perkDef.autoSpell.name}`);
+          }
+        }
         for(const tree of magicTrees) {
           if(!char.skills[tree.id]) continue;
           const rank = char.skills[tree.id];
@@ -2799,7 +3307,8 @@ function StepSummary({char,setChar,derived,totalSP}){
             for(const spellName of spells) {
               const spellDef = (tree.tiers[tier]?.techniques||[]).find(t=>t.name===spellName);
               if(!spellDef) continue;
-              slottable.push({skillId:tree.id, skillName:tree.name, tier, spellName, cost:spellDef.cost, desc:spellDef.desc, slotCost:TIER_SLOT_COST[tier]});
+              const key = `${tree.id}||${spellName}`;
+              slottable.push({skillId:tree.id, skillName:tree.name, tier, spellName, cost:spellDef.cost, desc:spellDef.desc, slotCost:TIER_SLOT_COST[tier], isAuto:autoSpellKeys.has(key)});
             }
           }
         }
@@ -2834,22 +3343,24 @@ function StepSummary({char,setChar,derived,totalSP}){
             {slottable.length===0
               ? <div style={{fontSize:11,color:"var(--text-muted)",fontStyle:"italic"}}>No spells purchased yet.</div>
               : <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-                  {slottable.map(({skillId,skillName,tier,spellName,cost,desc,slotCost})=>{
+                  {slottable.map(({skillId,skillName,tier,spellName,cost,desc,slotCost,isAuto})=>{
                     const key=`${skillId}||${spellName}`;
                     const slotted=(char.slottedSpells||new Set()).has(key);
-                    const wouldExceed = !slotted && (spellSlotsUsed+slotCost>totalSpellSlots);
+                    const wouldExceed = !slotted && !isAuto && (spellSlotsUsed+slotCost>totalSpellSlots);
                     return(
-                      <div key={key} onClick={()=>toggleSpell(skillId,spellName)}
-                        style={{padding:"8px 10px",border:`1px solid ${slotted?"var(--accent-gold)":wouldExceed?"var(--text-danger)":"var(--border-cebee8)"}`,borderRadius:3,cursor:"pointer",background:slotted?"var(--bg-tbl-sel)":wouldExceed?"rgba(139,26,42,0.05)":"var(--bg-card)",transition:"all 0.15s",opacity:wouldExceed&&!slotted?0.7:1}}>
+                      <div key={key} onClick={()=>!isAuto&&toggleSpell(skillId,spellName)}
+                        style={{padding:"8px 10px",border:`1px solid ${isAuto?"#9a70d8":slotted?"var(--accent-gold)":wouldExceed?"var(--text-danger)":"var(--border-cebee8)"}`,borderRadius:3,cursor:isAuto?"default":"pointer",background:isAuto?"rgba(154,112,216,0.08)":slotted?"var(--bg-tbl-sel)":wouldExceed?"rgba(139,26,42,0.05)":"var(--bg-card)",transition:"all 0.15s",opacity:wouldExceed&&!slotted?0.7:1}}>
                         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:3}}>
-                          <span style={{fontSize:11,fontWeight:600,color:slotted?"var(--accent-gold)":"var(--text-head)",lineHeight:1.2}}>{spellName}</span>
+                          <span style={{fontSize:11,fontWeight:600,color:isAuto?"#9a70d8":slotted?"var(--accent-gold)":"var(--text-head)",lineHeight:1.2}}>{spellName}</span>
                           <div style={{display:"flex",gap:4,alignItems:"center",flexShrink:0,marginLeft:6}}>
+                            {isAuto && <span style={{fontSize:9,background:"#9a70d8",color:"#fff",padding:"1px 5px",borderRadius:2,fontWeight:600}}>AUTO</span>}
                             <span style={{fontSize:9,color:tierColor[tier],background:"var(--bg-tag)",padding:"1px 4px",borderRadius:2,textTransform:"uppercase"}}>{tier}</span>
-                            <span style={{fontSize:9,background:slotted?"var(--accent-gold)":"var(--bg-panel-alt)",color:slotted?"#1a1030":"var(--text-muted)",padding:"1px 5px",borderRadius:2,fontWeight:600}}>{slotCost} slot{slotCost!==1?"s":""}</span>
+                            <span style={{fontSize:9,background:isAuto?"#9a70d8":slotted?"var(--accent-gold)":"var(--bg-panel-alt)",color:isAuto||slotted?"#fff":"var(--text-muted)",padding:"1px 5px",borderRadius:2,fontWeight:600}}>{isAuto?"✓ Slotted":`${slotCost} slot${slotCost!==1?"s":""}`}</span>
                           </div>
                         </div>
                         <div style={{fontSize:9,color:"var(--text-muted)",marginBottom:2}}>{skillName} · {cost}</div>
                         <div style={{fontSize:10,color:"var(--text-label)",lineHeight:1.4}}>{desc}</div>
+                        {isAuto && <div style={{marginTop:4,fontSize:9,color:"#9a70d8",borderTop:"1px solid rgba(154,112,216,0.3)",paddingTop:3}}>★ Auto-acquired from Master Perk — always active</div>}
                       </div>
                     );
                   })}
