@@ -1276,14 +1276,24 @@ function calcSkillSilverSpent(skills, purchasedTrainings, techniques) {
   let total = 0;
   const tierList = ["novice","adept","master"];
   for(const tree of SKILL_TREES) {
+    // Build set of auto-spell names granted free by master perks in this tree
+    const autoSpellNames = new Set();
+    if(tree.tiers?.master?.masterPerks) {
+      for(const perk of tree.tiers.master.masterPerks) {
+        if(perk.autoSpell) autoSpellNames.add(perk.autoSpell.name);
+      }
+    }
     for(let ti=0; ti<3; ti++) {
       const tier = tierList[ti];
       const silverCost = TIER_SILVER[tier];
       // Training cost
       if(purchasedTrainings.has(`${tree.id}:${tier}`)) total += silverCost;
-      // Techniques cost
+      // Techniques/spells cost — skip auto-acquired spells (free from master perks)
       const techs = ((techniques[tree.id]||{})[tier])||[];
-      total += techs.length * silverCost;
+      for(const techName of techs) {
+        if(autoSpellNames.has(techName)) continue; // free — granted by master perk
+        total += silverCost;
+      }
     }
   }
   return total;
@@ -2643,7 +2653,7 @@ function StepEquipment({char,setChar,moneyLeft}){
               <div style={{fontSize:10,color:"var(--text-row-label)",letterSpacing:"0.12em",marginBottom:6}}>{cat.toUpperCase()}</div>
               <table style={{width:"100%",borderCollapse:"collapse",fontSize:10}}>
                 <thead><tr style={{color:"var(--text-muted)",borderBottom:"1px solid var(--border-light)"}}>
-                  {["Name","Damage","Properties","Min STR","Wt","Cost",""].map(h=><th key={h} style={thS}>{h}</th>)}
+                  {["Name","Damage","AP","Properties","Min STR","Wt","Cost",""].map(h=><th key={h} style={thS}>{h}</th>)}
                 </tr></thead>
                 <tbody>
                   {items.map(w=>{
@@ -2652,7 +2662,8 @@ function StepEquipment({char,setChar,moneyLeft}){
                     return(
                       <tr key={w.name} style={{borderBottom:"1px solid var(--border-row)",background:isMW||isOH?"rgba(76,200,224,0.08)":"transparent"}}>
                         <td style={tdS}>{w.name}</td>
-                        <td style={{...tdS,color:"#c8a84a"}}>{w.dmg}</td>
+                        <td style={{...tdS,color:"#c8a84a"}}>{(()=>{const c=w.props?.match(/Cloak\((\d+ft)\)/);return c?`${w.dmg} (Cloak ${c[1]})`:w.dmg;})()}</td>
+                        <td style={{...tdS,color:"#4cc8e0",fontWeight:600}}>{(()=>{const m=w.props?.match(/\bAP (\d+)/);return m?m[1]:"—";})()}</td>
                         <td style={{...tdS,color:"var(--text-row-label)"}}>{w.props}</td>
                         <td style={tdS}>{w.minStr}</td>
                         <td style={tdS}>{w.wt}</td>
@@ -2716,13 +2727,14 @@ function StepEquipment({char,setChar,moneyLeft}){
           <p style={{...sub,marginBottom:10}}>Require Spellcrafting or relevant magic skill.</p>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:10}}>
             <thead><tr style={{color:"var(--text-muted)",borderBottom:"1px solid var(--border-light)"}}>
-              {["Name","Damage","Properties","Min Mind","Cost",""].map(h=><th key={h} style={thS}>{h}</th>)}
+              {["Name","Damage","AP","Properties","Min Mind","Cost",""].map(h=><th key={h} style={thS}>{h}</th>)}
             </tr></thead>
             <tbody>{CATALYSTS_DATA.map(c=>{
               const sel=char.equipment.catalyst?.name===c.name;
               return(<tr key={c.name} style={{borderBottom:"1px solid var(--border-row)",background:sel?"var(--bg-tbl-row-hi)":"transparent"}}>
                 <td style={tdS}>{c.name}</td>
-                <td style={{...tdS,color:"#c8a84a"}}>{c.dmg}</td>
+                <td style={{...tdS,color:"#c8a84a"}}>{(()=>{const cl=c.props?.match(/Cloak\((\d+ft)\)/);return cl?`${c.dmg} (Cloak ${cl[1]})`:c.dmg;})()}</td>
+                <td style={{...tdS,color:"#4cc8e0",fontWeight:600}}>{(()=>{const m=c.props?.match(/\bAP (\d+)/);return m?m[1]:"—";})()}</td>
                 <td style={{...tdS,color:"var(--text-row-label)"}}>{c.props}</td>
                 <td style={tdS}>{c.minMind}</td>
                 <td style={tdS}>{c.cost}s</td>
@@ -3010,12 +3022,19 @@ function StepSummary({char,setChar,derived,totalSP}){
                 dmgStr = `${dmgCore}${elem}`;
               }
               if(totalDmg!==0) dmgStr += ` (${totalDmg>0?"+":""}${totalDmg})`;
+              // Cloak AoE suffix
+              const cloakMatch = (wpn.props||"").match(/Cloak\((\d+ft)\)/);
+              if(cloakMatch) dmgStr += ` [Cloak ${cloakMatch[1]}]`;
+              // AP
+              const apMatch = (wpn.props||"").match(/\bAP (\d+)/);
+              const apVal = apMatch ? parseInt(apMatch[1]) : 0;
+              // High Caliber mod adds AP+2 on guns
+              const modAP = isGun && (modsArr||[]).includes("High Caliber") ? 2 : 0;
+              const totalAP = apVal + modAP;
 
               // Add-ons
               const rune = runeN ? WEAPON_RUNES_DATA.find(r=>r.name===runeN) : null;
               const spell = spellN ? WEAPON_SPELLS_DATA.find(s=>s.name===spellN) : null;
-              const hasAddons = mithrilOn || rune || spell;
-              const addonColor = {rune:"#9a70d8", spell:"#c8a84a", mithril:"#c8a84a", mod:"var(--accent-teal)"};
 
               return (
                 <div style={{marginBottom:10,padding:"8px 10px",background:"var(--bg-panel)",border:"1px solid var(--border-light)",borderRadius:3}}>
@@ -3025,6 +3044,10 @@ function StepSummary({char,setChar,derived,totalSP}){
                     <div style={{color:"var(--text-hi)",fontWeight:600}}>{accDie}{fmtBonus(totalAcc)}</div>
                     <div style={{color:"var(--text-muted)",fontSize:10}}>Damage</div>
                     <div style={{color:"var(--text-hi)",fontWeight:600}}>{dmgStr}</div>
+                    {totalAP>0 && <>
+                      <div style={{color:"var(--text-muted)",fontSize:10}}>AP</div>
+                      <div style={{color:"#4cc8e0",fontWeight:600}}>{totalAP} <span style={{color:"var(--text-muted)",fontWeight:400,fontSize:9}}>(ignores {totalAP} Armor)</span></div>
+                    </>}
                     {wpn.props && wpn.props!=="-" && <>
                       <div style={{color:"var(--text-muted)",fontSize:10}}>Props</div>
                       <div style={{color:"var(--text-label)",fontSize:10}}>{wpn.props}</div>
@@ -3121,6 +3144,14 @@ function StepSummary({char,setChar,derived,totalSP}){
                 dmgStr = `${sd}${elem}`;
               } else { dmgStr = `${dmgCore}${elem}`; }
               if(totalDmg!==0) dmgStr += ` (${totalDmg>0?"+":""}${totalDmg})`;
+              // Cloak AoE suffix
+              const cloakMatch = propsStr.match(/Cloak\((\d+ft)\)/);
+              if(cloakMatch) dmgStr += ` [Cloak ${cloakMatch[1]}]`;
+              // AP (weapon base + High Caliber mod)
+              const apBase = propsStr.match(/\bAP (\d+)/);
+              const apVal = apBase ? parseInt(apBase[1]) : 0;
+              const modAP = modsArr.includes("High Caliber") ? 2 : 0;
+              const totalAP = apVal + modAP;
 
               // Range
               const baseRange = parseRange(propsStr);
@@ -3144,6 +3175,10 @@ function StepSummary({char,setChar,derived,totalSP}){
                     <div style={{color:"var(--text-hi)",fontWeight:600}}>{accDie}{fmtBonus(totalAcc)}</div>
                     <div style={{color:"var(--text-muted)",fontSize:10}}>Damage</div>
                     <div style={{color:"var(--text-hi)",fontWeight:600}}>{dmgStr}</div>
+                    {totalAP>0 && <>
+                      <div style={{color:"var(--text-muted)",fontSize:10}}>AP</div>
+                      <div style={{color:"#4cc8e0",fontWeight:600}}>{totalAP} <span style={{color:"var(--text-muted)",fontWeight:400,fontSize:9}}>(ignores {totalAP} Armor)</span></div>
+                    </>}
                     <div style={{color:"var(--text-muted)",fontSize:10}}>Range</div>
                     <div style={{color:"var(--text-hi)",fontWeight:600}}>{rangeStr} spaces</div>
                     {ammoStr&&<><div style={{color:"var(--text-muted)",fontSize:10}}>Ammo</div><div style={{color:"var(--text-hi)",fontWeight:600}}>{ammoStr}</div></>}
