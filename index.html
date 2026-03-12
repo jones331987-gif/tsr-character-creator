@@ -692,7 +692,7 @@ const SKILL_TREES = [
       {name:"Streak",cost:"1 Action",desc:"Teleport 30ft in any direction. No AoO. (Lightning)"},
       {name:"Redirect",cost:"Reaction",desc:"Absorb enemy magic projectile and reflect it back. Willpower vs Willpower check. Auto-acquired with Energy perk."}
     ] },
-      master:{ training:{name:"Master Requiem Training", effect:"spellBonus", key:"AccSpellPower", value:1, desc:"Adds +1 to your Accuracy and Spell Power when casting spells. Become able to use the Last Candle feat for 8 mana, giving the user another Action immediately."}, techniques:[
+      master:{ training:{name:"Master Requiem Training", effect:"spellBonus", key:"AccSpellPower", value:1, desc:"Adds +1 to your Accuracy and Spell Power when casting spells. Become able to use the Last Candle feat for 8 mana, giving the user another Action immediately.", autoFeat:{name:"Last Candle", desc:"8 Mana — Grants the user 1 extra Action immediately."}}, techniques:[
       {name:"Master Fire Manipulation",cost:"Active",desc:"3d6 + Mind Fire Damage. Applies 3 stacks of Searing on HP damage."},
       {name:"Master Water Manipulation",cost:"Active",desc:"3d6 + Mind Water Damage. Additional 1d10 Stamina Damage on HP damage (not affected by Spell Power)."},
       {name:"Master Earth Manipulation",cost:"Active",desc:"3d6 + Mind Physical Damage. Gains Pierce effect."},
@@ -741,7 +741,7 @@ const SKILL_TREES = [
       {name:"Surge",cost:"Active",desc:"1d6 + Mind gravity damage. Applies Slow on hit if target fails Willpower vs Vigor save."},
       {name:"Projected Stasis",cost:"Active",desc:"10ft radius Difficult Terrain field at casting location for 2 rounds. Dismiss as Free Action."}
     ] },
-      adept:{ training:{name:"Adept Arcane Training", effect:"accBonus", value:1, desc:"Train your eyes to see the flow of mana, gaining +1 to your Accuracy. Become able to use Night's Sky for 4 mana, adding +2 to Primary Damage and Accuracy on the attack phase. This is an Attack/Spell Enhancing effect."}, techniques:[
+      adept:{ training:{name:"Adept Arcane Training", effect:"accBonus", value:1, desc:"Train your eyes to see the flow of mana, gaining +1 to your Accuracy. Become able to use Night's Sky for 4 mana, adding +2 to Primary Damage and Accuracy on the attack phase. This is an Attack/Spell Enhancing effect.", autoFeat:{name:"Night's Sky", desc:"4 Mana, Attack/Spell Enhancer — +2 Primary Damage and Accuracy for the attack phase."}}, techniques:[
       {name:"Door to Emptiness",cost:"Active",desc:"Launch 2 weapons from Dimensional Treasury. Each makes 1 attack using weapon dice + Mind. Weapons return after."},
       {name:"Perfect Balance",cost:"Active",desc:"Buff self or adjacent ally: ignore Difficult Terrain, walk on water. Lasts 1 minute. Magical augment."},
       {name:"Planar Step",cost:"1 Action",desc:"Teleport 30ft in any direction. No AoO."},
@@ -758,7 +758,7 @@ const SKILL_TREES = [
       {name:"Structured Stasis",cost:"Active",desc:"20ft radius Difficult Terrain field for 2 rounds. Dismiss as Free Action."},
       {name:"Drifter's Sheathe",cost:"Free Action",desc:"Summon weapon from pocket dimension. Also perform any Interact Action as a Free Action (except Use Alchemical Item). Auto-acquired with Arcane Spirit perk."}
     ] },
-      master:{ training:{name:"Master Arcane Training", effect:"accBonus", value:1, desc:"Train your eyes to see the flow of mana, gaining +1 to your Accuracy. Night's Sky can become Astra now, by using it with 8 mana — you retain the previous bonuses, but now also gain True Hit and +1 crit on the ensuing attack phase. This is an Attack/Spell enhancing effect."}, techniques:[
+      master:{ training:{name:"Master Arcane Training", effect:"accBonus", value:1, desc:"Train your eyes to see the flow of mana, gaining +1 to your Accuracy. Night's Sky can become Astra now, by using it with 8 mana — you retain the previous bonuses, but now also gain True Hit and +1 crit on the ensuing attack phase. This is an Attack/Spell enhancing effect.", autoFeat:{name:"Astra", desc:"8 Mana, Attack/Spell Enhancer — Upgrade of Night's Sky: +2 PrimDmg & Acc, True Hit, +1 Crit."}}, techniques:[
       {name:"Gates of Emptiness",cost:"Active",desc:"Launch 3 weapons from Dimensional Treasury. Each makes 1 attack using weapon dice + Mind. Weapons return after."},
       {name:"Walking on Air",cost:"Active",desc:"Buff self or adjacent ally: Flight speed equal to Movement Speed for 1 minute. Magical augment."},
       {name:"Blink",cost:"Free Action",desc:"Teleport 30ft in any direction. No AoO. Once per round."},
@@ -793,7 +793,7 @@ const SKILL_TREES = [
       {name:"Guardian Angel",cost:"Free Action",desc:"Instantly Guard an ally within 5ft."},
       {name:"Manifest Minor Relic",cost:"1+ Actions",desc:"Create Club, Heavy Club, or Sling from saint bones. Uses Mind for damage/accuracy. Attack enhancers cost Mana."}
     ] },
-      adept:{ training:{name:"Adept Celestial Training", effect:"statBonus", key:"HP", value:5, desc:"Trains the caster's body to absorb and retain holy energy inside themselves. +5 Health. Enables use of the Healing Light feat, allowing them to cast any spell of the Heal line as a Reaction after taking damage from an attack phase, after your damage taken is resolved."}, techniques:[
+      adept:{ training:{name:"Adept Celestial Training", effect:"statBonus", key:"HP", value:5, desc:"Trains the caster's body to absorb and retain holy energy inside themselves. +5 Health. Enables use of the Healing Light feat, allowing them to cast any spell of the Heal line as a Reaction after taking damage from an attack phase, after your damage taken is resolved.", autoFeat:{name:"Healing Light", desc:"Reaction — Cast any Heal line spell after taking damage from an attack phase (after damage resolves)."}}, techniques:[
       {name:"Mend",cost:"Active",desc:"Heal 3 targets (including caster) for 2d4 + Willpower. Remove 1 negative effect from each."},
       {name:"Recover",cost:"1 Action",desc:"Heal 1 target (including caster) for 2d4 + Willpower. Remove 1 negative effect."},
       {name:"Magic Barrier",cost:"Active",desc:"+3 Magic Resistance for 3 rounds. Magical Augment."},
@@ -806,7 +806,7 @@ const SKILL_TREES = [
       {name:"Sacred Oath",cost:"2 Mana/round upkeep",desc:"Self buff: +1 Physical Resistance and Primary Damage or Spell Power. One self buff at a time."},
       {name:"Daylight",cost:"Active",desc:"2d6 + Mind Holy Damage. Heals caster for 50% of holy damage (HP damage heals HP; DS heals DS)."}
     ] },
-      master:{ training:{name:"Master Celestial Training", effect:"statBonus", key:"HP", value:5, desc:"Trains the caster's body to absorb and retain holy energy inside themselves, gaining +5 Maximum Health. The caster becomes able to use the Radiant Dawn Feat — channel the power of one of their Holy self buffs into a 10ft radius aura benefiting all allies within range. Activating it doubles the casting and upkeep costs for that self buff. This is a Banner buff."}, techniques:[
+      master:{ training:{name:"Master Celestial Training", effect:"statBonus", key:"HP", value:5, desc:"Trains the caster's body to absorb and retain holy energy inside themselves, gaining +5 Maximum Health. The caster becomes able to use the Radiant Dawn Feat — channel the power of one of their Holy self buffs into a 10ft radius aura benefiting all allies within range. Activating it doubles the casting and upkeep costs for that self buff. This is a Banner buff.", autoFeat:{name:"Radiant Dawn", desc:"Banner Buff — Channel a Holy self buff into a 10ft radius aura for all allies. Doubles cast & upkeep cost."}}, techniques:[
       {name:"Catharsis",cost:"Active",desc:"Heal 4 targets (including caster) for 3d4 + Willpower. Remove 2 negative effects from each."},
       {name:"Fortify",cost:"1 Action",desc:"Heal 1 target (including caster) for 3d4 + Willpower. Remove 2 negative effects."},
       {name:"Great Magic Barrier",cost:"3 Mana/round, Self Buff",desc:"10ft radius aura. Magical projectiles, targeted AoE, and cloaks/explosions through it become Glancing blows."},
@@ -901,7 +901,7 @@ const SKILL_TREES = [
       {name:"Empty Mind",cost:"Free Action Reaction",desc:"During cleansing phase, add +2 to Breaking Free against Magical CC."},
       {name:"Shadow God's Stance",cost:"Free Action Reaction",desc:"During cleansing phase, add +2 to Breaking Free against Physical CC."}
     ] },
-      adept:{ training:{name:"Adept Clarity Training", effect:"parryBonus", value:1, desc:"Gain clarity over the world, able to observe motion through predictions, gaining +1 to Parry. Gain the Phasing spell, allowing you to Step as a free action when cast. This feat costs 4 mana to use."}, techniques:[
+      adept:{ training:{name:"Adept Clarity Training", effect:"parryBonus", value:1, desc:"Gain clarity over the world, able to observe motion through predictions, gaining +1 to Parry. Gain the Phasing spell, allowing you to Step as a free action when cast. This feat costs 4 mana to use.", autoFeat:{name:"Phasing", desc:"4 Mana — Step (5ft) as a Free Action."}}, techniques:[
       {name:"Illusory Circus",cost:"Active",desc:"20ft radius illusion zone for 1 minute. Enemy interactions trigger 1 Confusion stack. Willpower vs Willpower to see through. Move fragment 5 spaces with Action."},
       {name:"Furor",cost:"Active",desc:"Target takes 2 Confusion stacks and Cripple. Willpower vs Willpower save."},
       {name:"Fear",cost:"Active",desc:"Willpower vs Willpower; on fail, target is Stunned. Mind Alteration."},
@@ -915,7 +915,7 @@ const SKILL_TREES = [
       {name:"After Images",cost:"Reaction",desc:"+3 Parry. On successful dodge, make a Step. Each dodged attack triggers 1 Step."},
       {name:"Immaterial Forma",cost:"2 Mana/round upkeep",desc:"Self buff: +1 Parry and +2 Base Movement Speed. One self buff at a time."}
     ] },
-      master:{ training:{name:"Master Clarity Training", effect:"parryBonus", value:1, desc:"Gain clarity over the world, able to observe motion through predictions, gaining +1 to Parry. The caster becomes able to use the Speculo feat — copy a spell witnessed within spell reach by paying 4 mana as a Free Action. The caster temporarily learns that spell using the original caster's modifiers, but considers their own variable modifiers at time of casting. The caster may retain the spell's information for 1 hour and can retain up to 3 spells this way."}, techniques:[
+      master:{ training:{name:"Master Clarity Training", effect:"parryBonus", value:1, desc:"Gain clarity over the world, able to observe motion through predictions, gaining +1 to Parry. The caster becomes able to use the Speculo feat — copy a spell witnessed within spell reach by paying 4 mana as a Free Action. The caster temporarily learns that spell using the original caster's modifiers, but considers their own variable modifiers at time of casting. The caster may retain the spell's information for 1 hour and can retain up to 3 spells this way.", autoFeat:{name:"Speculo", desc:"4 Mana, Free Action — Copy a witnessed spell within reach; retain it for 1 hour (up to 3 spells)."}}, techniques:[
       {name:"Bewildering Shadow Garden",cost:"3 Actions",desc:"30ft radius illusion zone for 1 minute. Pulsing Stun + Root (1 round) on Willpower vs Willpower fail."},
       {name:"Chaos",cost:"Active",desc:"Target takes 3 Confusion stacks and Cripple. Willpower vs Willpower save."},
       {name:"Hypnotic Gaze",cost:"2-3 Actions",desc:"Willpower vs Willpower; on fail, target loses 1-2 Actions next turn and must use them as directed. Mind Alteration."},
@@ -1276,22 +1276,20 @@ function calcSkillSilverSpent(skills, purchasedTrainings, techniques) {
   let total = 0;
   const tierList = ["novice","adept","master"];
   for(const tree of SKILL_TREES) {
-    // Build set of auto-spell names granted free by master perks in this tree
-    const autoSpellNames = new Set();
-    if(tree.tiers?.master?.masterPerks) {
-      for(const perk of tree.tiers.master.masterPerks) {
-        if(perk.autoSpell) autoSpellNames.add(perk.autoSpell.name);
-      }
+    // Build set of spell/feat names granted FREE by master perks in this tree
+    const freeGrantNames = new Set();
+    for(const perk of (tree.masterPerks||[])) {
+      if(perk.autoSpell) freeGrantNames.add(perk.autoSpell.name);
     }
     for(let ti=0; ti<3; ti++) {
       const tier = tierList[ti];
       const silverCost = TIER_SILVER[tier];
       // Training cost
       if(purchasedTrainings.has(`${tree.id}:${tier}`)) total += silverCost;
-      // Techniques/spells cost — skip auto-acquired spells (free from master perks)
+      // Techniques/spells cost — skip auto-granted spells (free from master perks)
       const techs = ((techniques[tree.id]||{})[tier])||[];
       for(const techName of techs) {
-        if(autoSpellNames.has(techName)) continue; // free — granted by master perk
+        if(freeGrantNames.has(techName)) continue; // free — granted by master perk
         total += silverCost;
       }
     }
@@ -3402,6 +3400,54 @@ function StepSummary({char,setChar,derived,totalSP}){
                 </div>
             }
             {slottable.length>0&&<div style={{marginTop:8,fontSize:10,color:"var(--text-muted)",borderTop:"1px solid var(--border-row)",paddingTop:8}}>Click to slot/unslot. Trainings are always active and require no slots.</div>}
+          </Card>
+        );
+      })()}
+      {/* Auto-Feats from Trainings & Master Perks */}
+      {(()=>{
+        const feats = [];
+        for(const tree of SKILL_TREES) {
+          if(!char.skills[tree.id]) continue;
+          const rank = char.skills[tree.id];
+          const tierList = ["novice","adept","master"].slice(0,rank);
+          // Collect feats from purchased trainings
+          for(const tier of tierList) {
+            const training = tree.tiers[tier]?.training;
+            if(training?.autoFeat && char.purchasedTrainings.has(`${tree.id}:${tier}`)) {
+              feats.push({source:`${tree.name} · ${training.name}`, sourceType:"training", tier, ...training.autoFeat});
+            }
+          }
+          // Collect feats from master perks (auto-spells count as feats too)
+          if(rank >= 3) {
+            const perks = Array.isArray(char.masterPerks[tree.id]) ? char.masterPerks[tree.id] : char.masterPerks[tree.id] ? [char.masterPerks[tree.id]] : [];
+            for(const perkName of perks) {
+              const perkDef = (tree.masterPerks||[]).find(p=>p.name===perkName);
+              if(perkDef?.autoSpell) {
+                feats.push({source:`${tree.name} · ${perkName}`, sourceType:"perk", tier:"master", name:perkDef.autoSpell.name, desc:`Auto-acquired spell — always slotted at no silver or slot cost. (${perkDef.desc})`});
+              }
+            }
+          }
+        }
+        if(feats.length === 0) return null;
+        const tierColor = {novice:"var(--accent-teal)",adept:"#c8a84a",master:"#e05a6a"};
+        return (
+          <Card title="Feats & Auto-Acquired Abilities">
+            <div style={{fontSize:10,color:"var(--text-muted)",marginBottom:10,fontStyle:"italic"}}>These abilities are permanently available — granted free by Trainings or Master Perks. No silver cost, no slot cost.</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+              {feats.map((feat,i)=>(
+                <div key={i} style={{padding:"8px 10px",border:`1px solid ${feat.sourceType==="perk"?"rgba(154,112,216,0.4)":"rgba(76,200,224,0.4)"}`,borderRadius:3,background:feat.sourceType==="perk"?"rgba(154,112,216,0.06)":"rgba(76,200,224,0.06)"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}}>
+                    <span style={{fontSize:11,fontWeight:700,color:feat.sourceType==="perk"?"#9a70d8":"var(--accent-teal)"}}>{feat.name}</span>
+                    <div style={{display:"flex",gap:4,flexShrink:0,marginLeft:6}}>
+                      <span style={{fontSize:9,color:tierColor[feat.tier],background:"var(--bg-tag)",padding:"1px 4px",borderRadius:2,textTransform:"uppercase"}}>{feat.tier}</span>
+                      <span style={{fontSize:9,background:feat.sourceType==="perk"?"rgba(154,112,216,0.5)":"rgba(76,200,224,0.4)",color:"#fff",padding:"1px 5px",borderRadius:2,fontWeight:600}}>{feat.sourceType==="perk"?"PERK":"TRAINING"}</span>
+                    </div>
+                  </div>
+                  <div style={{fontSize:9,color:"var(--text-muted)",marginBottom:3}}>{feat.source}</div>
+                  <div style={{fontSize:10,color:"var(--text-label)",lineHeight:1.4}}>{feat.desc}</div>
+                </div>
+              ))}
+            </div>
           </Card>
         );
       })()}
