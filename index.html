@@ -1252,7 +1252,7 @@ const TIER_SILVER = {novice:50, adept:100, master:150};
 // Compute training bonuses ONLY from explicitly purchased trainings
 function getTrainingBonuses(purchasedTrainings) {
   // purchasedTrainings: Set of "skillId:tier" strings
-  let bonuses = {HP:0, Stamina:0, Mana:0, Parry:0, PhysRes:0, PrimDmg:0, Acc:0};
+  let bonuses = {HP:0, Stamina:0, Mana:0, Parry:0, PhysRes:0, PrimDmg:0, Acc:0, SpellAcc:0, SpellPower:0, SecDmg:0, CC:0};
   for(const tree of SKILL_TREES) {
     const tiers = ["novice","adept","master"];
     for(const tier of tiers) {
@@ -1261,6 +1261,24 @@ function getTrainingBonuses(purchasedTrainings) {
       if(!training) continue;
       if(training.effect === "statBonus") {
         bonuses[training.key] = (bonuses[training.key]||0) + training.value;
+      }
+      if(training.effect === "spellBonus" && training.key === "AccSpellPower") {
+        bonuses.SpellAcc   += training.value;
+        bonuses.SpellPower += training.value;
+      }
+      if(training.effect === "accBonus") {
+        // General accuracy bonus — applies to all attacks including spells
+        bonuses.Acc      += training.value;
+        bonuses.SpellAcc += training.value;
+      }
+      if(training.effect === "secDmgBonus") {
+        bonuses.SecDmg += training.value;
+      }
+      if(training.effect === "ccBonus") {
+        bonuses.CC += training.value;
+      }
+      if(training.effect === "parryBonus") {
+        bonuses.Parry += training.value;
       }
       if(training.bonus) {
         if(training.bonus.includes("Primary Damage") && training.bonus.includes("Accuracy")) {
@@ -1817,8 +1835,10 @@ function App() {
   const finalMeleeDmg = { die: meleeDmgDie, bonus: dmgBonus };
   // Spell attack: Accuracy = Mind die. Spell Power = Mind die + spell's own dice (spell dice shown at cast time).
   // Blessing of Power grants +1 to Spell Power via Primary Damage bonus.
-  const finalSpellAcc = { die: char.stats.Mind };
-  const finalSpellPower = { die: char.stats.Mind, bonus: boonOffensive };
+  const finalSpellAcc = { die: char.stats.Mind, bonus: (trainBonuses.SpellAcc||0) };
+  const finalSpellPower = { die: char.stats.Mind, bonus: boonOffensive + (trainBonuses.SpellPower||0) };
+  const finalSecDmg = trainBonuses.SecDmg || 0;
+  const finalCC     = trainBonuses.CC || 0;
 
   // Helper: does the equipped weapon have the Gun property?
   const isGunWeapon = (w) => w && (w.props||"").includes("Gun");
@@ -1873,7 +1893,7 @@ function App() {
   };
 
   const gunModAmmoBonus = (char.weaponMods||[]).includes("Extended Magazine") ? 6 : 0;
-  const derived = {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive,weaponCritBonus,offhandCritBonus,jewelryWardBonus,jewelrySpellPowerBonus,armorSizeBonus,weaponParryB,weaponReachB};
+  const derived = {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive,weaponCritBonus,offhandCritBonus,jewelryWardBonus,jewelrySpellPowerBonus,armorSizeBonus,weaponParryB,weaponReachB,finalSecDmg,finalCC};
 
   return (
     <div style={{minHeight:"100vh",background:"var(--bg-page-grad)",color:"var(--text-body)",fontFamily:"'Palatino Linotype',Palatino,Georgia,serif",display:"flex",flexDirection:"column"}}>
@@ -2962,7 +2982,7 @@ function StepEquipment({char,setChar,moneyLeft}){
 
 // ─── STEP SUMMARY ─────────────────────────────────────────────────────────────
 function StepSummary({char,setChar,derived,totalSP}){
-  const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive,weaponCritBonus,offhandCritBonus,jewelryWardBonus,jewelrySpellPowerBonus,armorSizeBonus,weaponParryB,weaponReachB}=derived;
+  const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive,weaponCritBonus,offhandCritBonus,jewelryWardBonus,jewelrySpellPowerBonus,armorSizeBonus,weaponParryB,weaponReachB,finalSecDmg,finalCC}=derived;
   const fmt = ({die,bonus}) => bonus>0?`${die} (+${bonus})`:bonus<0?`${die} (${bonus})`:die;
   const RANK_LABELS=["","Novice","Adept","Master"];
   const TIERS=["novice","adept","master"];
@@ -3297,9 +3317,10 @@ function StepSummary({char,setChar,derived,totalSP}){
         <Card title="Spell Attack">
           {[
             ["Spell Range", `${finalSpellRange} spaces (2 + ${STAT_CHAIN.indexOf(char.stats.Mind)} Mind + ${STAT_CHAIN.indexOf(char.stats.Willpower)} WIL)`, true],
-            ["Attack Spell Accuracy", fmt(finalSpellAcc)+" (Mind)", true],
-            ["Attack Spell Power", `${finalSpellPower.die} + Spell Dice${finalSpellPower.bonus+jewelrySpellPowerBonus>0?" (+"+(finalSpellPower.bonus+jewelrySpellPowerBonus)+")":""}${jewelrySpellPowerBonus>0?" [+"+jewelrySpellPowerBonus+" jewelry]":""}`, true],
-            ["CC / Save Spell Stat", `${char.stats.Willpower} (Willpower)`, true],
+            ["Attack Spell Accuracy", `${fmt(finalSpellAcc)} (Mind)${finalSpellAcc.bonus>0?" [+"+finalSpellAcc.bonus+" training]":""}`, true],
+            ["Attack Spell Power", `${finalSpellPower.die} + Spell Dice${finalSpellPower.bonus+jewelrySpellPowerBonus>0?" (+"+(finalSpellPower.bonus+jewelrySpellPowerBonus)+")":""}${(trainBonuses.SpellPower||0)>0?" [+"+trainBonuses.SpellPower+" training]":""}${jewelrySpellPowerBonus>0?" [+"+jewelrySpellPowerBonus+" jewelry]":""}`, true],
+            ...(finalSecDmg>0?[["Secondary Damage Bonus", `+${finalSecDmg} (from Runic Training)`, true]]:[]),
+            ["CC / Save Spell Stat", `${char.stats.Willpower} (Willpower)${finalCC>0?" [+"+finalCC+" to CC rolls & Break Free TN]":""}`, true],
             ["Mana Cost Discount", "−1 mana with 1+ free hand"],
             ["Spell Slots (Mana)", finalMana],
             ["Ward (vs spells)", `${finalWard}`+(jewelryWardBonus>0?` [+${jewelryWardBonus} jewelry]`:""), true],
