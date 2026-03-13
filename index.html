@@ -3585,6 +3585,29 @@ function StepSummary({char,setChar,derived,totalSP}){
             <button key={-amt} onClick={()=>setChar(c=>({...c,money:Math.max(0,c.money-amt)}))} style={{...mic,background:"rgba(139,26,42,0.06)",border:"1px solid #e0b0b8",color:"var(--text-banner)",padding:"5px 12px",fontSize:10}}>−{amt}s</button>
           ))}
         </div>
+        {(()=>{
+          const [customAmt, setCustomAmt] = React.useState("");
+          const parsed = parseInt(customAmt);
+          const valid = !isNaN(parsed) && parsed > 0;
+          return (
+            <div style={{display:"flex",gap:6,alignItems:"center",marginTop:10}}>
+              <input
+                type="number" min="1" placeholder="Custom amount…"
+                value={customAmt}
+                onChange={e=>setCustomAmt(e.target.value)}
+                style={{flex:1,padding:"5px 8px",fontSize:11,background:"var(--bg-panel)",border:"1px solid var(--border-cebee8)",borderRadius:3,color:"var(--text-head)",fontFamily:"inherit",minWidth:0}}
+              />
+              <button onClick={()=>{if(valid){setChar(c=>({...c,money:c.money+parsed}));setCustomAmt("");}}}
+                style={{...mic,background:"rgba(200,168,74,0.08)",border:"1px solid #c8a84a",color:"var(--text-head)",padding:"5px 12px",fontSize:10,opacity:valid?1:0.4,cursor:valid?"pointer":"default"}}>
+                + Add
+              </button>
+              <button onClick={()=>{if(valid){setChar(c=>({...c,money:Math.max(0,c.money-parsed)}));setCustomAmt("");}}}
+                style={{...mic,background:"rgba(139,26,42,0.06)",border:"1px solid #e0b0b8",color:"var(--text-banner)",padding:"5px 12px",fontSize:10,opacity:valid?1:0.4,cursor:valid?"pointer":"default"}}>
+                − Subtract
+              </button>
+            </div>
+          );
+        })()}
         <div style={{marginTop:8,fontSize:10,color:"var(--text-label)"}}>Use + to add earned silver. Use − to record purchases not tracked by the equipment step.</div>
       </Card>
       <div style={{marginTop:12,padding:"10px 14px",background:"var(--bg-panel)",border:"1px solid var(--border-main)",borderRadius:3,fontSize:10,color:"var(--text-row-label)",textAlign:"center"}}>
