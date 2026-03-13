@@ -1172,7 +1172,14 @@ const JEWELRY_DATA=[
   {name:"Ring of Magic Resistance",bonus:"Ward+3",cost:250},
 ];
 
-// ─── WEAPON ADD-ONS ──────────────────────────────────────────────────────────
+const stepDieUp = (dmgStr) => {
+  // Steps every die in a damage string up one size: d4→d6→d8→d10→d12→d12 (cap)
+  const chain = ["d4","d6","d8","d10","d12"];
+  return dmgStr.replace(/d(\d+)/g, (match) => {
+    const idx = chain.indexOf(match);
+    return idx >= 0 && idx < chain.length-1 ? chain[idx+1] : match;
+  });
+};
 // Gun Modifications — only for weapons with "Gun" property
 // Simple Guns: 1 mod max. Marksman Guns: 2 mods max. Lasgun: 1 mod, Scope/Long Barrel/Extended Mag only.
 const GUN_MODS_DATA = [
@@ -1598,8 +1605,6 @@ function App() {
   const spLeft = totalSP - spUsed;
 
   // derived stats with bonuses
-  const size         = char.size || 1;
-  const sizeB        = calcSizeBonus(size);
   const vigorHPBonus  = calcVigorHP(char.stats.Vigor);
   const finalHP       = char.attrs.HP + trainBonuses.HP + vigorHPBonus;
   const finalStamina  = char.attrs.Stamina + trainBonuses.Stamina;
@@ -1692,10 +1697,19 @@ function App() {
   const finalWard     = calcWard(char.stats.Willpower) + (char.boon?.name==="Blessing of Power"?1:0) + jewelryWardBonus;
 
   const armorBonus    = char.equipment.armor?.armor||0;
-  // Machine Armor: Size+1 from armor bonus field
+  // Machine Armor: Size+1 from armor bonus field — feeds into actual size calc
   const armorSizeBonus = parseIntProp(char.equipment.armor?.bonus, "Size");
+  const size         = (char.size || 1) + armorSizeBonus;
+  const sizeB        = calcSizeBonus(size);
   const finalArmor    = calcArmor(char.stats.Vigor) + armorBonus + sizeB.armor;
   const finalSpellRange = calcSpellRange(char.stats.Mind, char.stats.Willpower);
+
+  // CritRes from armor (Half Plate +1, Plate Armor +2)
+  const finalCritRes = parseIntProp(char.equipment.armor?.bonus, "CritRes");
+
+  // Catalyst bonuses — Accuracy+N and Crit+N in catalyst props feed into spell attack
+  const catalystAccBonus  = parseIntProp(char.equipment.catalyst?.props, "Accuracy");
+  const catalystCritBonus = parseIntProp(char.equipment.catalyst?.props, "Crit");
 
   // Crit bonus — from weapon props (Crit+N), off-hand weapon, and Demon rune
   const weaponCritBonus = (() => {
@@ -1722,6 +1736,19 @@ function App() {
     if((char.weaponMods||[]).includes("Scope")) bonus += 2;
     // Demon rune: Accuracy+2
     if(char.weaponRune === "Demon") bonus += 2;
+    // Rune of Wind: Accuracy+1
+    if(char.weaponRune === "Rune of Wind") bonus += 1;
+    return bonus;
+  })();
+  const offhandAccBonus = (() => {
+    const w = char.equipment.offhand;
+    if(!w || w.parry || w.minMind) return 0; // skip shields and catalysts
+    const base = w?.props?.match(/Acc\+(\d+)/);
+    let bonus = base ? parseInt(base[1]) : 0;
+    if(char.offhandMithril && w && !(w.props||"").includes("Gun")) bonus += 1;
+    if((char.offhandMods||[]).includes("Scope")) bonus += 2;
+    if(char.offhandRune === "Demon") bonus += 2;
+    if(char.offhandRune === "Rune of Wind") bonus += 1;
     return bonus;
   })();
   const weaponDmgBonus = (() => {
@@ -1826,7 +1853,7 @@ function App() {
   })();
   const savageFightingBonus = hasSavageFighting ? unarmoredParryBonus : 0;
 
-  const accBonus  = trainBonuses.Acc + slottedTechBonuses.Acc + boonOffensive + weaponAccBonus + jewelryAccBonus;
+  const accBonus  = trainBonuses.Acc + slottedTechBonuses.Acc + boonOffensive + weaponAccBonus + offhandAccBonus + jewelryAccBonus;
   const dmgBonus  = trainBonuses.PrimDmg + slottedTechBonuses.PrimDmg + boonOffensive + weaponDmgBonus + jewelryDmgBonus + sizeB.primDmg + savageFightingBonus;
   // Brute: use STR for melee accuracy die. Eagle Eye: use DEX for ranged dmg die. Primal Mass: use VIG for melee dmg die.
   const meleeAccDie = hasBrute ? char.stats.Strength : char.stats.Dexterity;
@@ -1835,7 +1862,7 @@ function App() {
   const finalMeleeDmg = { die: meleeDmgDie, bonus: dmgBonus };
   // Spell attack: Accuracy = Mind die. Spell Power = Mind die + spell's own dice (spell dice shown at cast time).
   // Blessing of Power grants +1 to Spell Power via Primary Damage bonus.
-  const finalSpellAcc = { die: char.stats.Mind, bonus: (trainBonuses.SpellAcc||0) };
+  const finalSpellAcc = { die: char.stats.Mind, bonus: (trainBonuses.SpellAcc||0) + catalystAccBonus };
   const finalSpellPower = { die: char.stats.Mind, bonus: boonOffensive + (trainBonuses.SpellPower||0) };
   const finalSecDmg = trainBonuses.SecDmg || 0;
   const finalCC     = trainBonuses.CC || 0;
@@ -1893,7 +1920,7 @@ function App() {
   };
 
   const gunModAmmoBonus = (char.weaponMods||[]).includes("Extended Magazine") ? 6 : 0;
-  const derived = {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive,weaponCritBonus,offhandCritBonus,jewelryWardBonus,jewelrySpellPowerBonus,armorSizeBonus,weaponParryB,weaponReachB,finalSecDmg,finalCC};
+  const derived = {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive,weaponCritBonus,offhandCritBonus,jewelryWardBonus,jewelrySpellPowerBonus,armorSizeBonus,weaponParryB,weaponReachB,finalSecDmg,finalCC,finalCritRes,catalystAccBonus,catalystCritBonus,offhandAccBonus};
 
   return (
     <div style={{minHeight:"100vh",background:"var(--bg-page-grad)",color:"var(--text-body)",fontFamily:"'Palatino Linotype',Palatino,Georgia,serif",display:"flex",flexDirection:"column"}}>
@@ -2982,7 +3009,7 @@ function StepEquipment({char,setChar,moneyLeft}){
 
 // ─── STEP SUMMARY ─────────────────────────────────────────────────────────────
 function StepSummary({char,setChar,derived,totalSP}){
-  const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive,weaponCritBonus,offhandCritBonus,jewelryWardBonus,jewelrySpellPowerBonus,armorSizeBonus,weaponParryB,weaponReachB,finalSecDmg,finalCC}=derived;
+  const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive,weaponCritBonus,offhandCritBonus,jewelryWardBonus,jewelrySpellPowerBonus,armorSizeBonus,weaponParryB,weaponReachB,finalSecDmg,finalCC,finalCritRes,catalystAccBonus,catalystCritBonus}=derived;
   const fmt = ({die,bonus}) => bonus>0?`${die} (+${bonus})`:bonus<0?`${die} (${bonus})`:die;
   const RANK_LABELS=["","Novice","Adept","Master"];
   const TIERS=["novice","adept","master"];
@@ -3064,10 +3091,12 @@ function StepSummary({char,setChar,derived,totalSP}){
 
               // Acc: die from DEX (or STR if Brute on main), modifier breakdown
               const accDie = (!ohSlot && hasBrute) ? char.stats.Strength : char.stats.Dexterity;
-              // weapon-specific acc bonus (from props + mithril)
+              // weapon-specific acc bonus (from props + mithril + runes)
               const wpnAccBase = wpn.props?.match(/Acc\+(\d+)/);
               let wpnAcc = wpnAccBase ? parseInt(wpnAccBase[1]) : 0;
               if(mithrilOn && !isGun) wpnAcc += 1;
+              if(runeN === "Rune of Wind") wpnAcc += 1;
+              if(runeN === "Demon") wpnAcc += 2;
               // shared bonuses (training, tech slots, jewelry, boon) — already in accBonus but we recompute without weapon to show breakdown
               const sharedAcc = trainBonuses.Acc + slottedTechBonuses.Acc + boonOffensive + jewelryAccBonus;
               const totalAcc = sharedAcc + wpnAcc;
@@ -3157,6 +3186,7 @@ function StepSummary({char,setChar,derived,totalSP}){
                 ["Reach", `${finalReach} space${finalReach>1?"s":""}${weaponReachB>0?` (+${weaponReachB})`:""}${size>=2?" (size 2+)":""}`],
                 ["Parry", `${finalParry}`+(weaponParryB>0?` (+${weaponParryB} wpn)`:"")+(size>1?` (${sizeB.parry} size)`:"")+((char.equipment.offhand?.parry)?` (+${char.equipment.offhand.parry} shield)`:""), true],
                 ["Armor", `${finalArmor}`+(size>1?` (+${sizeB.armor} size)`:""), true],
+                ...(finalCritRes>0?[["Crit Resistance", `+${finalCritRes}`, true]]:[]),
                 ["Ward",  `${finalWard}`+(jewelryWardBonus>0?` (+${jewelryWardBonus})`:""), true],
                 ...(weaponCritBonus>0?[["Crit Bonus", `+${weaponCritBonus}`, true]]:[] ),
               ].map(([k,v,h])=><Row key={k} label={k} val={v} hi={h}/>)}
@@ -3199,6 +3229,9 @@ function StepSummary({char,setChar,derived,totalSP}){
               if(!isGun && mithrilOn) wpnAcc += 1;
               // Scope mod: +2 acc
               if(modsArr.includes("Scope")) wpnAcc += 2;
+              // Rune acc bonuses
+              if(runeN === "Rune of Wind") wpnAcc += 1;
+              if(runeN === "Demon") wpnAcc += 2;
               const sharedAcc = trainBonuses.Acc + slottedTechBonuses.Acc + boonOffensive + jewelryAccBonus;
               const totalAcc = sharedAcc + wpnAcc;
 
@@ -3207,12 +3240,12 @@ function StepSummary({char,setChar,derived,totalSP}){
               const wpnDmgBase = propsStr.match(/Dmg\+(\d+)/);
               let wpnDmg = wpnDmgBase ? parseInt(wpnDmgBase[1]) : 0;
               if(!isGun && mithrilOn) wpnDmg += 1;
-              // High Caliber: die size +1 — noted in add-ons, not in base dmg
+              const hasHighCaliber = modsArr.includes("High Caliber");
               const sharedDmg = trainBonuses.PrimDmg + slottedTechBonuses.PrimDmg + boonOffensive + jewelryDmgBonus + sizeB.primDmg;
               const totalDmg = sharedDmg + wpnDmg;
 
-              // Damage formula
-              const raw = wpn.dmg;
+              // Damage formula — apply High Caliber die step before displaying
+              const raw = hasHighCaliber ? stepDieUp(wpn.dmg) : wpn.dmg;
               const elemMatch = raw.match(/^(.+?)\s+([A-Z][a-z]+)$/);
               const dmgCore = elemMatch ? elemMatch[1] : raw;
               const elem = elemMatch ? ` ${elemMatch[2]}` : "";
@@ -3316,6 +3349,7 @@ function StepSummary({char,setChar,derived,totalSP}){
             ["Spell Range", `${finalSpellRange} spaces (2 + ${STAT_CHAIN.indexOf(char.stats.Mind)} Mind + ${STAT_CHAIN.indexOf(char.stats.Willpower)} WIL)`, true],
             ["Attack Spell Accuracy", fmt(finalSpellAcc)+" (Mind)", true],
             ["Attack Spell Power", `${finalSpellPower.die} + Spell Dice${finalSpellPower.bonus+jewelrySpellPowerBonus>0?" (+"+(finalSpellPower.bonus+jewelrySpellPowerBonus)+")":""}`, true],
+            ...(catalystCritBonus>0?[["Spell Crit Bonus", `+${catalystCritBonus}`, true]]:[]),
             ...(finalSecDmg>0?[["Secondary Damage Bonus", `+${finalSecDmg}`, true]]:[]),
             ["CC / Save Spell Stat", `${char.stats.Willpower} (Willpower)${finalCC>0?" (+"+finalCC+" CC)":""}`, true],
             ["Mana Cost Discount", "−1 mana with 1+ free hand"],
@@ -3328,7 +3362,7 @@ function StepSummary({char,setChar,derived,totalSP}){
         </Card>
         <Card title="General">
           {[
-            ["Size", `${size + armorSizeBonus}`+(armorSizeBonus>0?` [+${armorSizeBonus} armor]`:"")],
+            ["Size", `${size}`+(armorSizeBonus>0?` (+${armorSizeBonus} armor)`:"")],
             ["Movement", `${finalMove} Space${finalMove!==1?"s":""}${finalMove!==6?` [base 6, net ${finalMove>6?"+":""}${finalMove-6}]`:"" }`],
             ["Carry Cap", `${finalStamina} wt`],
             ["Money Left", `${moneyLeft} Silver`, true],
