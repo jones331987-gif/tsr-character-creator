@@ -1674,14 +1674,10 @@ function App() {
   const parseIntPropNeg = (propsStr, key) => { const m = (propsStr||"").match(new RegExp(key+"-(\\d+)")); return m ? -parseInt(m[1]) : 0; };
   const weaponParryB  = parseIntProp(char.equipment.weapon?.props, "Parry")
                       + parseIntProp(char.equipment.offhand?.props, "Parry");
-  const finalParry    = baseParry + armorParryB + shieldParryB + weaponParryB + trainBonuses.Parry + slottedTechBonuses.Parry + (char.boon?.name==="Blessing of Power"?1:0) + sizeB.parry;
-
-  // Reach — base 1 + weapon Reach+N props (largest of main/off-hand, not additive) + size
   const weaponReachB  = Math.max(
     parseIntProp(char.equipment.weapon?.props, "Reach"),
     parseIntProp(char.equipment.offhand?.props, "Reach")
   );
-  const finalReach    = 1 + weaponReachB + sizeB.reach;
 
   // Movement Speed — base 6 + tech bonuses + armor bonus + armor Move penalty
   const maTechs = Object.values(char.techniques["martial_arts"]||{}).flat();
@@ -1703,6 +1699,10 @@ function App() {
   const sizeB        = calcSizeBonus(size);
   const finalArmor    = calcArmor(char.stats.Vigor) + armorBonus + sizeB.armor;
   const finalSpellRange = calcSpellRange(char.stats.Mind, char.stats.Willpower);
+
+  // finalParry and finalReach depend on sizeB — declared here after sizeB
+  const finalParry    = baseParry + armorParryB + shieldParryB + weaponParryB + trainBonuses.Parry + slottedTechBonuses.Parry + (char.boon?.name==="Blessing of Power"?1:0) + sizeB.parry;
+  const finalReach    = 1 + weaponReachB + sizeB.reach;
 
   // CritRes from armor (Half Plate +1, Plate Armor +2)
   const finalCritRes = parseIntProp(char.equipment.armor?.bonus, "CritRes");
