@@ -2591,7 +2591,7 @@ function StepSkills({char,setChar,spLeft,totalSP,moneyLeft,skillSilverSpent}){
                                 const isBonus = slotIdx===1;
                                 // Elemental Souls are mutually exclusive — if one Soul is taken in either slot, block all other Souls
                                 const SOUL_PERKS = ["Infernal Soul","Aqua Soul","Terra Soul","Vacuum Soul","Thunderous Soul"];
-                                const otherIsSoul = SOUL_PERKS.includes(otherSlotPerk);
+                                const otherIsSoul = !isRoE && SOUL_PERKS.includes(otherSlotPerk);
                                 return(
                                   <div key={slotIdx} style={{marginBottom:slotIdx===0?10:0}}>
                                     <div style={{fontSize:10,color:isBonus?"#8b1a2a":"#c8a84a",letterSpacing:"0.1em",marginBottom:6}}>
