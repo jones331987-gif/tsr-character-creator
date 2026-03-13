@@ -3154,14 +3154,11 @@ function StepSummary({char,setChar,derived,totalSP}){
               {noMelee && <div style={{fontSize:11,color:"var(--text-muted)",fontStyle:"italic",marginBottom:8}}>No melee weapon equipped.</div>}
               {mainBlock}{offBlock}
               {[
-                ["Reach", `${finalReach} space${finalReach>1?"s":""}${weaponReachB>0?` (weapon +${weaponReachB})`:""}${size>=2?" (size 2+)":""}`],
-                ["Parry", `${finalParry}`
-                  +(weaponParryB>0?` [+${weaponParryB} weapon]`:"")
-                  +(size>1?` [${sizeB.parry} size]`:"")
-                  +((char.equipment.offhand?.parry)?` [+${char.equipment.offhand.parry} shield]`:""), true],
-                ["Armor", `${finalArmor}`+(size>1?` [+${sizeB.armor} size]`:""), true],
-                ["Ward",  `${finalWard}`+(jewelryWardBonus>0?` [+${jewelryWardBonus} jewelry]`:""), true],
-                ...(weaponCritBonus>0?[["Crit Bonus", `+${weaponCritBonus} (lowers crit threshold)`, true]]:[] ),
+                ["Reach", `${finalReach} space${finalReach>1?"s":""}${weaponReachB>0?` (+${weaponReachB})`:""}${size>=2?" (size 2+)":""}`],
+                ["Parry", `${finalParry}`+(weaponParryB>0?` (+${weaponParryB} wpn)`:"")+(size>1?` (${sizeB.parry} size)`:"")+((char.equipment.offhand?.parry)?` (+${char.equipment.offhand.parry} shield)`:""), true],
+                ["Armor", `${finalArmor}`+(size>1?` (+${sizeB.armor} size)`:""), true],
+                ["Ward",  `${finalWard}`+(jewelryWardBonus>0?` (+${jewelryWardBonus})`:""), true],
+                ...(weaponCritBonus>0?[["Crit Bonus", `+${weaponCritBonus}`, true]]:[] ),
               ].map(([k,v,h])=><Row key={k} label={k} val={v} hi={h}/>)}
               {passiveOnHitEffects.length>0&&(
                 <div style={{marginTop:8,borderTop:"1px solid #e8d8f0",paddingTop:8}}>
@@ -3317,13 +3314,13 @@ function StepSummary({char,setChar,derived,totalSP}){
         <Card title="Spell Attack">
           {[
             ["Spell Range", `${finalSpellRange} spaces (2 + ${STAT_CHAIN.indexOf(char.stats.Mind)} Mind + ${STAT_CHAIN.indexOf(char.stats.Willpower)} WIL)`, true],
-            ["Attack Spell Accuracy", `${fmt(finalSpellAcc)} (Mind)${finalSpellAcc.bonus>0?" [+"+finalSpellAcc.bonus+" training]":""}`, true],
-            ["Attack Spell Power", `${finalSpellPower.die} + Spell Dice${finalSpellPower.bonus+jewelrySpellPowerBonus>0?" (+"+(finalSpellPower.bonus+jewelrySpellPowerBonus)+")":""}${(trainBonuses.SpellPower||0)>0?" [+"+trainBonuses.SpellPower+" training]":""}${jewelrySpellPowerBonus>0?" [+"+jewelrySpellPowerBonus+" jewelry]":""}`, true],
-            ...(finalSecDmg>0?[["Secondary Damage Bonus", `+${finalSecDmg} (from Runic Training)`, true]]:[]),
-            ["CC / Save Spell Stat", `${char.stats.Willpower} (Willpower)${finalCC>0?" [+"+finalCC+" to CC rolls & Break Free TN]":""}`, true],
+            ["Attack Spell Accuracy", fmt(finalSpellAcc)+" (Mind)", true],
+            ["Attack Spell Power", `${finalSpellPower.die} + Spell Dice${finalSpellPower.bonus+jewelrySpellPowerBonus>0?" (+"+(finalSpellPower.bonus+jewelrySpellPowerBonus)+")":""}`, true],
+            ...(finalSecDmg>0?[["Secondary Damage Bonus", `+${finalSecDmg}`, true]]:[]),
+            ["CC / Save Spell Stat", `${char.stats.Willpower} (Willpower)${finalCC>0?" (+"+finalCC+" CC)":""}`, true],
             ["Mana Cost Discount", "−1 mana with 1+ free hand"],
             ["Spell Slots (Mana)", finalMana],
-            ["Ward (vs spells)", `${finalWard}`+(jewelryWardBonus>0?` [+${jewelryWardBonus} jewelry]`:""), true],
+            ["Ward (vs spells)", `${finalWard}`+(jewelryWardBonus>0?` (+${jewelryWardBonus} jewelry)`:""), true],
           ].map(([k,v,h])=><Row key={k} label={k} val={v} hi={h}/>)}
           <div style={{fontSize:10,color:"var(--text-row-label)",marginTop:8,lineHeight:1.6,borderTop:"1px solid var(--border-row)",paddingTop:8}}>
             Attack spells: Mind for Accuracy &amp; Damage. CC/Save spells: auto-hit if in range, resisted by target using Willpower. Hybrid spells require both a hit and a failed save.
