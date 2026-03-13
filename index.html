@@ -208,11 +208,11 @@ const calcParry     = (dex) => Math.floor(dieValue(dex)/2)+2;
 // Ward = half WIL − 2 (minimum 0). Mind does NOT affect Ward per the rules.
 const calcWard      = (wil) => Math.max(0,Math.floor(dieValue(wil)/2)-2);
 // Armor = half VIG − 2 (minimum 0)
-const calcArmor     = (vig) => Math.max(0,Math.floor((dieValue(vig)-2)/2));
+const calcArmor     = (vig) => Math.max(0,Math.floor((dieValue(vig)-4)/2));
 // HP bonus from Vigor: +5 per tier above d4 (base 20 HP already includes d4)
 const calcVigorHP   = (vig) => vigorTier(vig) * 5;
 // Damage Shield cap: +5 per tier above d4 (0 at d4)
-const calcDmgShield = (vig) => vigorTier(vig) * 5;
+const calcDmgShield = (vig) => 5 + vigorTier(vig) * 5;
 // Spell Range: base 2 + tiers above d4 for Mind + tiers above d4 for Willpower
 const calcSpellRange = (mind, wil) => 2 + STAT_CHAIN.indexOf(mind) + STAT_CHAIN.indexOf(wil);
 // Size bonuses per size above 1: +1 Armor, +1 Primary Damage, −1 Parry. Size 2+ grants +1 Reach.
@@ -2185,7 +2185,7 @@ function StepAttributes({char,setChar,stLeft,apLeft,totalAP,trainBonuses,derived
   const STAT_DESC={
     Strength:   "Damage for unarmed & weapon attacks. Required to wield heavier weapons. Used in Grab checks.",
     Dexterity:  "Accuracy for attacks. Parry = ½ DEX + 2.",
-    Vigor:      "+5 Max HP & +5 Damage Shield cap per tier above d4. Armor = ½ VIG − 2. Resists physical crowd control.",
+    Vigor:      "+5 Max HP & +5 Damage Shield cap per tier above d4. Armor = ½ VIG − 2 (base 0 at d4, 1 at d6). Resists physical crowd control.",
     Mind:       "Accuracy & damage of attack spells. Spell Range +1 per tier above d4.",
     Willpower:  "Powers CC & save spells. Ward = ½ WIL − 2. Spell Range +1 per tier above d4.",
   };
@@ -2267,10 +2267,10 @@ function StepAttributes({char,setChar,stLeft,apLeft,totalAP,trainBonuses,derived
                 ["Size", sz],
                 ["Melee Reach", `${reach} space${reach>1?"s":""}${sz>=2?" (size 2+)":""}`],
                 ["Max HP", `${char.attrs.HP + calcVigorHP(char.stats.Vigor)} (${char.attrs.HP} base + ${calcVigorHP(char.stats.Vigor)} Vigor)`],
-                ["Dmg Shield Cap", `${calcDmgShield(char.stats.Vigor)} (${vigorTier(char.stats.Vigor)} × 5 Vigor)`],
+                ["Dmg Shield Cap", `${calcDmgShield(char.stats.Vigor)} (5 + ${vigorTier(char.stats.Vigor)} × 5 Vigor)`],
                 ["Primary Dmg bonus", `${szB.primDmg>0?"+":""}${szB.primDmg} from size`],
                 ["Parry", `${calcParry(char.stats.Dexterity) + szB.parry} (½ DEX+2${szB.parry!==0?" "+szB.parry+" size":""})`],
-                ["Armor", `${calcArmor(char.stats.Vigor) + szB.armor} (½ VIG−2${szB.armor>0?" +"+szB.armor+" size":""})`],
+                ["Armor", `${calcArmor(char.stats.Vigor) + szB.armor} (½ VIG−2, min 0${szB.armor>0?" +"+szB.armor+" size":""})`],
                 ["Ward", `${calcWard(char.stats.Willpower)} (½ WIL − 2)`],
                 ["Spell Range", `${calcSpellRange(char.stats.Mind,char.stats.Willpower)} (2+${STAT_CHAIN.indexOf(char.stats.Mind)}M+${STAT_CHAIN.indexOf(char.stats.Willpower)}WIL)`],
                 ["Carry Cap", `${char.attrs.Stamina} (= Stamina)`],
