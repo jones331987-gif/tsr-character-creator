@@ -1785,6 +1785,10 @@ function App() {
       return Array.isArray(v) ? v.includes(name) : v === name;
     };
 
+    // Brawler techniques
+    if(hasTech("martial_arts","Master Brawler"))      fx.push("Master Brawler: fists 1d10+STR, Finesse; DEX for CC saves; +1 Acc or Knockback 1 (style choice)");
+    else if(hasTech("martial_arts","Adept Brawler"))  fx.push("Adept Brawler: fists 1d8+STR, Finesse; DEX for CC saves");
+    else if(hasTech("martial_arts","Novice Brawler")) fx.push("Novice Brawler: fists 1d6+STR, Finesse");
     // CQC master perks
     if(perkIs("cqc","Lethality"))       fx.push("Lethality: melee HP dmg → 2 Bleed (Aggravate on crit)");
     if(perkIs("cqc","Crush Armor"))     fx.push("Crush Armor: 1st melee attack AP=½STR; crits apply Rend");
@@ -3101,6 +3105,8 @@ function StepSummary({char,setChar,derived,totalSP}){
               if(mithrilOn && !isGun) wpnAcc += 1;
               if(runeN === "Rune of Wind") wpnAcc += 1;
               if(runeN === "Demon") wpnAcc += 2;
+              // Master Brawler style choice: +1 Acc (or +1 Dmg — default to Acc for display)
+              if(wpn.isFist && hasMasterBrawler) wpnAcc += 1;
               // shared bonuses (training, tech slots, jewelry, boon) — already in accBonus but we recompute without weapon to show breakdown
               const sharedAcc = trainBonuses.Acc + slottedTechBonuses.Acc + boonOffensive + jewelryAccBonus;
               const totalAcc = sharedAcc + wpnAcc;
@@ -3179,9 +3185,23 @@ function StepSummary({char,setChar,derived,totalSP}){
               );
             };
 
-            const mainBlock = weaponBlock(char.equipment.weapon, char.weaponMods||[], char.weaponRune, char.weaponSpell, char.weaponMithril, false, "MAIN HAND");
+            // Synthesize fist weapon if Brawler technique is known and no main-hand weapon
+            const brawlerTechs = Object.values(char.techniques["martial_arts"]||{}).flat();
+            const hasMasterBrawler = brawlerTechs.includes("Master Brawler");
+            const hasAdeptBrawler  = brawlerTechs.includes("Adept Brawler");
+            const hasNoviceBrawler = brawlerTechs.includes("Novice Brawler");
+            const fistWeapon = (() => {
+              if(!char.equipment.weapon) {
+                if(hasMasterBrawler) return {name:"Fists (Master Brawler)", dmg:"Str+d10", props:"Finesse", minStr:"d4", wt:0, cost:0, isFist:true};
+                if(hasAdeptBrawler)  return {name:"Fists (Adept Brawler)",  dmg:"Str+d8",  props:"Finesse", minStr:"d4", wt:0, cost:0, isFist:true};
+                if(hasNoviceBrawler) return {name:"Fists (Novice Brawler)", dmg:"Str+d6",  props:"Finesse", minStr:"d4", wt:0, cost:0, isFist:true};
+              }
+              return null;
+            })();
+
+            const mainBlock = weaponBlock(fistWeapon || char.equipment.weapon, char.weaponMods||[], char.weaponRune, char.weaponSpell, char.weaponMithril, false, "MAIN HAND");
             const offBlock  = weaponBlock(char.equipment.offhand, char.offhandMods||[], char.offhandRune, char.offhandSpell, char.offhandMithril, true, "OFF-HAND");
-            const noMelee = !mainBlock && !offBlock;
+            const noMelee = !fistWeapon && !mainBlock && !offBlock;
 
             return (<>
               {noMelee && <div style={{fontSize:11,color:"var(--text-muted)",fontStyle:"italic",marginBottom:8}}>No melee weapon equipped.</div>}
