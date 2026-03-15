@@ -1381,6 +1381,21 @@ const SLOTTED_BONUS_TECHS = {
   "Perfected Stance":  {Acc:2, PrimDmg:2, Parry:2},
 };
 
+// Spells that grant passive bonuses when slotted (always-on while slotted)
+// Spell Enhancers (Arcane Chains etc.) are per-cast — tracked separately as notes
+const SLOTTED_BONUS_SPELLS = {
+  // Catalyst Attunement: +1 Spell Acc when wielding a catalyst (checked at calc time)
+  "Catalyst Attunement": {SpellAcc: 1},
+  // Mana Augmentation: Mind/2 as Parry — handled dynamically, flagged here
+  "Mana Augmentation": {ManaAugmentation: true},
+};
+
+// Spell Enhancers that show as notes on the summary when slotted
+const SLOTTED_SPELL_NOTES = {
+  "Arcane Chains": "+2 effective Willpower on CC spells (Spell Enhancer)",
+  "Mana Weaving":  "+2 Acc & Spell Power when casting with 1+ free hand (Passive)",
+};
+
 // ─── SPELL SLOT HELPERS ──────────────────────────────────────────────────────
 const calcBonusSpellSlots = (purchasedTrainings) => {
   let bonus = 0;
@@ -1583,6 +1598,30 @@ function App() {
     return b;
   })();
 
+  // Slotted spell passive bonuses and notes
+  const slottedSpellBonuses = (() => {
+    const b = {SpellAcc:0, ManaAugmentation:false};
+    (char.slottedSpells||new Set()).forEach(key => {
+      const spellName = key.split("||")[1];
+      const bonus = SLOTTED_BONUS_SPELLS[spellName];
+      if(!bonus) return;
+      if(bonus.SpellAcc) b.SpellAcc += bonus.SpellAcc;
+      if(bonus.ManaAugmentation) b.ManaAugmentation = true;
+    });
+    return b;
+  })();
+  // Mana Augmentation: use Mind/2 as Parry bonus when slotted (needed before finalParry)
+  const manaAugParry = slottedSpellBonuses.ManaAugmentation ? Math.floor(dieValue(char.stats.Mind) / 2) : 0;
+  const slottedSpellNotes = (() => {
+    const notes = [];
+    (char.slottedSpells||new Set()).forEach(key => {
+      const spellName = key.split("||")[1];
+      const note = SLOTTED_SPELL_NOTES[spellName];
+      if(note) notes.push(`${spellName}: ${note}`);
+    });
+    return notes;
+  })();
+
   // (slot budget calculated below after finalStamina)
 
   const skillSilverSpent = calcSkillSilverSpent(char.skills, char.purchasedTrainings, char.techniques);
@@ -1706,7 +1745,7 @@ function App() {
   const finalSpellRange = calcSpellRange(char.stats.Mind, char.stats.Willpower);
 
   // finalParry and finalReach depend on sizeB — declared here after sizeB
-  const finalParry    = baseParry + armorParryB + shieldParryB + weaponParryB + trainBonuses.Parry + slottedTechBonuses.Parry + boonOffensive + sizeB.parry;
+  const finalParry    = baseParry + armorParryB + shieldParryB + weaponParryB + trainBonuses.Parry + slottedTechBonuses.Parry + boonOffensive + sizeB.parry + manaAugParry;
   const finalReach    = 1 + weaponReachB + sizeB.reach;
 
   // CritRes from armor (Half Plate +1, Plate Armor +2)
@@ -1869,8 +1908,8 @@ function App() {
   const finalMeleeAcc = { die: meleeAccDie, bonus: accBonus };
   const finalMeleeDmg = { die: meleeDmgDie, bonus: dmgBonus };
   // Spell attack: Accuracy = Mind die. Spell Power = Mind die + spell's own dice (spell dice shown at cast time).
-  // Blessing of Power grants +1 to Spell Power via Primary Damage bonus.
-  const finalSpellAcc = { die: char.stats.Mind, bonus: (trainBonuses.SpellAcc||0) + catalystAccBonus };
+  const catalystAttunementBonus = (slottedSpellBonuses.SpellAcc > 0 && char.equipment.catalyst) ? slottedSpellBonuses.SpellAcc : 0;
+  const finalSpellAcc = { die: char.stats.Mind, bonus: (trainBonuses.SpellAcc||0) + catalystAccBonus + catalystAttunementBonus };
   const finalSpellPower = { die: char.stats.Mind, bonus: boonOffensive + (trainBonuses.SpellPower||0) };
   const finalSecDmg = trainBonuses.SecDmg || 0;
   const finalCC     = trainBonuses.CC || 0;
@@ -1928,7 +1967,7 @@ function App() {
   };
 
   const gunModAmmoBonus = (char.weaponMods||[]).includes("Extended Magazine") ? 6 : 0;
-  const derived = {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive,boonArmorBonus,boonWardBonus,weaponCritBonus,offhandCritBonus,jewelryWardBonus,jewelrySpellPowerBonus,armorSizeBonus,weaponParryB,weaponReachB,finalSecDmg,finalCC,finalCritRes,catalystAccBonus,catalystCritBonus,offhandAccBonus};
+  const derived = {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive,boonArmorBonus,boonWardBonus,weaponCritBonus,offhandCritBonus,jewelryWardBonus,jewelrySpellPowerBonus,armorSizeBonus,weaponParryB,weaponReachB,finalSecDmg,finalCC,finalCritRes,catalystAccBonus,catalystCritBonus,offhandAccBonus,slottedSpellNotes,manaAugParry,catalystAttunementBonus};
 
   return (
     <div style={{minHeight:"100vh",background:"var(--bg-page-grad)",color:"var(--text-body)",fontFamily:"'Palatino Linotype',Palatino,Georgia,serif",display:"flex",flexDirection:"column"}}>
@@ -3017,7 +3056,7 @@ function StepEquipment({char,setChar,moneyLeft}){
 
 // ─── STEP SUMMARY ─────────────────────────────────────────────────────────────
 function StepSummary({char,setChar,derived,totalSP}){
-  const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive,boonArmorBonus,boonWardBonus,weaponCritBonus,offhandCritBonus,jewelryWardBonus,jewelrySpellPowerBonus,armorSizeBonus,weaponParryB,weaponReachB,finalSecDmg,finalCC,finalCritRes,catalystAccBonus,catalystCritBonus,offhandAccBonus}=derived;
+  const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive,boonArmorBonus,boonWardBonus,weaponCritBonus,offhandCritBonus,jewelryWardBonus,jewelrySpellPowerBonus,armorSizeBonus,weaponParryB,weaponReachB,finalSecDmg,finalCC,finalCritRes,catalystAccBonus,catalystCritBonus,offhandAccBonus,slottedSpellNotes,manaAugParry,catalystAttunementBonus}=derived;
   const fmt = ({die,bonus}) => bonus>0?`${die} (+${bonus})`:bonus<0?`${die} (${bonus})`:die;
   const RANK_LABELS=["","Novice","Adept","Master"];
   const TIERS=["novice","adept","master"];
@@ -3376,10 +3415,19 @@ function StepSummary({char,setChar,derived,totalSP}){
             ...(catalystCritBonus>0?[["Spell Crit Bonus", `+${catalystCritBonus}`, true]]:[]),
             ...(finalSecDmg>0?[["Secondary Damage Bonus", `+${finalSecDmg}`, true]]:[]),
             ["CC / Save Spell Stat", `${char.stats.Willpower} (Willpower)${finalCC>0?" (+"+finalCC+" CC)":""}`, true],
+            ...(manaAugParry>0?[["Mana Aug. Parry", `+${manaAugParry} (Mind/2)`, true]]:[]),
             ["Mana Cost Discount", "−1 mana with 1+ free hand"],
             ["Spell Slots (Mana)", finalMana],
             ["Ward (vs spells)", `${finalWard}`+(jewelryWardBonus>0?` (+${jewelryWardBonus} jewelry)`:""), true],
           ].map(([k,v,h])=><Row key={k} label={k} val={v} hi={h}/>)}
+          {slottedSpellNotes.length>0&&(
+            <div style={{marginTop:8,borderTop:"1px solid var(--border-row)",paddingTop:8}}>
+              <div style={{fontSize:10,color:"#9a70d8",letterSpacing:"0.1em",marginBottom:4}}>SLOTTED SPELL EFFECTS</div>
+              {slottedSpellNotes.map((note,i)=>(
+                <div key={i} style={{fontSize:10,color:"var(--text-label)",padding:"2px 0",borderBottom:"1px solid rgba(154,112,216,0.2)"}}>{note}</div>
+              ))}
+            </div>
+          )}
           <div style={{fontSize:10,color:"var(--text-row-label)",marginTop:8,lineHeight:1.6,borderTop:"1px solid var(--border-row)",paddingTop:8}}>
             Attack spells: Mind for Accuracy &amp; Damage. CC/Save spells: auto-hit if in range, resisted by target using Willpower. Hybrid spells require both a hit and a failed save.
           </div>
