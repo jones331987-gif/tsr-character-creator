@@ -1599,7 +1599,7 @@ function App() {
   const apLeft = totalAP - char.attrPointsUsed + (char.levelAttrPoints||0);
 
   // skill point budget — subtract level-up skills from total used
-  const boonSP = char.boon?.name==="History of Discipline" ? 2 : 0;
+  const boonSP = char.boon?.name==="History of Discipline" ? (2 + ((char.level||1) >= 4 ? 1 : 0)) : 0;
   const totalSP = 3 + boonSP;
   const spUsed = Object.values(char.skills).reduce((t,v)=>t+v,0) - (char.levelSkillPointsSpent||0);
   const spLeft = totalSP - spUsed;
@@ -1665,7 +1665,7 @@ function App() {
     });
     return used;
   })();
-  const finalDmgShield= calcDmgShield(char.stats.Vigor);
+  const finalDmgShield= calcDmgShield(char.stats.Vigor) + (hasPerk("martial_arts","Enduring Warrior") ? 10 : 0);
   const baseParry     = calcParry(char.stats.Dexterity);
   const armorParryB   = char.equipment.armor?.parry||0;
   const shieldParryB  = (char.equipment.offhand?.parry)||0;
@@ -1690,18 +1690,18 @@ function App() {
   const jewelryWardBonus = char.equipment.jewelry.reduce((t,j) => {
     const m = j.bonus?.match(/Ward\+(\d+)/); return t + (m ? parseInt(m[1]) : 0);
   }, 0);
-  const finalWard     = calcWard(char.stats.Willpower) + (char.boon?.name==="Blessing of Power"?1:0) + jewelryWardBonus;
+  const finalWard     = calcWard(char.stats.Willpower) + boonOffensive + jewelryWardBonus + boonWardBonus;
 
   const armorBonus    = char.equipment.armor?.armor||0;
   // Machine Armor: Size+1 from armor bonus field — feeds into actual size calc
   const armorSizeBonus = parseIntProp(char.equipment.armor?.bonus, "Size");
   const size         = (char.size || 1) + armorSizeBonus;
   const sizeB        = calcSizeBonus(size);
-  const finalArmor    = calcArmor(char.stats.Vigor) + armorBonus + sizeB.armor;
+  const finalArmor    = calcArmor(char.stats.Vigor) + armorBonus + sizeB.armor + boonArmorBonus;
   const finalSpellRange = calcSpellRange(char.stats.Mind, char.stats.Willpower);
 
   // finalParry and finalReach depend on sizeB — declared here after sizeB
-  const finalParry    = baseParry + armorParryB + shieldParryB + weaponParryB + trainBonuses.Parry + slottedTechBonuses.Parry + (char.boon?.name==="Blessing of Power"?1:0) + sizeB.parry;
+  const finalParry    = baseParry + armorParryB + shieldParryB + weaponParryB + trainBonuses.Parry + slottedTechBonuses.Parry + boonOffensive + sizeB.parry;
   const finalReach    = 1 + weaponReachB + sizeB.reach;
 
   // CritRes from armor (Half Plate +1, Plate Armor +2)
@@ -1768,7 +1768,11 @@ function App() {
   const jewelryDmgBonus = char.equipment.jewelry.reduce((t,j) => {
     const m = j.bonus?.match(/Primary Damage\+(\d+)/); return t + (m ? parseInt(m[1]) : 0);
   }, 0);
-  const boonOffensive = char.boon?.name==="Blessing of Power" ? 1 : 0;
+  // Blessing of Power: +1 at all levels, upgrades to +2 at level 4+ (also grants +2 Armor & Ward at 4+)
+  const bopLevel = char.boon?.name==="Blessing of Power" ? (char.level||1) : 0;
+  const boonOffensive = bopLevel >= 4 ? 2 : bopLevel > 0 ? 1 : 0;
+  const boonArmorBonus = bopLevel >= 4 ? 2 : 0;
+  const boonWardBonus  = bopLevel >= 4 ? 2 : 0;
 
   // ── Passive On-Hit Effects ───────────────────────────────────────────────
   // Returns a list of always-on effect strings derived from perks, techniques, equipment
@@ -1920,7 +1924,7 @@ function App() {
   };
 
   const gunModAmmoBonus = (char.weaponMods||[]).includes("Extended Magazine") ? 6 : 0;
-  const derived = {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive,weaponCritBonus,offhandCritBonus,jewelryWardBonus,jewelrySpellPowerBonus,armorSizeBonus,weaponParryB,weaponReachB,finalSecDmg,finalCC,finalCritRes,catalystAccBonus,catalystCritBonus,offhandAccBonus};
+  const derived = {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive,boonArmorBonus,boonWardBonus,weaponCritBonus,offhandCritBonus,jewelryWardBonus,jewelrySpellPowerBonus,armorSizeBonus,weaponParryB,weaponReachB,finalSecDmg,finalCC,finalCritRes,catalystAccBonus,catalystCritBonus,offhandAccBonus};
 
   return (
     <div style={{minHeight:"100vh",background:"var(--bg-page-grad)",color:"var(--text-body)",fontFamily:"'Palatino Linotype',Palatino,Georgia,serif",display:"flex",flexDirection:"column"}}>
@@ -3009,7 +3013,7 @@ function StepEquipment({char,setChar,moneyLeft}){
 
 // ─── STEP SUMMARY ─────────────────────────────────────────────────────────────
 function StepSummary({char,setChar,derived,totalSP}){
-  const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive,weaponCritBonus,offhandCritBonus,jewelryWardBonus,jewelrySpellPowerBonus,armorSizeBonus,weaponParryB,weaponReachB,finalSecDmg,finalCC,finalCritRes,catalystAccBonus,catalystCritBonus}=derived;
+  const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive,boonArmorBonus,boonWardBonus,weaponCritBonus,offhandCritBonus,jewelryWardBonus,jewelrySpellPowerBonus,armorSizeBonus,weaponParryB,weaponReachB,finalSecDmg,finalCC,finalCritRes,catalystAccBonus,catalystCritBonus,offhandAccBonus}=derived;
   const fmt = ({die,bonus}) => bonus>0?`${die} (+${bonus})`:bonus<0?`${die} (${bonus})`:die;
   const RANK_LABELS=["","Novice","Adept","Master"];
   const TIERS=["novice","adept","master"];
@@ -3620,6 +3624,26 @@ function StepSummary({char,setChar,derived,totalSP}){
           <Card title="Boon Details">
             <div style={{fontSize:12,fontWeight:600,color:"#c8a84a",marginBottom:6}}>{char.boon.name}</div>
             <div style={{fontSize:11,color:"var(--text-row-label)",lineHeight:1.5}}>{char.boon.desc}</div>
+            {char.boon.name==="Blessing of Power"&&(
+              <div style={{marginTop:6,fontSize:10,padding:"4px 8px",borderRadius:3,
+                background:(char.level||1)>=4?"rgba(200,168,74,0.1)":"rgba(100,80,140,0.08)",
+                border:(char.level||1)>=4?"1px solid #c8a84a":"1px solid var(--border-soft)",
+                color:(char.level||1)>=4?"#c8a84a":"var(--text-muted)"}}>
+                {(char.level||1)>=4
+                  ? "★ Level 4+ active — bonuses upgraded to +2, Armor+2, Ward+2"
+                  : `Level ${char.level||1}/4 — upgrades to +2 Acc/Dmg/Parry/SpellPower + Armor+2/Ward+2 at level 4`}
+              </div>
+            )}
+            {char.boon.name==="History of Discipline"&&(
+              <div style={{marginTop:6,fontSize:10,padding:"4px 8px",borderRadius:3,
+                background:(char.level||1)>=4?"rgba(200,168,74,0.1)":"rgba(100,80,140,0.08)",
+                border:(char.level||1)>=4?"1px solid #c8a84a":"1px solid var(--border-soft)",
+                color:(char.level||1)>=4?"#c8a84a":"var(--text-muted)"}}>
+                {(char.level||1)>=4
+                  ? "★ Level 4+ active — +1 additional Skill Point granted"
+                  : `Level ${char.level||1}/4 — +1 Skill Point bonus unlocks at level 4`}
+              </div>
+            )}
           </Card>
         )}
       </div>
