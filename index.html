@@ -1463,10 +1463,24 @@ function App() {
     const doSave = () => {
       try {
         const data = charToJSON(char);
-        localStorage.setItem("tsr_"+slot, JSON.stringify(data));
-        setSaves(s=>({...s,[slot]:data}));
-        flash(`Saved to Slot ${i+1}!`);
-      } catch(e){ flash("Save failed."); }
+        const json = JSON.stringify(data);
+        try {
+          localStorage.setItem("tsr_"+slot, json);
+          setSaves(s=>({...s,[slot]:data}));
+          flash(`Saved to Slot ${i+1}!`);
+        } catch(quotaErr) {
+          // Quota exceeded — retry without portrait image
+          const dataNoPortrait = {...data, portrait: null};
+          const jsonNoPortrait = JSON.stringify(dataNoPortrait);
+          try {
+            localStorage.setItem("tsr_"+slot, jsonNoPortrait);
+            setSaves(s=>({...s,[slot]:dataNoPortrait}));
+            flash(`Saved to Slot ${i+1} (portrait omitted — too large)`);
+          } catch(e2) {
+            flash(`Save failed: storage full. Try clearing a slot.`);
+          }
+        }
+      } catch(e){ flash("Save failed: " + e.message); }
     };
     if(existing && existing.name) {
       confirm(`Overwrite "${existing.name}" in Slot ${i+1}?`, doSave);
@@ -2026,6 +2040,15 @@ function App() {
             </div>
           );
         })}
+        {(()=>{
+          try {
+            let used = 0;
+            SAVE_SLOTS.forEach(slot=>{const v=localStorage.getItem("tsr_"+slot);if(v)used+=v.length;});
+            const kb = Math.round(used/1024);
+            if(kb > 0) return <span style={{fontSize:9,color:"var(--text-muted)",marginLeft:4}}>{kb}KB used</span>;
+          } catch(e){}
+          return null;
+        })()}
         {saveMsg&&<span style={{fontSize:10,color:"#4cc8e0",marginLeft:8,fontStyle:"italic"}}>{saveMsg}</span>}
       </div>
 
