@@ -302,7 +302,7 @@ const SKILL_TREES = [
     id:"marksmanship", name:"Marksmanship", type:"physical",
     desc:"Ranged weapons using STR/DEX. Adept: proficiency. Master perk: Eagle Eye, Overwatch, or Barbed Shots.",
     masterPerks:[
-      {name:"Eagle Eye",    desc:"Use Dexterity for Ranged Weapon damage instead of Strength."},
+      {name:"Eagle Eye",    desc:"Use Dexterity for Ranged Weapon damage instead of Strength. Critical hits with ranged weapons deal an additional Dexterity die of damage."},
       {name:"Overwatch",    desc:"Attacks of Opportunity with Ranged Weapons at half range (double cost enhancers)."},
       {name:"Barbed Shots", desc:"Ranged HP damage applies 2 stacks of Bleed (Aggravate on crit)."},
     ],
@@ -325,7 +325,7 @@ const SKILL_TREES = [
           {name:"Hunter's Discharge",             cost:"4 Stamina", desc:"+2 Accuracy & +2 Damage. Ranged only."},
           {name:"Hunter's Mark",                  cost:"1 Action",  desc:"Mark target; +2 Accuracy vs them next round."},
           {name:"Stalker's Shot",                 cost:"4 Stamina", desc:"+1 Acc; HP dmg → 1 Bleed. Ranged. Attack Enhancer."},
-          {name:"Arrow Volley",                   cost:"2 Actions", desc:"AoE in 15ft radius at Bow's range. Bows only."},
+          {name:"Arrow Volley",                   cost:"2 Actions", desc:"AoE in 10ft radius at Bow's range. Bows only."},
           {name:"Unload",                         cost:"2 Actions", desc:"Empty clip in 5ft cloak at half range. Trigger weapons only."},
           {name:"Crippling Shot",                 cost:"4 Stamina", desc:"HP dmg → 1 Cripple (2 on crit) + Aggravate DoTs. Bow/Crossbow. Attack Enhancer."},
         ],
@@ -428,7 +428,7 @@ const SKILL_TREES = [
     id:"martial_arts", name:"Martial Arts", type:"physical",
     desc:"Unarmed & utility maneuvers. Master perk: Style Master, Enduring Warrior, or Disciplined Fighter.",
     masterPerks:[
-      {name:"Style Master",        desc:"Use 3 Attack Enhancers per phase (most expensive at 2x cost). 2-round CD."},
+      {name:"Style Master",        desc:"Use 3 Attack Enhancers per phase (most expensive at 2x cost)."},
       {name:"Enduring Warrior",    desc:"+10 max DS cap; regain 5 DS at start of each Upkeep Phase."},
       {name:"Disciplined Fighter", desc:"Halve the cost of 1 attack enhancer each attack phase."},
     ],
@@ -463,6 +463,7 @@ const SKILL_TREES = [
           {name:"Deflect",                cost:"4 Stam + Guard Stance", desc:"3-space line deflects Projectiles to Glancing; Block/Dodge → Reflect (1 Stam). Shield required."},
           {name:"Practiced Stance",        cost:"4 Stam / 2 upkeep", desc:"+1 Accuracy & Primary Damage."},
           {name:"Clairvoyance",            cost:"1 Action (2 Stam/attack)", desc:"Advantage on next attack phase."},
+          {name:"Swift Jabs",              cost:"4 Stamina", desc:"+4 Accuracy. Fist weapons only. Attack Enhancer. Progresses into Flicker Jabs."},
           {name:"Unarmored Style",         cost:"Passive (No Armor)", desc:"+2 Parry; Upkeep Phase start → regain 1 Vigor dice Stamina."},
         ],
       },
@@ -684,7 +685,7 @@ const SKILL_TREES = [
       {name:"Adept Earth Manipulation",cost:"Active",desc:"2d6 + Mind Physical Damage."},
       {name:"Adept Wind Manipulation",cost:"Active",desc:"+3 Accuracy. 2d6 + Mind Wind Damage."},
       {name:"Adept Lightning Manipulation",cost:"Active",desc:"2d6 + Mind Lightning Damage. +2 critical range. Can crit. Has Deadly property."},
-      {name:"Elemental Rain",cost:"2-3 Actions",desc:"20ft radius AoE (30ft with 3rd Action) of Novice Elemental Manipulation. Requires an Adept Manipulation known."},
+      {name:"Elemental Rain",cost:"2-3 Actions",desc:"10ft radius AoE (15ft with 3rd Action) of Novice Elemental Manipulation. Requires an Adept Manipulation known."},
       {name:"Charge Weapon",cost:"Touch Magic",desc:"5ft cloak during attack phase dealing 1d6+Mind Elemental Damage to surrounding enemies."},
       {name:"Elemental Cloak",cost:"4 Mana/round upkeep",desc:"Deal Mind worth of Elemental Damage to all units within 5ft each turn. Magical augment."},
       {name:"Elemental Wall",cost:"Active",desc:"4-space wall: 1d6 elemental damage on contact for 3 turns. Earth variant: solid wall 10 HP/tile (20 with Earth Soul)."},
@@ -722,7 +723,7 @@ const SKILL_TREES = [
       {name:"Thunderstruck",cost:"3 Mana upkeep",desc:"Self buff: +2 Spell Power, +1 Crit Range. Pay 8 Mana to gain another Action. (Thunderous Soul required)", requiresSoul:"Thunderous Soul"},
       {name:"Quantum Strike",cost:"1 Action",desc:"Magical Augment. Next single attack gains Advantage, +1 Crit, Fatal Quality. (Thunderous Soul required)", requiresSoul:"Thunderous Soul"},
       {name:"Overcharge Weapon",cost:"Touch Magic",desc:"5ft cloak during attack phase dealing 2d6+Mind Elemental Damage to surrounding enemies."},
-      {name:"Elemental Storm",cost:"2-3 Actions",desc:"20ft radius AoE (30ft with 3rd Action) of Adept Elemental Manipulation. Destroys all terrain hit. Requires Master Manipulation."},
+      {name:"Elemental Storm",cost:"2-3 Actions",desc:"15ft radius AoE (20ft with 3rd Action) of Adept Elemental Manipulation. Destroys all terrain hit. Requires Master Manipulation."},
       {name:"Weather Manipulation",cost:"Full Action",desc:"Change the battlefield Weather to any type for 1 minute."}
     ] },
     },
@@ -3425,7 +3426,7 @@ function StepSummary({char,setChar,derived,totalSP}){
               return <div style={{fontSize:11,color:"var(--text-muted)",fontStyle:"italic",textAlign:"center",padding:"16px 0"}}>No ranged weapon equipped. Equip a ranged weapon in the Equipment tab.</div>;
             }
             return <>{mainBlock}{offBlock}
-              {hasEagleEye&&<div style={{fontSize:10,color:"var(--text-muted)",marginTop:4,fontStyle:"italic"}}>Eagle Eye: DEX die used for ranged damage.</div>}
+              {hasEagleEye&&<div style={{fontSize:10,color:"var(--text-muted)",marginTop:4,fontStyle:"italic"}}>Eagle Eye: DEX die used for ranged damage. Critical hits deal +1 DEX die bonus damage.</div>}
               {offhandCritBonus>0&&<div style={{fontSize:10,color:"var(--accent-teal)",marginTop:4}}>Off-hand Crit Bonus: +{offhandCritBonus}</div>}
             </>;
           })()}
