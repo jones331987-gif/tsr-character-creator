@@ -282,11 +282,11 @@ const SKILL_TREES = [
           {name:"Masterful CQC Style",      cost:"6 Stam / 3 upkeep", desc:"+3 Accuracy & Primary Damage while active."},
           {name:"Masterful Fencing",        cost:"8 Stamina", desc:"+3 Accuracy, Primary Damage, +1 Crit. Melee. Attack Enhancer."},
           {name:"Overwhelming Stampede",    cost:"1 Action",  desc:"+2 dmg, acc, +STR dice to next attack. Melee."},
-          {name:"Flurry",                   cost:"2-3 Actions", desc:"2-3 attacks at current MAP. Dual Wield only."},
+          {name:"Flurry",                   cost:"2-3 Actions", desc:"2-3 attacks at current MAP. Dual Wield only. -2 Accuracy penalty if either weapon lacks Finesse."},
           {name:"Vicious Smite",            cost:"2-3 Actions", desc:"Single strike adding STR twice/thrice. Two-Handed only."},
           {name:"Stinging Flurry",          cost:"8 Stamina", desc:"+2 Acc; HP dmg → 2 Bleed. Dagger only. Attack Enhancer."},
           {name:"Sever Arteries",           cost:"8 Stamina", desc:"+2 Acc; HP dmg → 2 Bleed. Dual Wield Melee. Attack Enhancer."},
-          {name:"Cross Slash",              cost:"2 Actions", desc:"2 attacks; both hit → Aggravate. Dual Wield."},
+          {name:"Cross Slash",              cost:"2 Actions", desc:"2 attacks; both hit → Aggravate. Dual Wield. -2 Accuracy penalty if either weapon lacks Finesse."},
           {name:"Battle Fury",              cost:"2-3 Actions", desc:"AoE swing + optional Cloak AoE. Two-Handed only."},
           {name:"Overbearing Strikes",      cost:"8 Stamina", desc:"+6 Primary Damage; HP dmg → Rend. Two-Handed. Attack Enhancer."},
           {name:"Exploiting Lunge",         cost:"8 Stamina", desc:"+3 Acc, +1 Reach. One-Handed, empty offhand. Attack Enhancer."},
@@ -663,11 +663,11 @@ const SKILL_TREES = [
     masterPerks:[
       {name:"Energy",         desc:"+5 Mana pool. Gain the Redirect spell.", autoSpell:{tier:"adept", name:"Redirect"}},
       {name:"Domination",     desc:"Active spells cost 1 less Mana/round to upkeep. Touch Magic with Anima spells."},
-      {name:"Infernal Soul",  desc:"Attune to Fire. Cannot cast other element types. Unlocks Molten Core, Aspect of the Phoenix, and Hellzone Grenade at master tier."},
-      {name:"Aqua Soul",      desc:"Attune to Water. Cannot cast other element types. Unlocks Precipitation, Flow Like Water, Freeze Time, and Mirror Mirror at master tier."},
-      {name:"Terra Soul",     desc:"Attune to Earth. Cannot cast other element types. Unlocks Sand Embrace (novice), Sand Shield (adept), Sand Fortress, Shining Diamond, and Crystalline Barrier at master tier."},
-      {name:"Vacuum Soul",    desc:"Attune to Wind/Air. Cannot cast other element types. Unlocks Typhoon and Gale Strike at master tier."},
-      {name:"Thunderous Soul",desc:"Attune to Lightning. Cannot cast other element types. Unlocks Instant Transmission, Thunderstruck, and Quantum Strike at master tier."},
+      {name:"Infernal Soul",  desc:"Attune to Fire. Cannot cast other element types. Fire damage you deal adds +1d6 fire damage per hit and always applies +1 extra Searing. You can absorb heat, extinguishing small fires. Unlocks Molten Core, Aspect of the Phoenix at master tier."},
+      {name:"Aqua Soul",      desc:"Attune to Water. Cannot cast other element types. Each successful Water hit deals +1d8 Stamina damage. Breathe underwater and control water state. Unlocks Precipitation, Flow Like Water, Freeze Time, Mirror Mirror at master tier."},
+      {name:"Terra Soul",     desc:"Attune to Earth. Cannot cast other element types. Use Strength for Earth spell Accuracy and Damage; cast Earth spells via Touch Magic. Casting an Earth spell grants 10 Damage Shields (overflow to ally in range). Unlocks Sand Embrace (novice), Sand Shield (adept), Sand Fortress, Shining Diamond, Crystalline Barrier at master tier.", terraStrBased:true},
+      {name:"Vacuum Soul",    desc:"Attune to Wind/Air. Cannot cast other element types. Wind HP damage knocks back 2 spaces (+2 Forced Movement). Sacrifice damage for accuracy on wind attacks (no limit). Flight speed = base move +2. Unlocks Typhoon and Gale Strike at master tier."},
+      {name:"Thunderous Soul",desc:"Attune to Lightning. Cannot cast other element types. Lightning spells and Lightning-enchanted weapons gain the Fatal quality. Unlocks Instant Transmission, Thunderstruck, and Quantum Strike at master tier."},
     ],
     tiers:{
       novice:{ training:{name:"Novice Requiem Training", effect:"spellBonus", key:"AccSpellPower", value:1, desc:"Adds +1 to your Accuracy and Spell Power when casting spells."}, techniques:[
@@ -1739,6 +1739,11 @@ function App() {
   const armorMoveBonus  = parseIntProp(char.equipment.armor?.bonus, "Move");
   const armorMovePenalty= parseIntPropNeg(char.equipment.armor?.bonus, "Move");
   const finalMove = 6 + moveTechBonus + armorMoveBonus + armorMovePenalty;
+  // Winged boon: flight speed 50ft. Vacuum Soul: flight = base move + 2
+  const isWinged = char.boon?.name === "Winged";
+  const isMultiLimbed = char.boon?.name === "Multi-Limbed";
+  const hasVacuumSoul = hasPerk("anima", "Vacuum Soul");
+  const finalFlight = isWinged ? 50 : hasVacuumSoul ? (finalMove + 2) * 5 : 0; // in ft
 
   // Ward — base + boon + jewelry Ward bonus
   const jewelryWardBonus = char.equipment.jewelry.reduce((t,j) => {
@@ -1982,7 +1987,7 @@ function App() {
   };
 
   const gunModAmmoBonus = (char.weaponMods||[]).includes("Extended Magazine") ? 6 : 0;
-  const derived = {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive,boonArmorBonus,boonWardBonus,weaponCritBonus,offhandCritBonus,jewelryWardBonus,jewelrySpellPowerBonus,armorSizeBonus,weaponParryB,weaponReachB,finalSecDmg,finalCC,finalCritRes,catalystAccBonus,catalystCritBonus,offhandAccBonus,slottedSpellNotes,manaAugParry,catalystAttunementBonus};
+  const derived = {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,finalFlight,isWinged,isMultiLimbed,hasVacuumSoul,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive,boonArmorBonus,boonWardBonus,weaponCritBonus,offhandCritBonus,jewelryWardBonus,jewelrySpellPowerBonus,armorSizeBonus,weaponParryB,weaponReachB,finalSecDmg,finalCC,finalCritRes,catalystAccBonus,catalystCritBonus,offhandAccBonus,slottedSpellNotes,manaAugParry,catalystAttunementBonus};
 
   return (
     <div style={{minHeight:"100vh",background:"var(--bg-page-grad)",color:"var(--text-body)",fontFamily:"'Palatino Linotype',Palatino,Georgia,serif",display:"flex",flexDirection:"column"}}>
@@ -3080,7 +3085,7 @@ function StepEquipment({char,setChar,moneyLeft}){
 
 // ─── STEP SUMMARY ─────────────────────────────────────────────────────────────
 function StepSummary({char,setChar,derived,totalSP}){
-  const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive,boonArmorBonus,boonWardBonus,weaponCritBonus,offhandCritBonus,jewelryWardBonus,jewelrySpellPowerBonus,armorSizeBonus,weaponParryB,weaponReachB,finalSecDmg,finalCC,finalCritRes,catalystAccBonus,catalystCritBonus,offhandAccBonus,slottedSpellNotes,manaAugParry,catalystAttunementBonus}=derived;
+  const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,finalFlight,isWinged,isMultiLimbed,hasVacuumSoul,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive,boonArmorBonus,boonWardBonus,weaponCritBonus,offhandCritBonus,jewelryWardBonus,jewelrySpellPowerBonus,armorSizeBonus,weaponParryB,weaponReachB,finalSecDmg,finalCC,finalCritRes,catalystAccBonus,catalystCritBonus,offhandAccBonus,slottedSpellNotes,manaAugParry,catalystAttunementBonus}=derived;
   const fmt = ({die,bonus}) => bonus>0?`${die} (+${bonus})`:bonus<0?`${die} (${bonus})`:die;
   const RANK_LABELS=["","Novice","Adept","Master"];
   const TIERS=["novice","adept","master"];
@@ -3460,6 +3465,8 @@ function StepSummary({char,setChar,derived,totalSP}){
           {[
             ["Size", `${size}`+(armorSizeBonus>0?` (+${armorSizeBonus} armor)`:"")],
             ["Movement", `${finalMove} Space${finalMove!==1?"s":""}${finalMove!==6?` [base 6, net ${finalMove>6?"+":""}${finalMove-6}]`:"" }`],
+            ...(finalFlight>0?[["Flight Speed", `${finalFlight}ft${isWinged?" (Winged)":hasVacuumSoul?" (Vacuum Soul)":""}`, true]]:[]),
+            ...(isMultiLimbed?[["Arms", "4 (Multi-Limbed) — draw/stow up to 4 weapons per action", true]]:[]),
             ["Carry Cap", `${finalStamina} wt`],
             ["Money Left", `${moneyLeft} Silver`, true],
           ].map(([k,v,h])=><Row key={k} label={k} val={v} hi={h}/>)}
@@ -3850,7 +3857,7 @@ function StepLevelUp({char,setChar}){
     // VoA / RoE skill restrictions
     const tree = SKILL_TREES.find(t=>t.id===id);
     if(isVoA && tree?.type==="magic") return c;
-    if(isRoE && ["cqc","savagery","endurance","marksmanship","tactics","martialarts"].includes(id)) return c;
+    if(isRoE && ["cqc","savagery","endurance","marksmanship","tactics","martial_arts"].includes(id)) return c;
     return {...c, skills:{...c.skills,[id]:next}, levelSkillPoints:(c.levelSkillPoints||0)-dir, levelSkillPointsSpent:(c.levelSkillPointsSpent||0)+dir};
   });
 
@@ -3978,7 +3985,7 @@ function StepLevelUp({char,setChar}){
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
               {SKILL_TREES.map(tree=>{
                 const locked=(isVoA&&tree.type==="magic")||
-                  (isRoE&&["cqc","savagery","endurance","marksmanship","tactics","martialarts"].includes(tree.id));
+                  (isRoE&&["cqc","savagery","endurance","marksmanship","tactics","martial_arts"].includes(tree.id));
                 const cur=char.skills[tree.id]||0;
                 const RANK_LABELS=["None","Novice","Adept","Master"];
                 return(
