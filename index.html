@@ -3697,45 +3697,17 @@ function StepSummary({char,setChar,derived,totalSP}){
         <ST style={{margin:0}}>Character Sheet</ST>
         <button onClick={copySheet} style={{...btnS("pri"),padding:"8px 16px",fontSize:11}}>📋 Copy Sheet</button>
       </div>
-      {/* ── Grip toggle (Versatile weapons) + Active Enhancer bar ── */}
+      {/* ── Active Enhancer status bar ── */}
       {(()=>{
-        const wpn = char.equipment.weapon;
-        const isVers = wpn && (wpn.props||"").includes("Versatile");
         const activeEnh = char.activeEnhancers||new Set();
         const activeList = [...activeEnh].filter(n=>ATTACK_ENHANCERS_DATA.some(e=>e.name===n));
-        if(!isVers && activeList.length===0) return null;
+        if(activeList.length===0) return null;
         return (
-          <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
-            {isVers&&(
-              <div style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:"var(--bg-card)",border:"1px solid var(--border-main)",borderRadius:3}}>
-                <span style={{fontSize:9,color:"var(--text-label)",letterSpacing:"0.1em",fontWeight:700}}>GRIP:</span>
-                {["1h","2h"].map(g=>(
-                  <button key={g} onClick={()=>setChar(c=>{
-                    // Clear any active enhancers that required 2H grip when switching to 1H
-                    const newActive = new Set([...(c.activeEnhancers||[])].filter(name=>{
-                      const enh = ATTACK_ENHANCERS_DATA.find(e=>e.name===name);
-                      if(!enh) return false;
-                      const wt = enh.req?.weaponType;
-                      if(g==="1h" && (wt==="2h"||wt==="2h-ranged")) return false;
-                      return true;
-                    }));
-                    return {...c, versatileGrip:g, activeEnhancers:newActive};
-                  })}
-                    style={{padding:"3px 10px",border:`1px solid ${versatileGrip===g?"#c8a84a":"var(--border-main)"}`,borderRadius:3,cursor:"pointer",fontSize:10,fontWeight:versatileGrip===g?700:400,background:versatileGrip===g?"rgba(200,168,74,0.15)":"var(--bg-panel)",color:versatileGrip===g?"#c8a84a":"var(--text-muted)",fontFamily:"inherit",letterSpacing:"0.05em"}}>
-                    {g==="1h"?"One-Hand":"Two-Hand"}
-                  </button>
-                ))}
-                <span style={{fontSize:9,color:"var(--text-muted)",fontStyle:"italic"}}>{wpn.name}</span>
-              </div>
-            )}
-            {activeList.length>0&&(
-              <div style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",background:"rgba(76,200,224,0.06)",border:"1px solid rgba(76,200,224,0.3)",borderRadius:3,flexWrap:"wrap"}}>
-                <span style={{fontSize:9,color:"#4cc8e0",letterSpacing:"0.1em",fontWeight:700,marginRight:2}}>ENHANCERS ON:</span>
-                {activeList.map(n=>(
-                  <span key={n} style={{fontSize:9,padding:"1px 6px",background:"rgba(76,200,224,0.12)",border:"1px solid rgba(76,200,224,0.35)",borderRadius:3,color:"#4cc8e0",fontWeight:600}}>{n}</span>
-                ))}
-              </div>
-            )}
+          <div style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",marginBottom:12,background:"rgba(76,200,224,0.06)",border:"1px solid rgba(76,200,224,0.3)",borderRadius:3,flexWrap:"wrap"}}>
+            <span style={{fontSize:9,color:"#4cc8e0",letterSpacing:"0.1em",fontWeight:700,marginRight:2}}>⚡ ENHANCERS ON:</span>
+            {activeList.map(n=>(
+              <span key={n} style={{fontSize:9,padding:"1px 6px",background:"rgba(76,200,224,0.12)",border:"1px solid rgba(76,200,224,0.35)",borderRadius:3,color:"#4cc8e0",fontWeight:600}}>{n}</span>
+            ))}
           </div>
         );
       })()}
@@ -3874,6 +3846,31 @@ function StepSummary({char,setChar,derived,totalSP}){
 
             return (<>
               {noMelee && <div style={{fontSize:11,color:"var(--text-muted)",fontStyle:"italic",marginBottom:8}}>No melee weapon equipped.</div>}
+              {/* Versatile grip toggle */}
+              {(()=>{
+                const wpn = char.equipment.weapon;
+                if(!wpn || !(wpn.props||"").includes("Versatile")) return null;
+                return (
+                  <div style={{display:"flex",alignItems:"center",gap:6,padding:"6px 10px",marginBottom:10,background:"var(--bg-panel-alt)",border:"1px solid var(--border-main)",borderRadius:3}}>
+                    <span style={{fontSize:9,color:"var(--text-label)",letterSpacing:"0.1em",fontWeight:700,flexShrink:0}}>GRIP — {wpn.name}:</span>
+                    {["1h","2h"].map(g=>(
+                      <button key={g} onClick={()=>setChar(c=>{
+                        const newActive = new Set([...(c.activeEnhancers||[])].filter(name=>{
+                          const enh = ATTACK_ENHANCERS_DATA.find(e=>e.name===name);
+                          if(!enh) return false;
+                          if(g==="1h" && (enh.req?.weaponType==="2h"||enh.req?.weaponType==="2h-ranged")) return false;
+                          return true;
+                        }));
+                        return {...c, versatileGrip:g, activeEnhancers:newActive};
+                      })}
+                        style={{padding:"3px 12px",border:`1px solid ${versatileGrip===g?"#c8a84a":"var(--border-main)"}`,borderRadius:3,cursor:"pointer",fontSize:10,fontWeight:versatileGrip===g?700:400,background:versatileGrip===g?"rgba(200,168,74,0.15)":"var(--bg-panel)",color:versatileGrip===g?"#c8a84a":"var(--text-muted)",fontFamily:"inherit",letterSpacing:"0.05em"}}>
+                        {g==="1h"?"One-Hand ☽":"Two-Hand ⚔"}
+                      </button>
+                    ))}
+                    <span style={{fontSize:9,color:"var(--text-muted)",fontStyle:"italic",marginLeft:4}}>{versatileGrip==="2h"?"2H enhancers available":"2H enhancers locked"}</span>
+                  </div>
+                );
+              })()}
               {mainBlock}{offBlock}
               {(enhancerAcc!==0||enhancerDmg!==0)&&(
                 <div style={{marginBottom:8,padding:"4px 8px",background:"rgba(76,200,224,0.07)",border:"1px solid rgba(76,200,224,0.25)",borderRadius:3,fontSize:10,color:"#4cc8e0",display:"flex",gap:12,flexWrap:"wrap"}}>
@@ -4514,9 +4511,24 @@ function StepSummary({char,setChar,derived,totalSP}){
               {hasDisciplinedFighter&&<span style={{color:"#4cc8e0"}}> ★ Disciplined Fighter: halve 1 cost.</span>}
               {hasMasterMartialTraining&&<span style={{color:"#c8a84a"}}> ★ MMT: Attack Enhancers +1 to all stat bonuses.</span>}
             </div>
-            {versatileNote&&(
-              <div style={{marginBottom:8,padding:"5px 10px",background:"rgba(200,168,74,0.08)",border:"1px solid rgba(200,168,74,0.3)",borderRadius:3,fontSize:10,color:"#c8a84a"}}>
-                ⚔ {versatileNote}
+            {wpn&&(wpn.props||"").includes("Versatile")&&(
+              <div style={{display:"flex",alignItems:"center",gap:6,padding:"6px 10px",marginBottom:8,background:"rgba(200,168,74,0.07)",border:"1px solid rgba(200,168,74,0.3)",borderRadius:3}}>
+                <span style={{fontSize:9,color:"#c8a84a",letterSpacing:"0.1em",fontWeight:700,flexShrink:0}}>GRIP — {wpn.name}:</span>
+                {["1h","2h"].map(g=>(
+                  <button key={g} onClick={()=>setChar(c=>{
+                    const newActive = new Set([...(c.activeEnhancers||[])].filter(name=>{
+                      const enh = ATTACK_ENHANCERS_DATA.find(e=>e.name===name);
+                      if(!enh) return false;
+                      if(g==="1h" && (enh.req?.weaponType==="2h"||enh.req?.weaponType==="2h-ranged")) return false;
+                      return true;
+                    }));
+                    return {...c, versatileGrip:g, activeEnhancers:newActive};
+                  })}
+                    style={{padding:"3px 12px",border:`1px solid ${versatileGrip===g?"#c8a84a":"var(--border-main)"}`,borderRadius:3,cursor:"pointer",fontSize:10,fontWeight:versatileGrip===g?700:400,background:versatileGrip===g?"rgba(200,168,74,0.15)":"var(--bg-panel)",color:versatileGrip===g?"#c8a84a":"var(--text-muted)",fontFamily:"inherit",letterSpacing:"0.05em"}}>
+                    {g==="1h"?"One-Hand ☽":"Two-Hand ⚔"}
+                  </button>
+                ))}
+                <span style={{fontSize:9,color:"var(--text-muted)",fontStyle:"italic",marginLeft:4}}>{versatileGrip==="2h"?"2H enhancers available":"2H enhancers locked"}</span>
               </div>
             )}
             {(totalActiveAcc!==0||totalActiveDmg!==0||totalSpellAcc!==0||totalSecDmg!==0)&&(
