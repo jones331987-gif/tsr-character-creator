@@ -1233,6 +1233,503 @@ const getWeaponHandedness = (w) => {
   return "1h";
 };
 
+// ─── ATTACK ENHANCERS ────────────────────────────────────────────────────────
+// type: "martial" | "spell" | "both"
+// req: null = no requirement. Object with optional fields:
+//   weaponType: "fist" | "1h-melee-empty-offhand" | "2h" | "catalyst" | "throwing"
+//   skill: {id, rank} = requires that skill at that rank
+// statBonuses: {acc, dmg, secDmg, crit} — structured numbers used to apply the
+//   Master Martial Training +1 bonus. Fields present only where relevant.
+// note: additional note text
+const ATTACK_ENHANCERS_DATA = [
+  // ── Universal (available to everyone) ────────────────────────────────────
+  {
+    name: "Power Attack",
+    type: "martial",
+    cost: "1–4 Stamina",
+    effect: "Trade 1–4 Stamina for +1–+2 Damage (every 2 Stamina = +1 Dmg) until end of attack phase.",
+    statBonuses: { dmgLow: 1, dmgHigh: 2 }, // special: scaled
+    req: null,
+    universal: true,
+  },
+  {
+    name: "Take Aim",
+    type: "martial",
+    cost: "2 or 4 Stamina",
+    effect: "Spend 2 or 4 Stamina to gain +1 or +2 Accuracy during an attack phase.",
+    statBonuses: { accLow: 1, accHigh: 2 }, // special: scaled
+    req: null,
+    universal: true,
+  },
+  {
+    name: "Quick Jabs",
+    type: "martial",
+    cost: "4 Stamina",
+    effect: "+2 Accuracy to the attack phase. Fist weapons only.",
+    statBonuses: { acc: 2 },
+    req: { weaponType: "fist" },
+    universal: true,
+  },
+  {
+    name: "Rapid Lunge",
+    type: "martial",
+    cost: "4 Stamina",
+    effect: "+2 Accuracy. One-Handed Melee with empty offhand only.",
+    statBonuses: { acc: 2 },
+    req: { weaponType: "1h-melee-empty-offhand" },
+    universal: true,
+  },
+  {
+    name: "Homing Spell",
+    type: "spell",
+    cost: "4 Mana",
+    effect: "+2 Accuracy for the attack phase. Catalyst required.",
+    statBonuses: { acc: 2 },
+    req: { weaponType: "catalyst" },
+    universal: true,
+  },
+  // ── CQC Techniques ───────────────────────────────────────────────────────
+  {
+    name: "Wild Strikes",
+    type: "martial",
+    cost: "4 Stamina",
+    effect: "+2 Primary Damage (Melee only).",
+    statBonuses: { dmg: 2 },
+    req: { skill: { id: "cqc", rank: 1 }, weaponType: "melee" },
+  },
+  {
+    name: "Measured Strikes",
+    type: "martial",
+    cost: "4 Stamina",
+    effect: "+2 Accuracy (Melee only).",
+    statBonuses: { acc: 2 },
+    req: { skill: { id: "cqc", rank: 1 }, weaponType: "melee" },
+  },
+  {
+    name: "Rudimentary Fencing",
+    type: "martial",
+    cost: "4 Stamina",
+    effect: "+1 Accuracy & +1 Primary Damage. Melee only.",
+    statBonuses: { acc: 1, dmg: 1 },
+    req: { skill: { id: "cqc", rank: 1 }, weaponType: "melee" },
+  },
+  {
+    name: "Improved Power Attack",
+    type: "martial",
+    cost: "4 Stamina",
+    effect: "Power Attack for +3 Primary Damage.",
+    statBonuses: { dmg: 3 },
+    req: { skill: { id: "cqc", rank: 2 } },
+  },
+  {
+    name: "Improved Take Aim",
+    type: "martial",
+    cost: "4 Stamina",
+    effect: "Take Aim for +3 Accuracy.",
+    statBonuses: { acc: 3 },
+    req: { skill: { id: "cqc", rank: 2 } },
+  },
+  {
+    name: "Hamstring Strike",
+    type: "martial",
+    cost: "4 Stamina",
+    effect: "+2 Accuracy; HP damage → Str vs Vig → Slow. Melee.",
+    statBonuses: { acc: 2 },
+    req: { skill: { id: "cqc", rank: 2 }, weaponType: "melee" },
+  },
+  {
+    name: "Practiced Fencing",
+    type: "martial",
+    cost: "4 Stamina",
+    effect: "+2 Accuracy & +2 Primary Damage. Melee.",
+    statBonuses: { acc: 2, dmg: 2 },
+    req: { skill: { id: "cqc", rank: 2 }, weaponType: "melee" },
+  },
+  {
+    name: "Stinging Blow",
+    type: "martial",
+    cost: "4 Stamina",
+    effect: "+1 Acc; HP dmg → 1 Bleed. Dagger only.",
+    statBonuses: { acc: 1 },
+    req: { skill: { id: "cqc", rank: 2 }, weaponType: "dagger" },
+  },
+  {
+    name: "Heavy Strikes",
+    type: "martial",
+    cost: "4 Stamina",
+    effect: "+4 Primary Damage. Two-Handed only.",
+    statBonuses: { dmg: 4 },
+    req: { skill: { id: "cqc", rank: 2 }, weaponType: "2h" },
+  },
+  {
+    name: "Disciplined Power Attack",
+    type: "martial",
+    cost: "4 Stamina",
+    effect: "Power Attack for +4 Primary Damage.",
+    statBonuses: { dmg: 4 },
+    req: { skill: { id: "cqc", rank: 3 } },
+  },
+  {
+    name: "Disciplined Take Aim",
+    type: "martial",
+    cost: "4 Stamina",
+    effect: "Take Aim for +4 Accuracy.",
+    statBonuses: { acc: 4 },
+    req: { skill: { id: "cqc", rank: 3 } },
+  },
+  {
+    name: "Hamstring Slam",
+    type: "martial",
+    cost: "4 Stamina",
+    effect: "+4 Accuracy; HP dmg → Str vs Vig → Root. Melee.",
+    statBonuses: { acc: 4 },
+    req: { skill: { id: "cqc", rank: 3 }, weaponType: "melee" },
+  },
+  {
+    name: "Masterful Fencing",
+    type: "martial",
+    cost: "8 Stamina",
+    effect: "+3 Accuracy, +3 Primary Damage, +1 Crit. Melee.",
+    statBonuses: { acc: 3, dmg: 3, crit: 1 },
+    req: { skill: { id: "cqc", rank: 3 }, weaponType: "melee" },
+  },
+  {
+    name: "Stinging Flurry",
+    type: "martial",
+    cost: "8 Stamina",
+    effect: "+2 Acc; HP dmg → 2 Bleed. Dagger only.",
+    statBonuses: { acc: 2 },
+    req: { skill: { id: "cqc", rank: 3 }, weaponType: "dagger" },
+  },
+  {
+    name: "Sever Arteries",
+    type: "martial",
+    cost: "8 Stamina",
+    effect: "+2 Acc; HP dmg → 2 Bleed. Dual Wield Melee.",
+    statBonuses: { acc: 2 },
+    req: { skill: { id: "cqc", rank: 3 }, weaponType: "dual" },
+  },
+  {
+    name: "Overbearing Strikes",
+    type: "martial",
+    cost: "8 Stamina",
+    effect: "+6 Primary Damage; HP dmg → Rend. Two-Handed.",
+    statBonuses: { dmg: 6 },
+    req: { skill: { id: "cqc", rank: 3 }, weaponType: "2h" },
+  },
+  {
+    name: "Exploiting Lunge",
+    type: "martial",
+    cost: "8 Stamina",
+    effect: "+3 Acc, +1 Reach. One-Handed, empty offhand.",
+    statBonuses: { acc: 3 },
+    req: { skill: { id: "cqc", rank: 3 }, weaponType: "1h-melee-empty-offhand" },
+  },
+  // ── Marksmanship Techniques ───────────────────────────────────────────────
+  {
+    name: "Steady Shot",
+    type: "martial",
+    cost: "4 Stamina",
+    effect: "+2 Accuracy on next ranged attack phase.",
+    statBonuses: { acc: 2 },
+    req: { skill: { id: "marksmanship", rank: 1 }, weaponType: "ranged" },
+  },
+  {
+    name: "Penetrating Shot",
+    type: "martial",
+    cost: "4 Stamina",
+    effect: "+2 Primary Damage on next ranged attack phase.",
+    statBonuses: { dmg: 2 },
+    req: { skill: { id: "marksmanship", rank: 1 }, weaponType: "ranged" },
+  },
+  {
+    name: "Practiced Shot",
+    type: "martial",
+    cost: "4 Stamina",
+    effect: "+1 Acc & +1 Primary Damage. Ranged only.",
+    statBonuses: { acc: 1, dmg: 1 },
+    req: { skill: { id: "marksmanship", rank: 1 }, weaponType: "ranged" },
+  },
+  {
+    name: "Improved Steady Shot",
+    type: "martial",
+    cost: "4 Stamina",
+    effect: "Steady Shot for +3 Accuracy.",
+    statBonuses: { acc: 3 },
+    req: { skill: { id: "marksmanship", rank: 2 }, weaponType: "ranged" },
+  },
+  {
+    name: "Improved Penetrating Shot",
+    type: "martial",
+    cost: "4 Stamina",
+    effect: "Penetrating Shot for +3 Primary Damage.",
+    statBonuses: { dmg: 3 },
+    req: { skill: { id: "marksmanship", rank: 2 }, weaponType: "ranged" },
+  },
+  {
+    name: "Serrated Shot",
+    type: "martial",
+    cost: "4 Stamina",
+    effect: "+1 Acc; HP dmg → 1 Bleed. Throwing weapon only.",
+    statBonuses: { acc: 1 },
+    req: { skill: { id: "marksmanship", rank: 2 }, weaponType: "throwing" },
+  },
+  {
+    name: "Pinning Shot",
+    type: "martial",
+    cost: "4 Stamina",
+    effect: "+2 Accuracy; HP dmg → Root. Ranged.",
+    statBonuses: { acc: 2 },
+    req: { skill: { id: "marksmanship", rank: 2 }, weaponType: "ranged" },
+  },
+  {
+    name: "Practiced Marksmanship",
+    type: "martial",
+    cost: "4 Stamina",
+    effect: "+2 Accuracy & +2 Primary Damage. Ranged.",
+    statBonuses: { acc: 2, dmg: 2 },
+    req: { skill: { id: "marksmanship", rank: 2 }, weaponType: "ranged" },
+  },
+  {
+    name: "Heavy Shot",
+    type: "martial",
+    cost: "4 Stamina",
+    effect: "+4 Primary Damage. Two-Handed ranged only.",
+    statBonuses: { dmg: 4 },
+    req: { skill: { id: "marksmanship", rank: 2 }, weaponType: "2h-ranged" },
+  },
+  {
+    name: "Disciplined Steady Shot",
+    type: "martial",
+    cost: "4 Stamina",
+    effect: "Steady Shot for +4 Accuracy.",
+    statBonuses: { acc: 4 },
+    req: { skill: { id: "marksmanship", rank: 3 }, weaponType: "ranged" },
+  },
+  {
+    name: "Disciplined Penetrating Shot",
+    type: "martial",
+    cost: "4 Stamina",
+    effect: "Penetrating Shot for +4 Primary Damage.",
+    statBonuses: { dmg: 4 },
+    req: { skill: { id: "marksmanship", rank: 3 }, weaponType: "ranged" },
+  },
+  {
+    name: "Masterful Shot",
+    type: "martial",
+    cost: "8 Stamina",
+    effect: "+3 Accuracy, +3 Primary Damage, +1 Crit. Ranged.",
+    statBonuses: { acc: 3, dmg: 3, crit: 1 },
+    req: { skill: { id: "marksmanship", rank: 3 }, weaponType: "ranged" },
+  },
+  {
+    name: "Crippling Shot",
+    type: "martial",
+    cost: "8 Stamina",
+    effect: "+4 Accuracy; HP dmg → Cripple. Ranged.",
+    statBonuses: { acc: 4 },
+    req: { skill: { id: "marksmanship", rank: 3 }, weaponType: "ranged" },
+  },
+  {
+    name: "Armour Pierce",
+    type: "martial",
+    cost: "8 Stamina",
+    effect: "+6 Primary Damage; Rend on hit. Two-Handed ranged.",
+    statBonuses: { dmg: 6 },
+    req: { skill: { id: "marksmanship", rank: 3 }, weaponType: "2h-ranged" },
+  },
+  // ── Void Magic Enhancers ──────────────────────────────────────────────────
+  {
+    name: "Night's Sky",
+    type: "both",
+    cost: "4 Mana",
+    effect: "+2 Primary Damage and Accuracy for the attack phase.",
+    statBonuses: { acc: 2, dmg: 2 },
+    req: { skill: { id: "void", rank: 2 } },
+    note: "Auto-feat from Adept Arcane Training",
+  },
+  {
+    name: "Astra",
+    type: "both",
+    cost: "8 Mana",
+    effect: "+2 Primary Damage & Accuracy, True Hit, +1 Crit. Upgrade of Night's Sky.",
+    statBonuses: { acc: 2, dmg: 2, crit: 1 },
+    req: { skill: { id: "void", rank: 3 } },
+    note: "Auto-feat from Master Arcane Training",
+  },
+  {
+    name: "Psychic Strike",
+    type: "martial",
+    cost: "Free Action",
+    effect: "Extend melee range by 2 spaces with Projectile quality.",
+    req: { skill: { id: "void", rank: 2 }, weaponType: "melee" },
+  },
+  {
+    name: "Soul Vestige",
+    type: "martial",
+    cost: "Free Action",
+    effect: "Extend melee range by 3 spaces with Projectile quality.",
+    req: { skill: { id: "void", rank: 3 }, weaponType: "melee" },
+  },
+  {
+    name: "Telekinetic Strike",
+    type: "martial",
+    cost: "Attack Enhancer",
+    effect: "+2 Secondary Damage to your attack phase.",
+    statBonuses: { secDmg: 2 },
+    req: { skill: { id: "void", rank: 2 } },
+  },
+  {
+    name: "Telekinetic Overload",
+    type: "martial",
+    cost: "Attack Enhancer",
+    effect: "+3 Secondary Damage to your attack phase.",
+    statBonuses: { secDmg: 3 },
+    req: { skill: { id: "void", rank: 3 } },
+  },
+  // ── Anima Magic Enhancers ─────────────────────────────────────────────────
+  {
+    name: "Combustion",
+    type: "spell",
+    cost: "Spell Enhancer",
+    effect: "On a fire spell applying Searing: +1d6 damage and +1 Searing stack.",
+    req: { skill: { id: "anima", rank: 2 } },
+  },
+  {
+    name: "Air Slash",
+    type: "spell",
+    cost: "Free Action",
+    effect: "Extend melee range by 2 spaces with Projectile quality.",
+    req: { skill: { id: "anima", rank: 2 }, weaponType: "melee" },
+  },
+  {
+    name: "Gale Strike",
+    type: "spell",
+    cost: "Free Action",
+    effect: "Extend melee range by 4 spaces with Projectile quality. (Vacuum Soul required)",
+    req: { skill: { id: "anima", rank: 3 }, weaponType: "melee", requiresSoul: "Vacuum Soul" },
+  },
+  {
+    name: "Freeze Time",
+    type: "spell",
+    cost: "Attack/Spell Enhancer",
+    effect: "True Hit and +3 Accuracy on attack phase. (Aqua Soul required)",
+    statBonuses: { acc: 3 },
+    req: { skill: { id: "anima", rank: 3 }, requiresSoul: "Aqua Soul" },
+  },
+  {
+    name: "Quantum Strike",
+    type: "spell",
+    cost: "1 Action",
+    effect: "Magical Augment. Next single attack: Advantage, +1 Crit, Fatal Quality. (Thunderous Soul required)",
+    statBonuses: { crit: 1 },
+    req: { skill: { id: "anima", rank: 3 }, requiresSoul: "Thunderous Soul" },
+  },
+  // ── Martial Arts Techniques ───────────────────────────────────────────────
+  {
+    name: "Precise Strikes",
+    type: "martial",
+    cost: "4 Stamina",
+    effect: "+1 Accuracy & +1 Primary Damage.",
+    statBonuses: { acc: 1, dmg: 1 },
+    req: { skill: { id: "martial_arts", rank: 1 } },
+  },
+  {
+    name: "Precision Strikes",
+    type: "martial",
+    cost: "4 Stamina",
+    effect: "+2 Accuracy & +2 Primary Damage.",
+    statBonuses: { acc: 2, dmg: 2 },
+    req: { skill: { id: "martial_arts", rank: 2 } },
+  },
+  {
+    name: "Swift Jabs",
+    type: "martial",
+    cost: "4 Stamina",
+    effect: "+4 Accuracy. Fist weapons only.",
+    statBonuses: { acc: 4 },
+    req: { skill: { id: "martial_arts", rank: 2 }, weaponType: "fist" },
+  },
+  {
+    name: "Flicker Jabs",
+    type: "martial",
+    cost: "8 Stamina",
+    effect: "+6 Accuracy. Fist weapons only.",
+    statBonuses: { acc: 6 },
+    req: { skill: { id: "martial_arts", rank: 3 }, weaponType: "fist" },
+  },
+  {
+    name: "Surgical Strikes",
+    type: "martial",
+    cost: "8 Stamina",
+    effect: "+2 Accuracy + Pierce quality.",
+    statBonuses: { acc: 2 },
+    req: { skill: { id: "martial_arts", rank: 3 } },
+  },
+  {
+    name: "Bold Stance",
+    type: "martial",
+    cost: "4 Stamina",
+    effect: "+1 Reach; HP dmg → Prone. Two-Handed only.",
+    req: { skill: { id: "martial_arts", rank: 3 }, weaponType: "2h" },
+  },
+  // ── Tactics Techniques ────────────────────────────────────────────────────
+  {
+    name: "Crude Tactical Strike",
+    type: "martial",
+    cost: "4 Stamina",
+    effect: "+1 Accuracy & +1 Primary Damage.",
+    statBonuses: { acc: 1, dmg: 1 },
+    req: { skill: { id: "tactics", rank: 1 } },
+  },
+  {
+    name: "Hamstring Attack",
+    type: "martial",
+    cost: "2 Stamina",
+    effect: "HP damage → Root until target's next turn.",
+    req: { skill: { id: "tactics", rank: 1 } },
+  },
+  {
+    name: "Tactical Strike",
+    type: "martial",
+    cost: "4 Stamina",
+    effect: "+2 Accuracy & +2 Primary Damage.",
+    statBonuses: { acc: 2, dmg: 2 },
+    req: { skill: { id: "tactics", rank: 2 } },
+  },
+  {
+    name: "Master Tactical Strike",
+    type: "martial",
+    cost: "8 Stamina",
+    effect: "+3 Accuracy & +3 Primary Damage.",
+    statBonuses: { acc: 3, dmg: 3 },
+    req: { skill: { id: "tactics", rank: 3 } },
+  },
+  // ── Spellcraft Enhancers ──────────────────────────────────────────────────
+  {
+    name: "Arcane Chains",
+    type: "spell",
+    cost: "Spell Enhancer",
+    effect: "+2 effective Willpower on CC spells.",
+    req: { skill: { id: "spellcraft", rank: 2 } },
+  },
+  {
+    name: "Spell Fractal",
+    type: "spell",
+    cost: "Spell Enhancer",
+    effect: "+2 Accuracy and True Hit for the attack phase.",
+    statBonuses: { acc: 2 },
+    req: { skill: { id: "spellcraft", rank: 3 } },
+  },
+  {
+    name: "Spellblade",
+    type: "spell",
+    cost: "3rd Action + Enhancer Slot",
+    effect: "Touch Magic twice in a single attack. Both spells stack as Secondary Damage.",
+    req: { skill: { id: "spellcraft", rank: 3 } },
+  },
+];
+
 // ─── STEPS ───────────────────────────────────────────────────────────────────
 const STEPS=[
   {id:"identity",   label:"Identity",   icon:"⚔"},
@@ -3698,6 +4195,185 @@ function StepSummary({char,setChar,derived,totalSP}){
           </Card>
         );
       })()}
+      {/* ── Attack & Spell Enhancers Reference ── */}
+      {(()=>{
+        const wpn     = char.equipment.weapon;
+        const offhand = char.equipment.offhand;
+        const cat     = char.equipment.catalyst;
+
+        // Weapon classification helpers
+        const wProps = (w) => w?.props||"";
+        const isMelee    = (w) => w && !wProps(w).includes("Bow(") && !wProps(w).includes("Trigger(") && !wProps(w).includes("Throwing(");
+        const isRanged   = (w) => w && (wProps(w).includes("Bow(")||wProps(w).includes("Trigger(")||wProps(w).includes("Throwing("));
+        const isThrowing = (w) => w && wProps(w).includes("Throwing(");
+        const isTwoHanded  = (w) => w && wProps(w).includes("Two-Handed");
+        const isVersatile  = (w) => w && wProps(w).includes("Versatile");
+        // Versatile counts as 2H when used with no offhand
+        const isEffectively2H = (w) => isTwoHanded(w) || (isVersatile(w) && !offhand);
+        const isDagger = (w) => w?.name==="Dagger";
+        const isFistWeapon = (w) => w && (w.isFist || w.name==="Caestus" || (w.name||"").toLowerCase().includes("fist"));
+        const hasFistTech = Object.values(char.techniques["martial_arts"]||{}).flat()
+          .some(t=>["Novice Brawler","Adept Brawler","Master Brawler"].includes(t));
+        const hasDual  = wpn && offhand && isMelee(wpn) && isMelee(offhand);
+        const has1hMeleeEmptyOH = (wpn && isMelee(wpn) && !isTwoHanded(wpn) && !offhand)
+                                || (wpn && isVersatile(wpn) && !offhand);
+
+        // Soul perks
+        const hasSoulPerk = (name) => {
+          const v = char.masterPerks["anima"];
+          return Array.isArray(v) ? v.includes(name) : v === name;
+        };
+        const hasAquaSoul      = hasSoulPerk("Aqua Soul");
+        const hasVacuumSoul    = hasSoulPerk("Vacuum Soul") || char.hasVacuumSoul;
+        const hasThunderousSoul= hasSoulPerk("Thunderous Soul");
+
+        const meetsSkill = (req) => !req?.skill || (char.skills[req.skill.id]||0) >= req.skill.rank;
+
+        const isPurchased = (enh) => {
+          if(enh.universal) return true;
+          for(const tree of SKILL_TREES){
+            if(Object.values(char.techniques[tree.id]||{}).flat().includes(enh.name)) return true;
+          }
+          for(const tree of SKILL_TREES){
+            for(const tier of ["novice","adept","master"]){
+              const tr = tree.tiers[tier]?.training;
+              if(tr?.autoFeat?.name===enh.name && char.purchasedTrainings.has(`${tree.id}:${tier}`)) return true;
+            }
+          }
+          return false;
+        };
+
+        const meetsWeaponReq = (req) => {
+          if(!req?.weaponType) return true;
+          const wt = req.weaponType;
+          if(wt==="fist")                    return isFistWeapon(wpn) || hasFistTech;
+          if(wt==="melee")                   return isMelee(wpn) || isMelee(offhand);
+          if(wt==="ranged")                  return isRanged(wpn) || isRanged(offhand);
+          if(wt==="throwing")                return isThrowing(wpn) || isThrowing(offhand);
+          if(wt==="2h")                      return isEffectively2H(wpn);
+          if(wt==="2h-ranged")               return isRanged(wpn) && isTwoHanded(wpn);
+          if(wt==="dagger")                  return isDagger(wpn) || isDagger(offhand);
+          if(wt==="dual")                    return hasDual;
+          if(wt==="1h-melee-empty-offhand")  return has1hMeleeEmptyOH;
+          if(wt==="catalyst")                return !!cat;
+          return true;
+        };
+
+        const meetsSoulReq = (req) => {
+          if(!req?.requiresSoul) return true;
+          if(req.requiresSoul==="Aqua Soul")       return hasAquaSoul;
+          if(req.requiresSoul==="Vacuum Soul")     return hasVacuumSoul;
+          if(req.requiresSoul==="Thunderous Soul") return hasThunderousSoul;
+          return false;
+        };
+
+        const available = ATTACK_ENHANCERS_DATA.filter(enh =>
+          isPurchased(enh) && meetsSkill(enh.req) && meetsWeaponReq(enh.req) && meetsSoulReq(enh.req)
+        );
+
+        if(available.length===0) return null;
+
+        const martialOnly  = available.filter(e=>e.type==="martial");
+        const spellOnly    = available.filter(e=>e.type==="spell");
+        const bothList     = available.filter(e=>e.type==="both");
+
+        // Style Master perk: can use 3 Attack Enhancers per phase (most expensive at 2× cost)
+        const hasStyleMaster = (() => {
+          const v = char.masterPerks["martial_arts"];
+          return Array.isArray(v) ? v.includes("Style Master") : v==="Style Master";
+        })();
+        // Disciplined Fighter perk: halve cost of 1 enhancer per phase
+        const hasDisciplinedFighter = (() => {
+          const v = char.masterPerks["martial_arts"];
+          return Array.isArray(v) ? v.includes("Disciplined Fighter") : v==="Disciplined Fighter";
+        })();
+        const maxEnhancers = hasStyleMaster ? 3 : 2;
+
+        const versatileNote = wpn && isVersatile(wpn)
+          ? (offhand
+              ? "Versatile weapon in ONE-HAND grip — Two-Handed enhancers not available."
+              : "Versatile weapon in TWO-HAND grip (no offhand) — Two-Handed enhancers available.")
+          : null;
+
+        // Master Martial Training: Attack Enhancers gain +1 to their stat effectiveness
+        const hasMasterMartialTraining = char.purchasedTrainings.has("martial_arts:master");
+        // Only martial (not pure spell) enhancers get the +1 from Master Martial Training
+        const mmtApplies = (enh) => hasMasterMartialTraining && (enh.type==="martial" || enh.type==="both") && !!enh.statBonuses;
+
+        // Build a boosted effect string replacing numeric bonuses with +1 versions
+        const boostedEffect = (enh) => {
+          if(!mmtApplies(enh)) return null;
+          const b = enh.statBonuses;
+          const parts = [];
+          // Scaled enhancers (Power Attack / Take Aim) get +1 to each tier
+          if(b.accLow  !== undefined) parts.push(`Acc: +${b.accLow+1} / +${b.accHigh+1}`);
+          if(b.dmgLow  !== undefined) parts.push(`Dmg: +${b.dmgLow+1} / +${b.dmgHigh+1}`);
+          if(b.acc     !== undefined) parts.push(`Acc: +${b.acc+1}`);
+          if(b.dmg     !== undefined) parts.push(`Dmg: +${b.dmg+1}`);
+          if(b.secDmg  !== undefined) parts.push(`SecDmg: +${b.secDmg+1}`);
+          if(b.crit    !== undefined) parts.push(`Crit: +${b.crit+1}`);
+          return parts.length ? parts.join(", ") : null;
+        };
+
+        const enhCard = (enh, i) => {
+          const isBoth    = enh.type==="both";
+          const isMartial = enh.type==="martial";
+          const col   = isBoth ? "#c8a84a" : isMartial ? "#4cc8e0" : "#9a70d8";
+          const label = isBoth ? "MARTIAL + SPELL" : isMartial ? "MARTIAL" : "SPELL";
+          const borderCol = isBoth?"rgba(200,168,74,0.4)":isMartial?"rgba(76,200,224,0.35)":"rgba(154,112,216,0.35)";
+          const bgCol     = isBoth?"rgba(200,168,74,0.05)":isMartial?"rgba(76,200,224,0.04)":"rgba(154,112,216,0.04)";
+          const boosted   = boostedEffect(enh);
+          return (
+            <div key={i} style={{padding:"8px 10px",border:`1px solid ${borderCol}`,borderRadius:3,background:bgCol}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:3}}>
+                <span style={{fontSize:11,fontWeight:700,color:col,lineHeight:1.2}}>{enh.name}</span>
+                <span style={{fontSize:8,color:col,background:"var(--bg-tag)",padding:"1px 5px",borderRadius:2,fontWeight:700,letterSpacing:"0.05em",whiteSpace:"nowrap",flexShrink:0,marginLeft:6}}>{label}</span>
+              </div>
+              <div style={{fontSize:9,color:"var(--text-muted)",marginBottom:2}}>
+                Cost: <span style={{color:"var(--text-label)",fontWeight:600}}>{enh.cost}</span>
+              </div>
+              <div style={{fontSize:10,color:"var(--text-label)",lineHeight:1.4}}>{enh.effect}</div>
+              {boosted&&(
+                <div style={{marginTop:4,padding:"3px 7px",background:"rgba(200,168,74,0.12)",border:"1px solid rgba(200,168,74,0.35)",borderRadius:3,fontSize:10,color:"#c8a84a",fontWeight:600}}>
+                  ★ With Master Martial Training: {boosted}
+                </div>
+              )}
+              {enh.note&&<div style={{marginTop:3,fontSize:9,color:"#9a70d8",fontStyle:"italic"}}>{enh.note}</div>}
+              {enh.req?.weaponType==="2h"&&wpn&&isVersatile(wpn)&&!offhand&&(
+                <div style={{marginTop:3,fontSize:9,color:"#c8a84a",fontStyle:"italic"}}>✦ Available: Versatile weapon used two-handed</div>
+              )}
+            </div>
+          );
+        };
+
+        return (
+          <Card title={`Attack & Spell Enhancers (${available.length} available · max ${maxEnhancers} per phase)`}>
+            <div style={{fontSize:10,color:"var(--text-muted)",marginBottom:8,fontStyle:"italic",lineHeight:1.5}}>
+              Up to <strong style={{color:"var(--text-label)"}}>{maxEnhancers} Attack Enhancers</strong> and up to <strong style={{color:"var(--text-label)"}}>2 Spell Enhancers</strong> may be used per attack phase. They apply to all attacks made during that phase.
+              {hasStyleMaster&&<span style={{color:"#c8a84a"}}> ★ Style Master: 3rd Attack Enhancer costs 2× its Stamina.</span>}
+              {hasDisciplinedFighter&&<span style={{color:"#4cc8e0"}}> ★ Disciplined Fighter: halve cost of 1 enhancer per phase.</span>}
+              {hasMasterMartialTraining&&<span style={{color:"#c8a84a"}}> ★ Master Martial Training: all Attack Enhancers gain +1 to their stat bonuses.</span>}
+            </div>
+            {versatileNote&&(
+              <div style={{marginBottom:8,padding:"5px 10px",background:"rgba(200,168,74,0.08)",border:"1px solid rgba(200,168,74,0.3)",borderRadius:3,fontSize:10,color:"#c8a84a"}}>
+                ⚔ {versatileNote}
+              </div>
+            )}
+            <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}}>
+              {martialOnly.length>0&&<span style={{fontSize:9,padding:"2px 7px",background:"rgba(76,200,224,0.1)",border:"1px solid rgba(76,200,224,0.3)",borderRadius:3,color:"#4cc8e0",fontWeight:700}}>⚔ {martialOnly.length} Martial</span>}
+              {spellOnly.length>0&&<span style={{fontSize:9,padding:"2px 7px",background:"rgba(154,112,216,0.1)",border:"1px solid rgba(154,112,216,0.3)",borderRadius:3,color:"#9a70d8",fontWeight:700}}>✦ {spellOnly.length} Spell</span>}
+              {bothList.length>0&&<span style={{fontSize:9,padding:"2px 7px",background:"rgba(200,168,74,0.1)",border:"1px solid rgba(200,168,74,0.3)",borderRadius:3,color:"#c8a84a",fontWeight:700}}>◆ {bothList.length} Both</span>}
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+              {available.map((enh,i)=>enhCard(enh,i))}
+            </div>
+            <div style={{marginTop:10,paddingTop:8,borderTop:"1px solid var(--border-row)",fontSize:10,color:"var(--text-muted)",lineHeight:1.6}}>
+              <strong style={{color:"var(--text-label)"}}>Rules reminder:</strong> Attack Enhancers only boost Primary Damage (weapon) attacks. Spell Enhancers only boost Spell Power attacks. Night's Sky &amp; Astra boost both. Reckless Tossout cannot benefit from any enhancers.
+            </div>
+          </Card>
+        );
+      })()}
+
       {/* Skills with techniques */}
       <Card title="Skills, Techniques & Master Perks">
         {SKILL_TREES.filter(t=>char.skills[t.id]>0).length===0
