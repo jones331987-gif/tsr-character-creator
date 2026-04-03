@@ -1923,12 +1923,15 @@ const EMPTY_CHAR = {
   // Off-hand add-ons
   offhandRune:null, offhandSpell:null, offhandMithril:false, offhandMods:[],
   money:500,
+  // Summary combat toggles
+  activeEnhancers: new Set(), // Set of enhancer names currently toggled ON
+  versatileGrip: "1h",        // "1h" | "2h" — only relevant for Versatile weapons
 };
 
 // Serialize Set → array for storage/export
-const charToJSON = (c) => ({...c, purchasedTrainings: [...(c.purchasedTrainings||[])], slottedTechniques: [...(c.slottedTechniques||[])], slottedSpells: [...(c.slottedSpells||[])], activeTechBuffs: [...(c.activeTechBuffs||[])]});
+const charToJSON = (c) => ({...c, purchasedTrainings: [...(c.purchasedTrainings||[])], slottedTechniques: [...(c.slottedTechniques||[])], slottedSpells: [...(c.slottedSpells||[])], activeTechBuffs: [...(c.activeTechBuffs||[])], activeEnhancers: [...(c.activeEnhancers||[])]});
 // Restore array → Set on load
-const charFromJSON = (obj) => ({...EMPTY_CHAR, ...obj, purchasedTrainings: new Set(obj.purchasedTrainings||[]), slottedTechniques: new Set(obj.slottedTechniques||[]), slottedSpells: new Set(obj.slottedSpells||[]), activeTechBuffs: new Set(obj.activeTechBuffs||[])});
+const charFromJSON = (obj) => ({...EMPTY_CHAR, ...obj, purchasedTrainings: new Set(obj.purchasedTrainings||[]), slottedTechniques: new Set(obj.slottedTechniques||[]), slottedSpells: new Set(obj.slottedSpells||[]), activeTechBuffs: new Set(obj.activeTechBuffs||[]), activeEnhancers: new Set(obj.activeEnhancers||[])});
 
 const SAVE_SLOTS = ["slot_1","slot_2","slot_3","slot_4","slot_5"];
 
@@ -2420,8 +2423,64 @@ function App() {
   })();
   const savageFightingBonus = hasSavageFighting ? unarmoredParryBonus : 0;
 
-  const accBonus  = trainBonuses.Acc + slottedTechBonuses.Acc + boonOffensive + weaponAccBonus + offhandAccBonus + jewelryAccBonus;
-  const dmgBonus  = trainBonuses.PrimDmg + slottedTechBonuses.PrimDmg + boonOffensive + weaponDmgBonus + jewelryDmgBonus + sizeB.primDmg + savageFightingBonus;
+  // ── Active Enhancer bonuses ─────────────────────────────────────────────
+  // Compute the acc/dmg/secDmg/spellAcc bonus from currently toggled enhancers.
+  // Master Martial Training gives +1 to each stat bonus on martial/both enhancers.
+  const hasMasterMartialTrainingGlobal = char.purchasedTrainings.has("martial_arts:master");
+  const enhancerAcc      = (() => {
+    let tot = 0;
+    (char.activeEnhancers||new Set()).forEach(name => {
+      const enh = ATTACK_ENHANCERS_DATA.find(e=>e.name===name);
+      if(!enh?.statBonuses) return;
+      const mmt = hasMasterMartialTrainingGlobal && (enh.type==="martial"||enh.type==="both") ? 1 : 0;
+      const b = enh.statBonuses;
+      if(b.acc      !== undefined) tot += b.acc + mmt;
+      if(b.accHigh  !== undefined) tot += b.accHigh + mmt; // use max tier for display
+    });
+    return tot;
+  })();
+  const enhancerDmg      = (() => {
+    let tot = 0;
+    (char.activeEnhancers||new Set()).forEach(name => {
+      const enh = ATTACK_ENHANCERS_DATA.find(e=>e.name===name);
+      if(!enh?.statBonuses) return;
+      const mmt = hasMasterMartialTrainingGlobal && (enh.type==="martial"||enh.type==="both") ? 1 : 0;
+      const b = enh.statBonuses;
+      if(b.dmg      !== undefined) tot += b.dmg + mmt;
+      if(b.dmgHigh  !== undefined) tot += b.dmgHigh + mmt;
+    });
+    return tot;
+  })();
+  const enhancerSpellAcc = (() => {
+    let tot = 0;
+    (char.activeEnhancers||new Set()).forEach(name => {
+      const enh = ATTACK_ENHANCERS_DATA.find(e=>e.name===name);
+      if(!enh?.statBonuses) return;
+      // spell and both type enhancers contribute to spell acc
+      if(enh.type==="spell"||enh.type==="both") {
+        const b = enh.statBonuses;
+        if(b.acc !== undefined) tot += b.acc;
+        if(b.accHigh !== undefined) tot += b.accHigh;
+      }
+    });
+    return tot;
+  })();
+  const enhancerSecDmg   = (() => {
+    let tot = 0;
+    (char.activeEnhancers||new Set()).forEach(name => {
+      const enh = ATTACK_ENHANCERS_DATA.find(e=>e.name===name);
+      if(!enh?.statBonuses?.secDmg) return;
+      const mmt = hasMasterMartialTrainingGlobal && (enh.type==="martial"||enh.type==="both") ? 1 : 0;
+      tot += enh.statBonuses.secDmg + mmt;
+    });
+    return tot;
+  })();
+
+  // Versatile grip — affects whether 2H enhancers are available and weapon bonus
+  const versatileGrip = char.versatileGrip || "1h";
+
+  const accBonus  = trainBonuses.Acc + slottedTechBonuses.Acc + boonOffensive + weaponAccBonus + offhandAccBonus + jewelryAccBonus + enhancerAcc;
+  const dmgBonus  = trainBonuses.PrimDmg + slottedTechBonuses.PrimDmg + boonOffensive + weaponDmgBonus + jewelryDmgBonus + sizeB.primDmg + savageFightingBonus + enhancerDmg;
   // Brute: use STR for melee accuracy die. Eagle Eye: use DEX for ranged dmg die. Primal Mass: use VIG for melee dmg die.
   const meleeAccDie = hasBrute ? char.stats.Strength : char.stats.Dexterity;
   const meleeDmgDie = hasPrimalMass ? char.stats.Vigor : char.stats.Strength;
@@ -2429,7 +2488,7 @@ function App() {
   const finalMeleeDmg = { die: meleeDmgDie, bonus: dmgBonus };
   // Spell attack: Accuracy = Mind die. Spell Power = Mind die + spell's own dice (spell dice shown at cast time).
   const catalystAttunementBonus = (slottedSpellBonuses.SpellAcc > 0 && char.equipment.catalyst) ? slottedSpellBonuses.SpellAcc : 0;
-  const finalSpellAcc = { die: char.stats.Mind, bonus: (trainBonuses.SpellAcc||0) + catalystAccBonus + catalystAttunementBonus };
+  const finalSpellAcc = { die: char.stats.Mind, bonus: (trainBonuses.SpellAcc||0) + catalystAccBonus + catalystAttunementBonus + enhancerSpellAcc };
   const finalSpellPower = { die: char.stats.Mind, bonus: boonOffensive + (trainBonuses.SpellPower||0) };
   const finalSecDmg = trainBonuses.SecDmg || 0;
   const finalCC     = trainBonuses.CC || 0;
@@ -2487,7 +2546,7 @@ function App() {
   };
 
   const gunModAmmoBonus = (char.weaponMods||[]).includes("Extended Magazine") ? 6 : 0;
-  const derived = {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,finalFlight,isWinged,isMultiLimbed,hasVacuumSoul,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive,boonArmorBonus,boonWardBonus,weaponCritBonus,offhandCritBonus,jewelryWardBonus,jewelrySpellPowerBonus,armorSizeBonus,weaponParryB,weaponReachB,finalSecDmg,finalCC,finalCritRes,catalystAccBonus,catalystCritBonus,offhandAccBonus,slottedSpellNotes,manaAugParry,catalystAttunementBonus};
+  const derived = {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,finalFlight,isWinged,isMultiLimbed,hasVacuumSoul,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive,boonArmorBonus,boonWardBonus,weaponCritBonus,offhandCritBonus,jewelryWardBonus,jewelrySpellPowerBonus,armorSizeBonus,weaponParryB,weaponReachB,finalSecDmg,finalCC,finalCritRes,catalystAccBonus,catalystCritBonus,offhandAccBonus,slottedSpellNotes,manaAugParry,catalystAttunementBonus,enhancerAcc,enhancerDmg,enhancerSpellAcc,enhancerSecDmg,versatileGrip,hasMasterMartialTrainingGlobal};
 
   return (
     <div style={{minHeight:"100vh",background:"var(--bg-page-grad)",color:"var(--text-body)",fontFamily:"'Palatino Linotype',Palatino,Georgia,serif",display:"flex",flexDirection:"column"}}>
@@ -3585,7 +3644,7 @@ function StepEquipment({char,setChar,moneyLeft}){
 
 // ─── STEP SUMMARY ─────────────────────────────────────────────────────────────
 function StepSummary({char,setChar,derived,totalSP}){
-  const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,finalFlight,isWinged,isMultiLimbed,hasVacuumSoul,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive,boonArmorBonus,boonWardBonus,weaponCritBonus,offhandCritBonus,jewelryWardBonus,jewelrySpellPowerBonus,armorSizeBonus,weaponParryB,weaponReachB,finalSecDmg,finalCC,finalCritRes,catalystAccBonus,catalystCritBonus,offhandAccBonus,slottedSpellNotes,manaAugParry,catalystAttunementBonus}=derived;
+  const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,finalFlight,isWinged,isMultiLimbed,hasVacuumSoul,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive,boonArmorBonus,boonWardBonus,weaponCritBonus,offhandCritBonus,jewelryWardBonus,jewelrySpellPowerBonus,armorSizeBonus,weaponParryB,weaponReachB,finalSecDmg,finalCC,finalCritRes,catalystAccBonus,catalystCritBonus,offhandAccBonus,slottedSpellNotes,manaAugParry,catalystAttunementBonus,enhancerAcc,enhancerDmg,enhancerSpellAcc,enhancerSecDmg,versatileGrip,hasMasterMartialTrainingGlobal}=derived;
   const fmt = ({die,bonus}) => bonus>0?`${die} (+${bonus})`:bonus<0?`${die} (${bonus})`:die;
   const RANK_LABELS=["","Novice","Adept","Master"];
   const TIERS=["novice","adept","master"];
@@ -3638,6 +3697,48 @@ function StepSummary({char,setChar,derived,totalSP}){
         <ST style={{margin:0}}>Character Sheet</ST>
         <button onClick={copySheet} style={{...btnS("pri"),padding:"8px 16px",fontSize:11}}>📋 Copy Sheet</button>
       </div>
+      {/* ── Grip toggle (Versatile weapons) + Active Enhancer bar ── */}
+      {(()=>{
+        const wpn = char.equipment.weapon;
+        const isVers = wpn && (wpn.props||"").includes("Versatile");
+        const activeEnh = char.activeEnhancers||new Set();
+        const activeList = [...activeEnh].filter(n=>ATTACK_ENHANCERS_DATA.some(e=>e.name===n));
+        if(!isVers && activeList.length===0) return null;
+        return (
+          <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
+            {isVers&&(
+              <div style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:"var(--bg-card)",border:"1px solid var(--border-main)",borderRadius:3}}>
+                <span style={{fontSize:9,color:"var(--text-label)",letterSpacing:"0.1em",fontWeight:700}}>GRIP:</span>
+                {["1h","2h"].map(g=>(
+                  <button key={g} onClick={()=>setChar(c=>{
+                    // Clear any active enhancers that required 2H grip when switching to 1H
+                    const newActive = new Set([...(c.activeEnhancers||[])].filter(name=>{
+                      const enh = ATTACK_ENHANCERS_DATA.find(e=>e.name===name);
+                      if(!enh) return false;
+                      const wt = enh.req?.weaponType;
+                      if(g==="1h" && (wt==="2h"||wt==="2h-ranged")) return false;
+                      return true;
+                    }));
+                    return {...c, versatileGrip:g, activeEnhancers:newActive};
+                  })}
+                    style={{padding:"3px 10px",border:`1px solid ${versatileGrip===g?"#c8a84a":"var(--border-main)"}`,borderRadius:3,cursor:"pointer",fontSize:10,fontWeight:versatileGrip===g?700:400,background:versatileGrip===g?"rgba(200,168,74,0.15)":"var(--bg-panel)",color:versatileGrip===g?"#c8a84a":"var(--text-muted)",fontFamily:"inherit",letterSpacing:"0.05em"}}>
+                    {g==="1h"?"One-Hand":"Two-Hand"}
+                  </button>
+                ))}
+                <span style={{fontSize:9,color:"var(--text-muted)",fontStyle:"italic"}}>{wpn.name}</span>
+              </div>
+            )}
+            {activeList.length>0&&(
+              <div style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",background:"rgba(76,200,224,0.06)",border:"1px solid rgba(76,200,224,0.3)",borderRadius:3,flexWrap:"wrap"}}>
+                <span style={{fontSize:9,color:"#4cc8e0",letterSpacing:"0.1em",fontWeight:700,marginRight:2}}>ENHANCERS ON:</span>
+                {activeList.map(n=>(
+                  <span key={n} style={{fontSize:9,padding:"1px 6px",background:"rgba(76,200,224,0.12)",border:"1px solid rgba(76,200,224,0.35)",borderRadius:3,color:"#4cc8e0",fontWeight:600}}>{n}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
         <Card title="Identity">
           {char.portrait&&(
@@ -3675,8 +3776,8 @@ function StepSummary({char,setChar,derived,totalSP}){
               if(runeN === "Demon") wpnAcc += 2;
               // Master Brawler style choice: +1 Acc (or +1 Dmg — default to Acc for display)
               if(wpn.isFist && hasMasterBrawler) wpnAcc += 1;
-              // shared bonuses (training, tech slots, jewelry, boon) — already in accBonus but we recompute without weapon to show breakdown
-              const sharedAcc = trainBonuses.Acc + slottedTechBonuses.Acc + boonOffensive + jewelryAccBonus;
+              // shared bonuses (training, tech slots, jewelry, boon, active enhancers)
+              const sharedAcc = trainBonuses.Acc + slottedTechBonuses.Acc + boonOffensive + jewelryAccBonus + (!ohSlot ? enhancerAcc : 0);
               const totalAcc = sharedAcc + wpnAcc;
 
               // Dmg die
@@ -3684,7 +3785,7 @@ function StepSummary({char,setChar,derived,totalSP}){
               const wpnDmgBase = wpn.props?.match(/Dmg\+(\d+)/);
               let wpnDmg = wpnDmgBase ? parseInt(wpnDmgBase[1]) : 0;
               if(mithrilOn && !isGun) wpnDmg += 1;
-              const sharedDmg = trainBonuses.PrimDmg + slottedTechBonuses.PrimDmg + boonOffensive + jewelryDmgBonus + sizeB.primDmg + (!ohSlot?savageFightingBonus:0);
+              const sharedDmg = trainBonuses.PrimDmg + slottedTechBonuses.PrimDmg + boonOffensive + jewelryDmgBonus + sizeB.primDmg + (!ohSlot?savageFightingBonus:0) + (!ohSlot ? enhancerDmg : 0);
               const totalDmg = sharedDmg + wpnDmg;
 
               // Dmg formula from weapon
@@ -3774,6 +3875,13 @@ function StepSummary({char,setChar,derived,totalSP}){
             return (<>
               {noMelee && <div style={{fontSize:11,color:"var(--text-muted)",fontStyle:"italic",marginBottom:8}}>No melee weapon equipped.</div>}
               {mainBlock}{offBlock}
+              {(enhancerAcc!==0||enhancerDmg!==0)&&(
+                <div style={{marginBottom:8,padding:"4px 8px",background:"rgba(76,200,224,0.07)",border:"1px solid rgba(76,200,224,0.25)",borderRadius:3,fontSize:10,color:"#4cc8e0",display:"flex",gap:12,flexWrap:"wrap"}}>
+                  <span style={{fontWeight:700,letterSpacing:"0.05em"}}>⚡ ENHANCERS</span>
+                  {enhancerAcc!==0&&<span>Acc: <strong>+{enhancerAcc}</strong></span>}
+                  {enhancerDmg!==0&&<span>Dmg: <strong>+{enhancerDmg}</strong></span>}
+                </div>
+              )}
               {[
                 ["Reach", `${finalReach} space${finalReach>1?"s":""}${weaponReachB>0?` (+${weaponReachB})`:""}${size>=2?" (size 2+)":""}`],
                 ["Parry", `${finalParry}`+(weaponParryB>0?` (+${weaponParryB} wpn)`:"")+(size>1?` (${sizeB.parry} size)`:"")+((char.equipment.offhand?.parry)?` (+${char.equipment.offhand.parry} shield)`:""), true],
@@ -3824,7 +3932,7 @@ function StepSummary({char,setChar,derived,totalSP}){
               // Rune acc bonuses
               if(runeN === "Rune of Wind") wpnAcc += 1;
               if(runeN === "Demon") wpnAcc += 2;
-              const sharedAcc = trainBonuses.Acc + slottedTechBonuses.Acc + boonOffensive + jewelryAccBonus;
+              const sharedAcc = trainBonuses.Acc + slottedTechBonuses.Acc + boonOffensive + jewelryAccBonus + (!ohSlot ? enhancerAcc : 0);
               const totalAcc = sharedAcc + wpnAcc;
 
               // Damage die: STR normally, DEX if Eagle Eye (main hand only)
@@ -3833,7 +3941,7 @@ function StepSummary({char,setChar,derived,totalSP}){
               let wpnDmg = wpnDmgBase ? parseInt(wpnDmgBase[1]) : 0;
               if(!isGun && mithrilOn) wpnDmg += 1;
               const hasHighCaliber = modsArr.includes("High Caliber");
-              const sharedDmg = trainBonuses.PrimDmg + slottedTechBonuses.PrimDmg + boonOffensive + jewelryDmgBonus + sizeB.primDmg;
+              const sharedDmg = trainBonuses.PrimDmg + slottedTechBonuses.PrimDmg + boonOffensive + jewelryDmgBonus + sizeB.primDmg + (!ohSlot ? enhancerDmg : 0);
               const totalDmg = sharedDmg + wpnDmg;
 
               // Damage formula — apply High Caliber die step before displaying
@@ -3931,6 +4039,13 @@ function StepSummary({char,setChar,derived,totalSP}){
               return <div style={{fontSize:11,color:"var(--text-muted)",fontStyle:"italic",textAlign:"center",padding:"16px 0"}}>No ranged weapon equipped. Equip a ranged weapon in the Equipment tab.</div>;
             }
             return <>{mainBlock}{offBlock}
+              {(enhancerAcc!==0||enhancerDmg!==0)&&(
+                <div style={{marginTop:6,padding:"4px 8px",background:"rgba(76,200,224,0.07)",border:"1px solid rgba(76,200,224,0.25)",borderRadius:3,fontSize:10,color:"#4cc8e0",display:"flex",gap:12,flexWrap:"wrap"}}>
+                  <span style={{fontWeight:700,letterSpacing:"0.05em"}}>⚡ ENHANCERS</span>
+                  {enhancerAcc!==0&&<span>Acc: <strong>+{enhancerAcc}</strong></span>}
+                  {enhancerDmg!==0&&<span>Dmg: <strong>+{enhancerDmg}</strong></span>}
+                </div>
+              )}
               {hasEagleEye&&<div style={{fontSize:10,color:"var(--text-muted)",marginTop:4,fontStyle:"italic"}}>Eagle Eye: DEX die used for ranged damage. Critical hits deal +1 DEX die bonus damage.</div>}
               {offhandCritBonus>0&&<div style={{fontSize:10,color:"var(--accent-teal)",marginTop:4}}>Off-hand Crit Bonus: +{offhandCritBonus}</div>}
             </>;
@@ -3939,10 +4054,10 @@ function StepSummary({char,setChar,derived,totalSP}){
         <Card title="Spell Attack">
           {[
             ["Spell Range", `${finalSpellRange} spaces (2 + ${STAT_CHAIN.indexOf(char.stats.Mind)} Mind + ${STAT_CHAIN.indexOf(char.stats.Willpower)} WIL)`, true],
-            ["Attack Spell Accuracy", fmt(finalSpellAcc)+" (Mind)", true],
+            ["Attack Spell Accuracy", fmt(finalSpellAcc)+(enhancerSpellAcc>0?" [+"+enhancerSpellAcc+" enhancers]":"")+" (Mind)", true],
             ["Attack Spell Power", `${finalSpellPower.die} + Spell Dice${finalSpellPower.bonus+jewelrySpellPowerBonus>0?" (+"+(finalSpellPower.bonus+jewelrySpellPowerBonus)+")":""}`, true],
             ...(catalystCritBonus>0?[["Spell Crit Bonus", `+${catalystCritBonus}`, true]]:[]),
-            ...(finalSecDmg>0?[["Secondary Damage Bonus", `+${finalSecDmg}`, true]]:[]),
+            ...(finalSecDmg+enhancerSecDmg>0?[["Secondary Damage Bonus", `+${finalSecDmg+enhancerSecDmg}${enhancerSecDmg>0?" (incl. +"+enhancerSecDmg+" enhancer)":""}`, true]]:[]),
             ["CC / Save Spell Stat", `${char.stats.Willpower} (Willpower)${finalCC>0?" (+"+finalCC+" CC)":""}`, true],
             ...(manaAugParry>0?[["Mana Aug. Parry", `+${manaAugParry} (Mind/2)`, true]]:[]),
             ["Mana Cost Discount", "−1 mana with 1+ free hand"],
@@ -4208,15 +4323,15 @@ function StepSummary({char,setChar,derived,totalSP}){
         const isThrowing = (w) => w && wProps(w).includes("Throwing(");
         const isTwoHanded  = (w) => w && wProps(w).includes("Two-Handed");
         const isVersatile  = (w) => w && wProps(w).includes("Versatile");
-        // Versatile counts as 2H when used with no offhand
-        const isEffectively2H = (w) => isTwoHanded(w) || (isVersatile(w) && !offhand);
+        // Versatile counts as 2H when explicitly set to 2h grip in summary
+        const isEffectively2H = (w) => isTwoHanded(w) || (isVersatile(w) && versatileGrip==="2h");
         const isDagger = (w) => w?.name==="Dagger";
         const isFistWeapon = (w) => w && (w.isFist || w.name==="Caestus" || (w.name||"").toLowerCase().includes("fist"));
         const hasFistTech = Object.values(char.techniques["martial_arts"]||{}).flat()
           .some(t=>["Novice Brawler","Adept Brawler","Master Brawler"].includes(t));
         const hasDual  = wpn && offhand && isMelee(wpn) && isMelee(offhand);
         const has1hMeleeEmptyOH = (wpn && isMelee(wpn) && !isTwoHanded(wpn) && !offhand)
-                                || (wpn && isVersatile(wpn) && !offhand);
+                                || (wpn && isVersatile(wpn) && versatileGrip==="1h");
 
         // Soul perks
         const hasSoulPerk = (name) => {
@@ -4290,73 +4405,127 @@ function StepSummary({char,setChar,derived,totalSP}){
         const maxEnhancers = hasStyleMaster ? 3 : 2;
 
         const versatileNote = wpn && isVersatile(wpn)
-          ? (offhand
-              ? "Versatile weapon in ONE-HAND grip — Two-Handed enhancers not available."
-              : "Versatile weapon in TWO-HAND grip (no offhand) — Two-Handed enhancers available.")
+          ? (versatileGrip==="2h"
+              ? "Versatile weapon in TWO-HAND grip — Two-Handed enhancers available."
+              : "Versatile weapon in ONE-HAND grip — Two-Handed enhancers not available.")
           : null;
 
         // Master Martial Training: Attack Enhancers gain +1 to their stat effectiveness
-        const hasMasterMartialTraining = char.purchasedTrainings.has("martial_arts:master");
-        // Only martial (not pure spell) enhancers get the +1 from Master Martial Training
+        const hasMasterMartialTraining = hasMasterMartialTrainingGlobal;
         const mmtApplies = (enh) => hasMasterMartialTraining && (enh.type==="martial" || enh.type==="both") && !!enh.statBonuses;
 
-        // Build a boosted effect string replacing numeric bonuses with +1 versions
-        const boostedEffect = (enh) => {
-          if(!mmtApplies(enh)) return null;
+        // Build a readable bonus string showing the final values (with MMT applied if active)
+        const bonusSummary = (enh) => {
           const b = enh.statBonuses;
+          if(!b) return null;
+          const mmt = mmtApplies(enh) ? 1 : 0;
           const parts = [];
-          // Scaled enhancers (Power Attack / Take Aim) get +1 to each tier
-          if(b.accLow  !== undefined) parts.push(`Acc: +${b.accLow+1} / +${b.accHigh+1}`);
-          if(b.dmgLow  !== undefined) parts.push(`Dmg: +${b.dmgLow+1} / +${b.dmgHigh+1}`);
-          if(b.acc     !== undefined) parts.push(`Acc: +${b.acc+1}`);
-          if(b.dmg     !== undefined) parts.push(`Dmg: +${b.dmg+1}`);
-          if(b.secDmg  !== undefined) parts.push(`SecDmg: +${b.secDmg+1}`);
-          if(b.crit    !== undefined) parts.push(`Crit: +${b.crit+1}`);
-          return parts.length ? parts.join(", ") : null;
+          if(b.accLow  !== undefined) parts.push(`Acc +${b.accLow+mmt}–+${b.accHigh+mmt}`);
+          else if(b.acc !== undefined) parts.push(`Acc +${b.acc+mmt}`);
+          if(b.dmgLow  !== undefined) parts.push(`Dmg +${b.dmgLow+mmt}–+${b.dmgHigh+mmt}`);
+          else if(b.dmg !== undefined) parts.push(`Dmg +${b.dmg+mmt}`);
+          if(b.secDmg  !== undefined) parts.push(`SecDmg +${b.secDmg+mmt}`);
+          if(b.crit    !== undefined) parts.push(`Crit +${b.crit+mmt}`);
+          return parts.length ? parts.join("  ") : null;
         };
+
+        // Toggle handler — enforce max cap
+        const toggleEnhancer = (name, enhType) => {
+          setChar(c => {
+            const cur = new Set(c.activeEnhancers||[]);
+            if(cur.has(name)) { cur.delete(name); return {...c, activeEnhancers: cur}; }
+            // Count current active by type
+            const allActive = [...cur].map(n=>ATTACK_ENHANCERS_DATA.find(e=>e.name===n)).filter(Boolean);
+            const martialCount = allActive.filter(e=>e.type==="martial"||e.type==="both").length;
+            const spellCount   = allActive.filter(e=>e.type==="spell"  ||e.type==="both").length;
+            const isMartialType = enhType==="martial"||enhType==="both";
+            const isSpellType   = enhType==="spell"  ||enhType==="both";
+            const maxM = hasStyleMaster ? 3 : 2;
+            if(isMartialType && martialCount >= maxM) return c; // cap reached
+            if(isSpellType   && spellCount   >= 2)    return c;
+            cur.add(name);
+            return {...c, activeEnhancers: cur};
+          });
+        };
+
+        const activeEnh = char.activeEnhancers||new Set();
 
         const enhCard = (enh, i) => {
           const isBoth    = enh.type==="both";
           const isMartial = enh.type==="martial";
-          const col   = isBoth ? "#c8a84a" : isMartial ? "#4cc8e0" : "#9a70d8";
-          const label = isBoth ? "MARTIAL + SPELL" : isMartial ? "MARTIAL" : "SPELL";
-          const borderCol = isBoth?"rgba(200,168,74,0.4)":isMartial?"rgba(76,200,224,0.35)":"rgba(154,112,216,0.35)";
-          const bgCol     = isBoth?"rgba(200,168,74,0.05)":isMartial?"rgba(76,200,224,0.04)":"rgba(154,112,216,0.04)";
-          const boosted   = boostedEffect(enh);
+          const isActive  = activeEnh.has(enh.name);
+          const col       = isBoth ? "#c8a84a" : isMartial ? "#4cc8e0" : "#9a70d8";
+          const label     = isBoth ? "MARTIAL + SPELL" : isMartial ? "MARTIAL" : "SPELL";
+          const summary   = bonusSummary(enh);
+          const mmtOn     = mmtApplies(enh);
+          // Check if toggling on would exceed cap
+          const allActive = [...activeEnh].map(n=>ATTACK_ENHANCERS_DATA.find(e=>e.name===n)).filter(Boolean);
+          const mCnt = allActive.filter(e=>e.type==="martial"||e.type==="both").length;
+          const sCnt = allActive.filter(e=>e.type==="spell"  ||e.type==="both").length;
+          const maxM = hasStyleMaster ? 3 : 2;
+          const wouldExceed = !isActive && (
+            ((enh.type==="martial"||enh.type==="both") && mCnt>=maxM) ||
+            ((enh.type==="spell"  ||enh.type==="both") && sCnt>=2)
+          );
+          const borderCol = isActive ? col : wouldExceed ? "rgba(139,26,42,0.4)" : "var(--border-cebee8)";
+          const bgCol     = isActive
+            ? (isBoth?"rgba(200,168,74,0.14)":isMartial?"rgba(76,200,224,0.1)":"rgba(154,112,216,0.12)")
+            : wouldExceed ? "rgba(139,26,42,0.04)" : "var(--bg-card)";
           return (
-            <div key={i} style={{padding:"8px 10px",border:`1px solid ${borderCol}`,borderRadius:3,background:bgCol}}>
+            <div key={i} onClick={()=>toggleEnhancer(enh.name, enh.type)}
+              style={{padding:"8px 10px",border:`1px solid ${borderCol}`,borderRadius:3,background:bgCol,cursor:"pointer",transition:"all 0.15s",opacity:wouldExceed&&!isActive?0.55:1}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:3}}>
-                <span style={{fontSize:11,fontWeight:700,color:col,lineHeight:1.2}}>{enh.name}</span>
-                <span style={{fontSize:8,color:col,background:"var(--bg-tag)",padding:"1px 5px",borderRadius:2,fontWeight:700,letterSpacing:"0.05em",whiteSpace:"nowrap",flexShrink:0,marginLeft:6}}>{label}</span>
+                <span style={{fontSize:11,fontWeight:700,color:isActive?col:"var(--text-head)",lineHeight:1.2}}>{enh.name}</span>
+                <div style={{display:"flex",gap:4,alignItems:"center",flexShrink:0,marginLeft:6}}>
+                  <span style={{fontSize:8,color:col,background:"var(--bg-tag)",padding:"1px 5px",borderRadius:2,fontWeight:700,letterSpacing:"0.05em",whiteSpace:"nowrap"}}>{label}</span>
+                  <span style={{fontSize:9,padding:"1px 6px",borderRadius:3,fontWeight:700,background:isActive?col:"var(--bg-panel-alt)",color:isActive?"#fff":"var(--text-muted)",border:`1px solid ${isActive?col:"var(--border-soft)"}`}}>{isActive?"ON":"OFF"}</span>
+                </div>
               </div>
               <div style={{fontSize:9,color:"var(--text-muted)",marginBottom:2}}>
                 Cost: <span style={{color:"var(--text-label)",fontWeight:600}}>{enh.cost}</span>
               </div>
               <div style={{fontSize:10,color:"var(--text-label)",lineHeight:1.4}}>{enh.effect}</div>
-              {boosted&&(
-                <div style={{marginTop:4,padding:"3px 7px",background:"rgba(200,168,74,0.12)",border:"1px solid rgba(200,168,74,0.35)",borderRadius:3,fontSize:10,color:"#c8a84a",fontWeight:600}}>
-                  ★ With Master Martial Training: {boosted}
+              {summary&&(
+                <div style={{marginTop:4,padding:"2px 6px",background:isActive?(isBoth?"rgba(200,168,74,0.1)":isMartial?"rgba(76,200,224,0.08)":"rgba(154,112,216,0.08)"):"var(--bg-panel-alt)",border:`1px solid ${isActive?col:"var(--border-soft)"}`,borderRadius:3,fontSize:10,color:isActive?col:"var(--text-muted)",fontWeight:isActive?700:400,display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+                  {isActive&&<span style={{fontSize:9}}>⚡</span>}
+                  <span>{summary}</span>
+                  {mmtOn&&<span style={{fontSize:9,color:"#c8a84a",fontStyle:"italic"}}>★ +1 MMT</span>}
                 </div>
               )}
               {enh.note&&<div style={{marginTop:3,fontSize:9,color:"#9a70d8",fontStyle:"italic"}}>{enh.note}</div>}
-              {enh.req?.weaponType==="2h"&&wpn&&isVersatile(wpn)&&!offhand&&(
-                <div style={{marginTop:3,fontSize:9,color:"#c8a84a",fontStyle:"italic"}}>✦ Available: Versatile weapon used two-handed</div>
+              {enh.req?.weaponType==="2h"&&wpn&&isVersatile(wpn)&&versatileGrip==="2h"&&(
+                <div style={{marginTop:3,fontSize:9,color:"#c8a84a",fontStyle:"italic"}}>✦ Available: Versatile weapon in two-hand grip</div>
               )}
             </div>
           );
         };
 
+        // Active summary totals
+        const totalActiveAcc  = enhancerAcc;
+        const totalActiveDmg  = enhancerDmg;
+        const totalSpellAcc   = enhancerSpellAcc;
+        const totalSecDmg     = enhancerSecDmg;
+
         return (
           <Card title={`Attack & Spell Enhancers (${available.length} available · max ${maxEnhancers} per phase)`}>
             <div style={{fontSize:10,color:"var(--text-muted)",marginBottom:8,fontStyle:"italic",lineHeight:1.5}}>
-              Up to <strong style={{color:"var(--text-label)"}}>{maxEnhancers} Attack Enhancers</strong> and up to <strong style={{color:"var(--text-label)"}}>2 Spell Enhancers</strong> may be used per attack phase. They apply to all attacks made during that phase.
-              {hasStyleMaster&&<span style={{color:"#c8a84a"}}> ★ Style Master: 3rd Attack Enhancer costs 2× its Stamina.</span>}
-              {hasDisciplinedFighter&&<span style={{color:"#4cc8e0"}}> ★ Disciplined Fighter: halve cost of 1 enhancer per phase.</span>}
-              {hasMasterMartialTraining&&<span style={{color:"#c8a84a"}}> ★ Master Martial Training: all Attack Enhancers gain +1 to their stat bonuses.</span>}
+              Click to toggle enhancers ON/OFF. Up to <strong style={{color:"var(--text-label)"}}>{maxEnhancers} Attack</strong> and <strong style={{color:"var(--text-label)"}}>2 Spell</strong> enhancers per phase — active ones are calculated into the attack cards above.
+              {hasStyleMaster&&<span style={{color:"#c8a84a"}}> ★ Style Master: 3rd costs 2×.</span>}
+              {hasDisciplinedFighter&&<span style={{color:"#4cc8e0"}}> ★ Disciplined Fighter: halve 1 cost.</span>}
+              {hasMasterMartialTraining&&<span style={{color:"#c8a84a"}}> ★ MMT: Attack Enhancers +1 to all stat bonuses.</span>}
             </div>
             {versatileNote&&(
               <div style={{marginBottom:8,padding:"5px 10px",background:"rgba(200,168,74,0.08)",border:"1px solid rgba(200,168,74,0.3)",borderRadius:3,fontSize:10,color:"#c8a84a"}}>
                 ⚔ {versatileNote}
+              </div>
+            )}
+            {(totalActiveAcc!==0||totalActiveDmg!==0||totalSpellAcc!==0||totalSecDmg!==0)&&(
+              <div style={{marginBottom:10,padding:"6px 10px",background:"rgba(76,200,224,0.08)",border:"1px solid rgba(76,200,224,0.3)",borderRadius:3,display:"flex",gap:14,flexWrap:"wrap",alignItems:"center"}}>
+                <span style={{fontSize:9,color:"#4cc8e0",fontWeight:700,letterSpacing:"0.1em"}}>⚡ ACTIVE TOTAL</span>
+                {totalActiveAcc!==0&&<span style={{fontSize:11,color:"#4cc8e0",fontWeight:700}}>Acc +{totalActiveAcc}</span>}
+                {totalActiveDmg!==0&&<span style={{fontSize:11,color:"#4cc8e0",fontWeight:700}}>Dmg +{totalActiveDmg}</span>}
+                {totalSpellAcc!==0&&<span style={{fontSize:11,color:"#9a70d8",fontWeight:700}}>SpellAcc +{totalSpellAcc}</span>}
+                {totalSecDmg!==0&&<span style={{fontSize:11,color:"#c8a84a",fontWeight:700}}>SecDmg +{totalSecDmg}</span>}
               </div>
             )}
             <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}}>
