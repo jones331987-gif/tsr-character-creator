@@ -1419,7 +1419,7 @@ const EMPTY_CHAR = {
   stats:{Strength:"d4",Dexterity:"d4",Vigor:"d4",Mind:"d4",Willpower:"d4"},
   attrs:{HP:20,Stamina:10,Mana:0},
   attrPointsUsed:0,
-  skills:{}, techniques:{}, purchasedTrainings:new Set(), masterPerks:{}, slottedTechniques:new Set(), slottedSpells:new Set(),
+  skills:{}, techniques:{}, purchasedTrainings:new Set(), masterPerks:{}, slottedTechniques:new Set(), slottedSpells:new Set(), activeTechBuffs:new Set(),
   equipment:{weapon:null,offhand:null,armor:null,items:[],catalyst:null,jewelry:[]},
   // Main hand add-ons
   weaponRune:null, weaponSpell:null, weaponMithril:false, weaponMods:[],
@@ -1429,16 +1429,16 @@ const EMPTY_CHAR = {
 };
 
 // Serialize Set → array for storage/export
-const charToJSON = (c) => ({...c, purchasedTrainings: [...(c.purchasedTrainings||[])], slottedTechniques: [...(c.slottedTechniques||[])], slottedSpells: [...(c.slottedSpells||[])]});
+const charToJSON = (c) => ({...c, purchasedTrainings: [...(c.purchasedTrainings||[])], slottedTechniques: [...(c.slottedTechniques||[])], slottedSpells: [...(c.slottedSpells||[])], activeTechBuffs: [...(c.activeTechBuffs||[])]});
 // Restore array → Set on load
-const charFromJSON = (obj) => ({...EMPTY_CHAR, ...obj, purchasedTrainings: new Set(obj.purchasedTrainings||[]), slottedTechniques: new Set(obj.slottedTechniques||[]), slottedSpells: new Set(obj.slottedSpells||[])});
+const charFromJSON = (obj) => ({...EMPTY_CHAR, ...obj, purchasedTrainings: new Set(obj.purchasedTrainings||[]), slottedTechniques: new Set(obj.slottedTechniques||[]), slottedSpells: new Set(obj.slottedSpells||[]), activeTechBuffs: new Set(obj.activeTechBuffs||[])});
 
-const SAVE_SLOTS = ["slot_1","slot_2","slot_3"];
+const SAVE_SLOTS = ["slot_1","slot_2","slot_3","slot_4","slot_5"];
 
 function App() {
   const [step, setStep] = useState(0);
   const [char, setChar] = useState({...EMPTY_CHAR, purchasedTrainings: new Set()});
-  const [saves, setSaves] = useState({slot_1:null,slot_2:null,slot_3:null});
+  const [saves, setSaves] = useState({slot_1:null,slot_2:null,slot_3:null,slot_4:null,slot_5:null});
   const [saveMsg, setSaveMsg] = useState("");
   const [darkMode, setDarkMode] = useState(false);
   useEffect(()=>{ document.documentElement.setAttribute("data-theme", darkMode ? "dark" : "light"); },[darkMode]);
@@ -1601,14 +1601,17 @@ function App() {
 
   const trainBonuses = getTrainingBonuses(char.purchasedTrainings);
 
-  // Slotted technique persistent bonuses
+  // Slotted technique persistent bonuses — only applied when the buff is toggled ON
   const slottedTechBonuses = (() => {
     const b = {HP:0,Stamina:0,Mana:0,Parry:0,PhysRes:0,PrimDmg:0,Acc:0};
     (char.slottedTechniques||new Set()).forEach(key => {
       // key format: "skillId||techName"
       const techName = key.split("||")[1];
       const bonus = SLOTTED_BONUS_TECHS[techName];
-      if(bonus) Object.entries(bonus).forEach(([k,v]) => { b[k] = (b[k]||0) + v; });
+      if(!bonus) return;
+      // Only apply if this buff is toggled active
+      if(!(char.activeTechBuffs||new Set()).has(key)) return;
+      Object.entries(bonus).forEach(([k,v]) => { b[k] = (b[k]||0) + v; });
     });
     return b;
   })();
@@ -3494,9 +3497,12 @@ function StepSummary({char,setChar,derived,totalSP}){
           const key = `${skillId}||${techName}`;
           setChar(c => {
             const cur = new Set(c.slottedTechniques||[]);
-            if(cur.has(key)) { cur.delete(key); }
-            else { cur.add(key); }
-            return {...c, slottedTechniques:cur};
+            const removing = cur.has(key);
+            if(removing) { cur.delete(key); } else { cur.add(key); }
+            // Clear active buff state when unslotting
+            const activeBuffs = new Set(c.activeTechBuffs||[]);
+            if(removing) activeBuffs.delete(key);
+            return {...c, slottedTechniques:cur, activeTechBuffs:activeBuffs};
           });
         };
         const slotsLeft = totalTechSlots - slotsUsed;
@@ -3521,6 +3527,16 @@ function StepSummary({char,setChar,derived,totalSP}){
                     const key=`${skillId}||${techName}`;
                     const slotted=(char.slottedTechniques||new Set()).has(key);
                     const wouldExceed = !slotted && (slotsUsed+slotCost>totalTechSlots);
+                    const hasBonus = slotted && SLOTTED_BONUS_TECHS[techName] && Object.keys(SLOTTED_BONUS_TECHS[techName]).length>0;
+                    const isActive = hasBonus && (char.activeTechBuffs||new Set()).has(key);
+                    const toggleActive = (e) => {
+                      e.stopPropagation();
+                      setChar(c => {
+                        const cur = new Set(c.activeTechBuffs||[]);
+                        if(cur.has(key)) cur.delete(key); else cur.add(key);
+                        return {...c, activeTechBuffs: cur};
+                      });
+                    };
                     return(
                       <div key={key} onClick={()=>toggleSlot(skillId,techName)}
                         style={{padding:"8px 10px",border:`1px solid ${slotted?"var(--accent-gold)":wouldExceed?"var(--text-danger)":"var(--border-cebee8)"}`,borderRadius:3,cursor:"pointer",background:slotted?"var(--bg-tbl-sel)":wouldExceed?"rgba(139,26,42,0.05)":"var(--bg-card)",transition:"all 0.15s",opacity:wouldExceed&&!slotted?0.7:1}}>
@@ -3533,9 +3549,10 @@ function StepSummary({char,setChar,derived,totalSP}){
                         </div>
                         <div style={{fontSize:9,color:"var(--text-muted)",marginBottom:2}}>{skillName} · {cost}</div>
                         <div style={{fontSize:10,color:"var(--text-label)",lineHeight:1.4}}>{desc}</div>
-                        {slotted && SLOTTED_BONUS_TECHS[techName] && Object.keys(SLOTTED_BONUS_TECHS[techName]).length>0 && (
-                          <div style={{marginTop:4,fontSize:9,color:"var(--text-teal)",borderTop:"1px solid var(--border-row)",paddingTop:3}}>
-                            ★ Active bonus: {Object.entries(SLOTTED_BONUS_TECHS[techName]).map(([k,v])=>`+${v} ${k}`).join(", ")}
+                        {hasBonus && (
+                          <div onClick={toggleActive} style={{marginTop:6,display:"flex",alignItems:"center",gap:6,padding:"4px 6px",borderRadius:3,cursor:"pointer",background:isActive?"rgba(76,200,224,0.12)":"rgba(100,80,140,0.08)",border:`1px solid ${isActive?"var(--accent-teal)":"var(--border-soft)"}`,transition:"all 0.15s"}}>
+                            <span style={{fontSize:10,fontWeight:700,color:isActive?"var(--accent-teal)":"var(--text-muted)"}}>{isActive?"⚡ ACTIVE":"○ INACTIVE"}</span>
+                            <span style={{fontSize:9,color:isActive?"var(--accent-teal)":"var(--text-muted)",flex:1}}>{Object.entries(SLOTTED_BONUS_TECHS[techName]).map(([k,v])=>`+${v} ${k}`).join(", ")}</span>
                           </div>
                         )}
                       </div>
@@ -3543,7 +3560,7 @@ function StepSummary({char,setChar,derived,totalSP}){
                   })}
                 </div>
             }
-            {slottable.length>0&&<div style={{marginTop:8,fontSize:10,color:"var(--text-muted)",borderTop:"1px solid var(--border-row)",paddingTop:8}}>Click to slot/unslot. Passive techniques are always active and shown in the Skills section below.</div>}
+            {slottable.length>0&&<div style={{marginTop:8,fontSize:10,color:"var(--text-muted)",borderTop:"1px solid var(--border-row)",paddingTop:8}}>Click to slot/unslot. Stances &amp; self-buffs: tap ⚡ to toggle their bonuses active in calculations.</div>}
           </Card>
         );
       })()}
