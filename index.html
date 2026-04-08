@@ -2432,10 +2432,13 @@ function App() {
     (char.activeEnhancers||new Set()).forEach(name => {
       const enh = ATTACK_ENHANCERS_DATA.find(e=>e.name===name);
       if(!enh?.statBonuses) return;
+      // Only martial/both enhancers add to weapon (primary damage) accuracy
+      // Pure spell enhancers like Homing Spell only add to spell accuracy
+      if(enh.type==="spell") return;
       const mmt = hasMasterMartialTrainingGlobal && (enh.type==="martial"||enh.type==="both") ? 1 : 0;
       const b = enh.statBonuses;
       if(b.acc      !== undefined) tot += b.acc + mmt;
-      if(b.accHigh  !== undefined) tot += b.accHigh + mmt; // use max tier for display
+      if(b.accHigh  !== undefined) tot += b.accHigh + mmt;
     });
     return tot;
   })();
@@ -4367,7 +4370,7 @@ function StepSummary({char,setChar,derived,totalSP}){
           if(wt==="dagger")                  return isDagger(wpn) || isDagger(offhand);
           if(wt==="dual")                    return hasDual;
           if(wt==="1h-melee-empty-offhand")  return has1hMeleeEmptyOH;
-          if(wt==="catalyst")                return !!cat;
+          if(wt==="catalyst")                return !!cat || !!(wpn&&(wpn.props||"").includes("Catalytic")) || !!(offhand&&(offhand.props||"").includes("Catalytic"));
           return true;
         };
 
