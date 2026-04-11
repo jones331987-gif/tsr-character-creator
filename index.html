@@ -1926,6 +1926,8 @@ const EMPTY_CHAR = {
   // Summary combat toggles
   activeEnhancers: new Set(), // Set of enhancer names currently toggled ON
   versatileGrip: "1h",        // "1h" | "2h" — only relevant for Versatile weapons
+  // Attack presets — user-defined attack configurations
+  attackPresets: [],
 };
 
 // Serialize Set → array for storage/export
@@ -3645,6 +3647,334 @@ function StepEquipment({char,setChar,moneyLeft}){
   );
 }
 
+// ─── ATTACK PRESETS CARD ─────────────────────────────────────────────────────
+function AttackPresetsCard({char, setChar, derived}) {
+  const {trainBonuses, slottedTechBonuses, boonOffensive, jewelryAccBonus, jewelryDmgBonus,
+         sizeB, savageFightingBonus, finalReach, size, catalystAccBonus, catalystAttunementBonus,
+         hasBrute, hasEagleEye, hasPrimalMass, hasMasterMartialTrainingGlobal} = derived;
+
+  const wpn     = char.equipment.weapon;
+  const offhand = char.equipment.offhand;
+  const cat     = char.equipment.catalyst;
+  const presets = char.attackPresets || [];
+
+  // ── Hooks at top level ────────────────────────────────────────────────────
+  const [editIdx,      setEditIdx]      = useState(null);
+  const [editName,     setEditName]     = useState("");
+  const [editStance,   setEditStance]   = useState("normal");
+  const [editEnhancers,setEditEnhancers]= useState([]);
+  const [editNotes,    setEditNotes]    = useState("");
+  const [editGrip,     setEditGrip]     = useState("1h");
+
+  // ── Weapon helpers ────────────────────────────────────────────────────────
+  const wProps     = (w) => w?.props||"";
+  const isMelee    = (w) => w && !wProps(w).includes("Bow(") && !wProps(w).includes("Trigger(") && !wProps(w).includes("Throwing(");
+  const isRanged   = (w) => w && (wProps(w).includes("Bow(")||wProps(w).includes("Trigger(")||wProps(w).includes("Throwing("));
+  const isThrowing = (w) => w && wProps(w).includes("Throwing(");
+  const isTwoHanded= (w) => w && wProps(w).includes("Two-Handed");
+  const isVers     = (w) => w && wProps(w).includes("Versatile");
+  const isDagger   = (w) => w?.name==="Dagger";
+  const isFist     = (w) => w && (w.isFist || w.name==="Caestus" || (w.name||"").toLowerCase().includes("fist"));
+  const hasFistTech= Object.values(char.techniques["martial_arts"]||{}).flat()
+                       .some(t=>["Novice Brawler","Adept Brawler","Master Brawler"].includes(t));
+  const hasDual    = !!(wpn && offhand && isMelee(wpn) && isMelee(offhand));
+  const hasCatalyst= !!cat || !!(wpn&&wProps(wpn).includes("Catalytic")) || !!(offhand&&wProps(offhand).includes("Catalytic"));
+
+  // ── isPurchased: technique bought OR training autoFeat OR universal ───────
+  const isPurchased = (enh) => {
+    if(enh.universal) return true;
+    for(const tree of SKILL_TREES){
+      if(Object.values(char.techniques[tree.id]||{}).flat().includes(enh.name)) return true;
+    }
+    for(const tree of SKILL_TREES){
+      for(const tier of ["novice","adept","master"]){
+        const tr = tree.tiers[tier]?.training;
+        if(tr?.autoFeat?.name===enh.name && char.purchasedTrainings.has(`${tree.id}:${tier}`)) return true;
+      }
+    }
+    return false;
+  };
+
+  const meetsSkill = (req) => !req?.skill || (char.skills[req.skill.id]||0) >= req.skill.rank;
+
+  const meetsWeaponReq = (req) => {
+    if(!req?.weaponType) return true;
+    const wt = req.weaponType;
+    if(wt==="fist")    return isFist(wpn) || hasFistTech;
+    if(wt==="melee")   return isMelee(wpn) || isMelee(offhand);
+    if(wt==="ranged")  return isRanged(wpn) || isRanged(offhand);
+    if(wt==="throwing")return isThrowing(wpn) || isThrowing(offhand);
+    if(wt==="2h")      return !!(wpn && (isTwoHanded(wpn) || isVers(wpn)));
+    if(wt==="2h-ranged")return isRanged(wpn) && isTwoHanded(wpn);
+    if(wt==="dagger")  return isDagger(wpn) || isDagger(offhand);
+    if(wt==="dual")    return hasDual;
+    if(wt==="1h-melee-empty-offhand") return (isMelee(wpn) && !isTwoHanded(wpn)) || isVers(wpn);
+    if(wt==="catalyst")return hasCatalyst;
+    return true;
+  };
+
+  const hasSoulPerk = (name) => { const v=char.masterPerks["anima"]; return Array.isArray(v)?v.includes(name):v===name; };
+  const meetsSoulReq = (req) => {
+    if(!req?.requiresSoul) return true;
+    if(req.requiresSoul==="Aqua Soul")       return hasSoulPerk("Aqua Soul");
+    if(req.requiresSoul==="Vacuum Soul")     return hasSoulPerk("Vacuum Soul")||char.hasVacuumSoul;
+    if(req.requiresSoul==="Thunderous Soul") return hasSoulPerk("Thunderous Soul");
+    return false;
+  };
+
+  const availableEnhancers = ATTACK_ENHANCERS_DATA.filter(enh =>
+    isPurchased(enh) && meetsSkill(enh.req) && meetsWeaponReq(enh.req) && meetsSoulReq(enh.req)
+  );
+
+  // ── Stances ───────────────────────────────────────────────────────────────
+  const OFFENSE_STANCES = [
+    {id:"normal",    label:"Basic Attack",   actions:1, desc:"Standard attack action."},
+    {id:"vicious",   label:"Vicious Strike", actions:2, desc:"2 Actions. STR added twice to damage. Two-Handed only. Counts as 2 MAP."},
+    {id:"dual",      label:"Dual Strike",    actions:2, desc:"2 Actions. 2 attacks at current MAP. Dual Wield."},
+    {id:"cleave",    label:"Cleave",         actions:2, desc:"2 Actions. AoE swing around you. Two-Handed only. Counts as 2 MAP."},
+    {id:"lunge",     label:"Rapid Lunge",    actions:1, desc:"Universal. 1H empty offhand. +2 Acc."},
+    {id:"touchmagic",label:"Touch Magic",    actions:2, desc:"2 Actions. Deliver a spell through a weapon attack. Counts as 2 MAP."},
+    {id:"spell",     label:"Cast Spell",     actions:2, desc:"Standard spell cast (2 Actions base)."},
+  ];
+
+  const maxEnhM = (() => { const v=char.masterPerks["martial_arts"]; return (Array.isArray(v)?v.includes("Style Master"):v==="Style Master")?3:2; })();
+  const hasVers = !!(wpn && isVers(wpn));
+
+  // ── Preset editor open/save/delete ────────────────────────────────────────
+  const openNew = () => {
+    setEditIdx(-1); setEditName("New Preset"); setEditStance("normal");
+    setEditEnhancers([]); setEditNotes(""); setEditGrip(char.versatileGrip||"1h");
+  };
+  const openEdit = (i) => {
+    const p = presets[i];
+    setEditIdx(i); setEditName(p.name); setEditStance(p.stance||"normal");
+    setEditEnhancers([...(p.enhancers||[])]); setEditNotes(p.notes||""); setEditGrip(p.grip||"1h");
+  };
+  const savePreset = () => {
+    const preset = {name:editName||"Preset", stance:editStance, enhancers:editEnhancers, notes:editNotes, grip:editGrip};
+    setChar(c => { const arr=[...(c.attackPresets||[])]; if(editIdx===-1)arr.push(preset); else arr[editIdx]=preset; return {...c,attackPresets:arr}; });
+    setEditIdx(null);
+  };
+  const deletePreset = (i) => setChar(c=>{ const arr=[...(c.attackPresets||[])]; arr.splice(i,1); return {...c,attackPresets:arr}; });
+  const toggleEditEnhancer = (name) => setEditEnhancers(prev=>prev.includes(name)?prev.filter(n=>n!==name):[...prev,name]);
+
+  // ── Stat computation helpers ───────────────────────────────────────────────
+  const calcEnhBonuses = (preset) => {
+    const mmt = hasMasterMartialTrainingGlobal;
+    let acc=0, dmg=0, spellAcc=0, secDmg=0;
+    for(const eName of (preset.enhancers||[])){
+      const enh=ATTACK_ENHANCERS_DATA.find(e=>e.name===eName);
+      if(!enh?.statBonuses) continue;
+      const b=enh.statBonuses; const m=mmt&&(enh.type==="martial"||enh.type==="both")?1:0;
+      if(enh.type!=="spell"){ if(b.acc!==undefined)acc+=b.acc+m; if(b.accHigh!==undefined)acc+=b.accHigh+m; if(b.dmg!==undefined)dmg+=b.dmg+m; if(b.dmgHigh!==undefined)dmg+=b.dmgHigh+m; }
+      if(enh.type==="spell"||enh.type==="both"){ if(b.acc!==undefined)spellAcc+=b.acc; if(b.accHigh!==undefined)spellAcc+=b.accHigh; }
+      if(b.secDmg!==undefined) secDmg+=b.secDmg+m;
+    }
+    return {acc,dmg,spellAcc,secDmg};
+  };
+
+  const calcWeaponStats = (w, isOffhand) => {
+    if(!w) return null;
+    const isGun = wProps(w).includes("Gun");
+    const isRng = isGun||wProps(w).includes("Bow(")||wProps(w).includes("Trigger(")||wProps(w).includes("Throwing(");
+    const accDie = (!isOffhand && hasBrute) ? char.stats.Strength : char.stats.Dexterity;
+    const dmgDie = (!isOffhand && hasPrimalMass) ? char.stats.Vigor
+                 : (!isOffhand && isRng && hasEagleEye) ? char.stats.Dexterity
+                 : char.stats.Strength;
+    const wpnAccProp = parseInt((wProps(w).match(/Acc\+(\d+)/)||[0,0])[1]);
+    const wpnDmgProp = parseInt((wProps(w).match(/Dmg\+(\d+)/)||[0,0])[1]);
+    const rune = !isOffhand ? char.weaponRune : char.offhandRune;
+    const mith = !isOffhand ? char.weaponMithril : char.offhandMithril;
+    const mods = !isOffhand ? (char.weaponMods||[]) : (char.offhandMods||[]);
+    const accMod = wpnAccProp + (rune==="Rune of Wind"?1:0) + (rune==="Demon"?2:0) + (!isGun&&mith?1:0) + (mods.includes("Scope")?2:0);
+    const dmgMod = wpnDmgProp + (rune==="Demon"?3:0) + (!isGun&&mith?1:0);
+    const sharedAcc = trainBonuses.Acc + slottedTechBonuses.Acc + boonOffensive + jewelryAccBonus;
+    const sharedDmg = trainBonuses.PrimDmg + slottedTechBonuses.PrimDmg + boonOffensive + jewelryDmgBonus + sizeB.primDmg + (!isOffhand?savageFightingBonus:0);
+    return { accDie, dmgDie, acc: sharedAcc+accMod, dmg: sharedDmg+dmgMod, dmgFormula: w.dmg, isRanged: isRng, name: w.name };
+  };
+
+  const fmtAcc  = (die, bonus) => bonus!==0 ? `${die} (${bonus>0?"+":""}${bonus})` : die;
+  const fmtBonus= (n) => n>0?`+${n}`:n<0?`${n}`:"";
+  const fmtDmg  = (formula, dmgDie, extraDmg, viciousDouble) => {
+    const elemM = formula.match(/^(.+?)\s+([A-Z][a-z]+)$/);
+    const core = elemM ? elemM[1] : formula; const elem = elemM ? ` ${elemM[2]}` : "";
+    const statPlusM = core.match(/^(Str|Mind)\+(.+)$/); const statOnlyM = core.match(/^(Str|Mind)$/);
+    let base;
+    if(viciousDouble && statPlusM) base = `(${dmgDie})×2 + ${statPlusM[2]}${elem}`;
+    else if(statPlusM) base = `${dmgDie}+${statPlusM[2]}${elem}`;
+    else if(statOnlyM) base = `${dmgDie}${elem}`;
+    else base = `${core}${elem}`;
+    const bonus = extraDmg!==0 ? ` (${extraDmg>0?"+":""}${extraDmg})` : "";
+    return base+bonus;
+  };
+  const typeColor = {martial:"#4cc8e0", spell:"#9a70d8", both:"#c8a84a"};
+
+  // ── Render a single preset display card ──────────────────────────────────
+  const renderPreset = (preset, idx) => {
+    const eb = calcEnhBonuses(preset);
+    const grip = preset.grip||"1h";
+    const isVicious    = preset.stance==="vicious";
+    const isDualStrike = preset.stance==="dual";
+    const isSpell      = preset.stance==="spell";
+    const stanceDef    = OFFENSE_STANCES.find(s=>s.id===preset.stance)||OFFENSE_STANCES[0];
+    const mh = calcWeaponStats(wpn||null, false);
+    const oh = (offhand&&!offhand.parry&&!offhand.minMind) ? calcWeaponStats(offhand, true) : null;
+    const spellAccTotal  = (trainBonuses.SpellAcc||0) + catalystAccBonus + catalystAttunementBonus + eb.spellAcc;
+    const spellPwrBonus  = boonOffensive + (trainBonuses.SpellPower||0);
+    const reach = finalReach + (preset.enhancers?.includes("Exploiting Lunge")?1:0) + (preset.enhancers?.includes("Bold Stance")?1:0);
+    const rangeStr = mh?.isRanged
+      ? (()=>{ const m=wProps(wpn).match(/(?:Bow|Trigger|Throwing)\((\d+)\)/); return m?m[1]+" spaces":"—"; })()
+      : `1–${reach} Melee${size>=2?" (Size "+size+", Reach)":""}`;
+    return (
+      <div key={idx} style={{marginBottom:10,padding:"12px 14px",background:"var(--bg-panel)",border:"1px solid var(--border-main)",borderTop:"2px solid var(--border-modal)",borderRadius:3}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+          <div>
+            <div style={{fontSize:13,fontWeight:700,color:"var(--text-value-hi)",fontFamily:"'Palatino Linotype',Palatino,Georgia,serif",fontStyle:"italic"}}>{preset.name}</div>
+            <div style={{display:"flex",gap:6,marginTop:3,flexWrap:"wrap",alignItems:"center"}}>
+              <span style={{fontSize:9,padding:"1px 6px",background:"var(--bg-tag)",borderRadius:3,color:"var(--text-gold)",fontWeight:700,letterSpacing:"0.05em"}}>{stanceDef.actions} {stanceDef.actions===1?"ACTION":"ACTIONS"}</span>
+              {(preset.enhancers||[]).map(n=>{const enh=ATTACK_ENHANCERS_DATA.find(e=>e.name===n);return(<span key={n} style={{fontSize:9,padding:"1px 6px",background:"rgba(76,200,224,0.1)",border:"1px solid rgba(76,200,224,0.3)",borderRadius:3,color:typeColor[enh?.type]||"#4cc8e0",fontWeight:600}}>{n}</span>);})}
+              {hasVers&&<span style={{fontSize:9,padding:"1px 5px",background:"rgba(200,168,74,0.1)",border:"1px solid rgba(200,168,74,0.3)",borderRadius:3,color:"#c8a84a"}}>{grip==="2h"?"Two-Hand":"One-Hand"}</span>}
+            </div>
+          </div>
+          <div style={{display:"flex",gap:5,flexShrink:0,marginLeft:8}}>
+            <button onClick={()=>openEdit(idx)} style={{...mic,color:"var(--text-teal)",border:"1px solid rgba(76,200,224,0.4)"}}>Edit</button>
+            <button onClick={()=>deletePreset(idx)} style={{...mic,color:"var(--text-danger)",border:"1px solid rgba(139,26,42,0.4)"}}>✕</button>
+          </div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"4px 16px",fontSize:11}}>
+          <div>
+            <div style={{fontSize:9,color:"var(--text-label)",letterSpacing:"0.1em",marginBottom:2,fontWeight:700}}>ACCURACY</div>
+            {isSpell?(<div style={{color:"var(--text-value-hi)",fontWeight:700}}>{fmtAcc(char.stats.Mind,spellAccTotal)}</div>)
+            :mh?(<div><div style={{color:"var(--text-value-hi)",fontWeight:700}}>{fmtAcc(mh.accDie,mh.acc+eb.acc)}</div>
+              {(mh.acc+eb.acc)!==0&&<div style={{fontSize:9,color:"var(--text-muted)",lineHeight:1.5}}>{trainBonuses.Acc>0&&<span>(+{trainBonuses.Acc} train) </span>}{slottedTechBonuses.Acc>0&&<span>(+{slottedTechBonuses.Acc} tech) </span>}{boonOffensive>0&&<span>(+{boonOffensive} boon) </span>}{eb.acc!==0&&<span style={{color:"#4cc8e0"}}>({fmtBonus(eb.acc)} enh) </span>}</div>}
+              {isDualStrike&&oh&&<div style={{color:"var(--text-muted)",fontSize:10,marginTop:2}}>+ Off-hand: {fmtAcc(oh.accDie,oh.acc)}</div>}</div>)
+            :<div style={{color:"var(--text-muted)",fontSize:10}}>No weapon</div>}
+          </div>
+          <div>
+            <div style={{fontSize:9,color:"var(--text-label)",letterSpacing:"0.1em",marginBottom:2,fontWeight:700}}>RANGE</div>
+            <div style={{color:"var(--text-value-hi)",fontWeight:700}}>{rangeStr}</div>
+          </div>
+          <div style={{marginTop:4}}>
+            <div style={{fontSize:9,color:"var(--text-label)",letterSpacing:"0.1em",marginBottom:2,fontWeight:700}}>DAMAGE</div>
+            {isSpell?(<div style={{color:"var(--text-value-hi)",fontWeight:700}}>{char.stats.Mind} + Spell Dice{spellPwrBonus>0?` (+${spellPwrBonus})`:""}{eb.spellAcc>0&&<span style={{color:"#9a70d8",fontSize:10}}> [+{eb.spellAcc} acc]</span>}</div>)
+            :mh?(<div><div style={{color:"var(--text-value-hi)",fontWeight:700}}>{fmtDmg(mh.dmgFormula,mh.dmgDie,mh.dmg+eb.dmg,isVicious)}</div>
+              {(mh.dmg+eb.dmg)!==0&&<div style={{fontSize:9,color:"var(--text-muted)",lineHeight:1.5}}>{trainBonuses.PrimDmg>0&&<span>(+{trainBonuses.PrimDmg} train) </span>}{slottedTechBonuses.PrimDmg>0&&<span>(+{slottedTechBonuses.PrimDmg} tech) </span>}{boonOffensive>0&&<span>(+{boonOffensive} boon) </span>}{sizeB.primDmg>0&&<span>(+{sizeB.primDmg} size) </span>}{eb.dmg!==0&&<span style={{color:"#4cc8e0"}}>({fmtBonus(eb.dmg)} enh) </span>}</div>}
+              {isDualStrike&&oh&&<div style={{color:"var(--text-muted)",fontSize:10,marginTop:2}}>+ {fmtDmg(oh.dmgFormula,oh.dmgDie,oh.dmg,false)} (off-hand)</div>}</div>)
+            :<div style={{color:"var(--text-muted)",fontSize:10}}>No weapon</div>}
+          </div>
+          <div style={{marginTop:4}}>
+            <div style={{fontSize:9,color:"var(--text-label)",letterSpacing:"0.1em",marginBottom:2,fontWeight:700}}>MAP</div>
+            <div style={{fontSize:10,color:"var(--text-muted)"}}>{["vicious","cleave","dual","touchmagic"].includes(preset.stance)?"Counts as 2 attacks":"1 attack"}</div>
+            {eb.secDmg>0&&<div style={{fontSize:10,color:"var(--text-muted)",marginTop:2}}>Sec Dmg +{eb.secDmg}</div>}
+          </div>
+        </div>
+        <div style={{marginTop:6,paddingTop:6,borderTop:"1px solid var(--border-row)",fontSize:10,color:"var(--text-muted)"}}>
+          <strong style={{color:"var(--text-label)"}}>{stanceDef.label}:</strong> {stanceDef.desc}
+        </div>
+        {preset.notes&&<div style={{marginTop:4,fontSize:10,color:"var(--text-sub)",fontStyle:"italic"}}>{preset.notes}</div>}
+      </div>
+    );
+  };
+
+  // ── Edit panel ────────────────────────────────────────────────────────────
+  const editPanel = editIdx!==null && (
+    <div style={{marginTop:10,padding:"14px",background:"var(--bg-card)",border:"1px solid var(--border-modal)",borderRadius:3}}>
+      <div style={{fontSize:11,fontWeight:700,color:"var(--text-head)",letterSpacing:"0.1em",marginBottom:12}}>{editIdx===-1?"NEW PRESET":"EDIT PRESET"}</div>
+      <div style={{marginBottom:10}}>
+        <Lbl>Preset Name</Lbl>
+        <input value={editName} onChange={e=>setEditName(e.target.value)} style={{...inp,fontSize:12,padding:"6px 10px"}} placeholder="e.g. Basic Strike, Power Smash…"/>
+      </div>
+      <div style={{marginBottom:10}}>
+        <Lbl>Attack Type</Lbl>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5}}>
+          {OFFENSE_STANCES.map(s=>(
+            <div key={s.id} onClick={()=>setEditStance(s.id)}
+              style={{padding:"6px 10px",border:`1px solid ${editStance===s.id?"#c8a84a":"var(--border-main)"}`,borderRadius:3,cursor:"pointer",background:editStance===s.id?"rgba(200,168,74,0.1)":"var(--bg-panel)",transition:"all 0.12s"}}>
+              <div style={{fontSize:10,fontWeight:700,color:editStance===s.id?"#c8a84a":"var(--text-head)"}}>{s.label} <span style={{fontWeight:400,color:"var(--text-muted)"}}>({s.actions} {s.actions===1?"action":"actions"})</span></div>
+              <div style={{fontSize:9,color:"var(--text-muted)",marginTop:1,lineHeight:1.4}}>{s.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      {hasVers&&(
+        <div style={{marginBottom:10}}>
+          <Lbl>Grip — {wpn.name}</Lbl>
+          <div style={{display:"flex",gap:6}}>
+            {["1h","2h"].map(g=>(
+              <button key={g} onClick={()=>setEditGrip(g)}
+                style={{padding:"4px 14px",border:`1px solid ${editGrip===g?"#c8a84a":"var(--border-main)"}`,borderRadius:3,cursor:"pointer",fontSize:10,fontWeight:editGrip===g?700:400,background:editGrip===g?"rgba(200,168,74,0.15)":"var(--bg-panel)",color:editGrip===g?"#c8a84a":"var(--text-muted)",fontFamily:"inherit"}}>
+                {g==="1h"?"One-Hand ☽":"Two-Hand ⚔"}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {availableEnhancers.length>0&&(
+        <div style={{marginBottom:10}}>
+          <Lbl>Attack Enhancers (max {maxEnhM} martial, 2 spell) — {availableEnhancers.length} available</Lbl>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4}}>
+            {availableEnhancers.map(enh=>{
+              const on = editEnhancers.includes(enh.name);
+              const typeCol = typeColor[enh.type]||"#4cc8e0";
+              const mCnt = editEnhancers.filter(n=>{const e=ATTACK_ENHANCERS_DATA.find(x=>x.name===n);return e&&(e.type==="martial"||e.type==="both");}).length;
+              const sCnt = editEnhancers.filter(n=>{const e=ATTACK_ENHANCERS_DATA.find(x=>x.name===n);return e&&(e.type==="spell"||e.type==="both");}).length;
+              const wouldExceed = !on&&(((enh.type==="martial"||enh.type==="both")&&mCnt>=maxEnhM)||((enh.type==="spell"||enh.type==="both")&&sCnt>=2));
+              const mmt = hasMasterMartialTrainingGlobal&&(enh.type==="martial"||enh.type==="both")?1:0;
+              const bonusParts = (() => {
+                const b=enh.statBonuses; if(!b) return [];
+                const p=[];
+                if(b.accLow!==undefined)p.push(`Acc +${b.accLow+mmt}–+${b.accHigh+mmt}`);
+                else if(b.acc!==undefined)p.push(`Acc +${b.acc+mmt}`);
+                if(b.dmgLow!==undefined)p.push(`Dmg +${b.dmgLow+mmt}–+${b.dmgHigh+mmt}`);
+                else if(b.dmg!==undefined)p.push(`Dmg +${b.dmg+mmt}`);
+                if(b.secDmg!==undefined)p.push(`SecDmg +${b.secDmg+mmt}`);
+                if(b.crit!==undefined)p.push(`Crit +${b.crit+mmt}`);
+                return p;
+              })();
+              return (
+                <div key={enh.name} onClick={()=>!wouldExceed&&toggleEditEnhancer(enh.name)}
+                  style={{padding:"5px 8px",border:`1px solid ${on?typeCol:wouldExceed?"rgba(139,26,42,0.3)":"var(--border-soft)"}`,borderRadius:3,cursor:wouldExceed&&!on?"not-allowed":"pointer",background:on?(enh.type==="spell"?"rgba(154,112,216,0.1)":enh.type==="both"?"rgba(200,168,74,0.1)":"rgba(76,200,224,0.08)"):"var(--bg-panel)",opacity:wouldExceed&&!on?0.5:1,transition:"all 0.12s",display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:6}}>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:10,fontWeight:on?700:400,color:on?typeCol:"var(--text-head)"}}>{enh.name}</div>
+                    <div style={{fontSize:9,color:"var(--text-muted)"}}>{enh.cost}</div>
+                    {bonusParts.length>0&&<div style={{fontSize:9,color:on?typeCol:"var(--text-label)",fontWeight:600,marginTop:1}}>{bonusParts.join("  ")}</div>}
+                  </div>
+                  <span style={{fontSize:8,padding:"1px 5px",borderRadius:2,fontWeight:700,background:on?typeCol:"var(--bg-panel-alt)",color:on?"#fff":"var(--text-muted)",flexShrink:0}}>{on?"ON":"OFF"}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      <div style={{marginBottom:12}}>
+        <Lbl>Notes (optional)</Lbl>
+        <input value={editNotes} onChange={e=>setEditNotes(e.target.value)} style={{...inp,fontSize:11,padding:"6px 10px"}} placeholder="e.g. Use vs armored targets, first attack of the round…"/>
+      </div>
+      <div style={{display:"flex",gap:8}}>
+        <button onClick={savePreset} style={{...btnS("pri"),flex:1,padding:"7px 0",fontSize:11}}>{editIdx===-1?"✦ Add Preset":"✦ Save Changes"}</button>
+        <button onClick={()=>setEditIdx(null)} style={{...btnS("sec"),padding:"7px 16px",fontSize:11}}>Cancel</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <Card title="Attack Presets">
+      <div style={{fontSize:10,color:"var(--text-muted)",marginBottom:10,fontStyle:"italic",lineHeight:1.5}}>
+        Save named attack configurations — choose your stance, enhancers and grip. Accuracy and Damage are calculated live from your current stats.
+      </div>
+      {presets.length===0&&editIdx===null&&(
+        <div style={{fontSize:11,color:"var(--text-muted)",fontStyle:"italic",marginBottom:10,textAlign:"center",padding:"12px 0",borderBottom:"1px solid var(--border-row)"}}>No presets yet. Add one below.</div>
+      )}
+      {presets.map((p,i)=>renderPreset(p,i))}
+      {editPanel}
+      {editIdx===null&&(
+        <button onClick={openNew} style={{...btnS("pri"),width:"100%",marginTop:presets.length>0?10:0,padding:"8px 0",fontSize:11}}>✦ Add Attack Preset</button>
+      )}
+    </Card>
+  );
+}
+
+
 // ─── STEP SUMMARY ─────────────────────────────────────────────────────────────
 function StepSummary({char,setChar,derived,totalSP}){
   const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,finalFlight,isWinged,isMultiLimbed,hasVacuumSoul,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive,boonArmorBonus,boonWardBonus,weaponCritBonus,offhandCritBonus,jewelryWardBonus,jewelrySpellPowerBonus,armorSizeBonus,weaponParryB,weaponReachB,finalSecDmg,finalCC,finalCritRes,catalystAccBonus,catalystCritBonus,offhandAccBonus,slottedSpellNotes,manaAugParry,catalystAttunementBonus,enhancerAcc,enhancerDmg,enhancerSpellAcc,enhancerSecDmg,versatileGrip,hasMasterMartialTrainingGlobal}=derived;
@@ -4310,6 +4640,9 @@ function StepSummary({char,setChar,derived,totalSP}){
           </Card>
         );
       })()}
+
+      {/* ── Attack Presets ── */}
+      <AttackPresetsCard char={char} setChar={setChar} derived={derived}/>
       {/* ── Attack & Spell Enhancers Reference ── */}
       {(()=>{
         const wpn     = char.equipment.weapon;
@@ -4661,6 +4994,192 @@ function StepSummary({char,setChar,derived,totalSP}){
           );
         })()}
         <div style={{marginTop:8,fontSize:10,color:"var(--text-label)"}}>Use + to add earned silver. Use − to record purchases not tracked by the equipment step.</div>
+
+        {/* ── Full spending breakdown ── */}
+        {(()=>{
+          const TIER_LABELS = {novice:"Novice",adept:"Adept",master:"Master"};
+          const TIER_C = {novice:50,adept:100,master:150};
+
+          // ── Equipment line items ─────────────────────────────────────────
+          const equipLines = [];
+          const eq = char.equipment;
+
+          const addEquip = (item, category) => {
+            if(!item) return;
+            const cost = item.cost||0;
+            equipLines.push({name: item.name, cost, category});
+          };
+
+          addEquip(eq.weapon,  "Weapon");
+          addEquip(eq.offhand, "Off-hand");
+          addEquip(eq.armor,   "Armor");
+          addEquip(eq.catalyst,"Catalyst");
+          (eq.jewelry||[]).forEach(j => addEquip(j, "Jewelry"));
+          (eq.items||[]).forEach(i  => addEquip(i, "Alchemical"));
+
+          // Weapon add-ons (main hand)
+          if(char.weaponRune){
+            const r=WEAPON_RUNES_DATA.find(x=>x.name===char.weaponRune);
+            if(r&&!r.special) equipLines.push({name:`${char.weaponRune} (rune on ${eq.weapon?.name||"weapon"})`,cost:r.cost,category:"Enchantment"});
+          }
+          if(char.weaponSpell){
+            const s=WEAPON_SPELLS_DATA.find(x=>x.name===char.weaponSpell);
+            if(s) equipLines.push({name:`${char.weaponSpell} (spell on ${eq.weapon?.name||"weapon"})`,cost:s.cost,category:"Enchantment"});
+          }
+          if(char.weaponMithril && eq.weapon && !(eq.weapon.props||"").includes("Gun")){
+            const wt=getWeaponHandedness(eq.weapon);
+            equipLines.push({name:`Mithril Silver (${eq.weapon.name})`,cost:MITHRIL_WEAPON_COST(wt),category:"Upgrade"});
+          }
+          (char.weaponMods||[]).forEach(m=>{
+            const md=GUN_MODS_DATA.find(x=>x.name===m);
+            if(md) equipLines.push({name:`${m} (mod on ${eq.weapon?.name||"gun"})`,cost:md.cost,category:"Mod"});
+          });
+          // Off-hand add-ons
+          if(char.offhandRune){
+            const r=WEAPON_RUNES_DATA.find(x=>x.name===char.offhandRune);
+            if(r&&!r.special) equipLines.push({name:`${char.offhandRune} (rune on ${eq.offhand?.name||"off-hand"})`,cost:r.cost,category:"Enchantment"});
+          }
+          if(char.offhandSpell){
+            const s=WEAPON_SPELLS_DATA.find(x=>x.name===char.offhandSpell);
+            if(s) equipLines.push({name:`${char.offhandSpell} (spell on ${eq.offhand?.name||"off-hand"})`,cost:s.cost,category:"Enchantment"});
+          }
+          if(char.offhandMithril && eq.offhand && !(eq.offhand.props||"").includes("Gun")){
+            const wt=getWeaponHandedness(eq.offhand);
+            equipLines.push({name:`Mithril Silver (${eq.offhand.name})`,cost:MITHRIL_WEAPON_COST(wt),category:"Upgrade"});
+          }
+          (char.offhandMods||[]).forEach(m=>{
+            const md=GUN_MODS_DATA.find(x=>x.name===m);
+            if(md) equipLines.push({name:`${m} (mod on ${eq.offhand?.name||"off-hand gun"})`,cost:md.cost,category:"Mod"});
+          });
+
+          const equipTotal = equipLines.reduce((t,l)=>t+l.cost, 0);
+
+          // ── Skill lines (trainings + techniques/spells) ──────────────────
+          // Build set of auto-spell names (free from master perks)
+          const freeAutoNames = new Set();
+          for(const tree of SKILL_TREES){
+            for(const perk of (tree.masterPerks||[])){
+              if(perk.autoSpell) freeAutoNames.add(perk.autoSpell.name);
+            }
+          }
+
+          const skillSections = [];
+          let skillTotal = 0;
+
+          for(const tree of SKILL_TREES){
+            if(!(char.skills[tree.id]>0)) continue;
+            const treeLines = [];
+            for(const tier of ["novice","adept","master"]){
+              const c2 = TIER_C[tier];
+              // Training
+              if(char.purchasedTrainings.has(`${tree.id}:${tier}`)){
+                treeLines.push({name:`${TIER_LABELS[tier]} Training`, cost:c2, tier});
+                skillTotal += c2;
+              }
+              // Techniques / spells
+              const techs = ((char.techniques[tree.id]||{})[tier])||[];
+              for(const techName of techs){
+                if(freeAutoNames.has(techName)){
+                  treeLines.push({name:techName, cost:0, tier, note:"free (master perk)"});
+                } else {
+                  treeLines.push({name:techName, cost:c2, tier});
+                  skillTotal += c2;
+                }
+              }
+            }
+            if(treeLines.length>0){
+              skillSections.push({treeName:tree.name, lines:treeLines});
+            }
+          }
+
+          const grandTotal = equipTotal + skillTotal;
+          const starting   = char.money||500;
+          const remaining  = starting - grandTotal;
+
+          // ── Category colour helper ───────────────────────────────────────
+          const catCol = (cat) => {
+            if(cat==="Weapon"||cat==="Off-hand") return "#4cc8e0";
+            if(cat==="Armor") return "#9a70d8";
+            if(cat==="Enchantment"||cat==="Upgrade"||cat==="Mod") return "#c8a84a";
+            if(cat==="Jewelry"||cat==="Catalyst") return "#e05a6a";
+            return "var(--text-label)";
+          };
+          const tierCol = {novice:"var(--text-teal)",adept:"#c8a84a",master:"#e05a6a"};
+
+          const SectionHdr = ({label, total, color}) => (
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:"1px solid var(--border-main)",marginBottom:4}}>
+              <span style={{fontSize:10,fontWeight:700,color:color||"var(--text-head)",letterSpacing:"0.1em"}}>{label}</span>
+              <span style={{fontSize:10,fontWeight:700,color:"#c8a84a"}}>{total}s</span>
+            </div>
+          );
+
+          const LineItem = ({name, cost, badge, badgeCol, note}) => (
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",padding:"2px 0 2px 8px",borderBottom:"1px solid var(--border-row)",gap:8}}>
+              <div style={{display:"flex",alignItems:"center",gap:5,flex:1,minWidth:0}}>
+                {badge&&<span style={{fontSize:8,padding:"0 4px",background:badgeCol||"var(--bg-tag)",borderRadius:2,color:"#fff",fontWeight:700,letterSpacing:"0.05em",flexShrink:0}}>{badge}</span>}
+                <span style={{fontSize:10,color:"var(--text-td)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name}</span>
+                {note&&<span style={{fontSize:9,color:"var(--text-muted)",fontStyle:"italic",flexShrink:0}}>{note}</span>}
+              </div>
+              <span style={{fontSize:10,fontWeight:600,color:cost===0?"var(--text-muted)":"var(--text-row-val)",flexShrink:0}}>{cost===0?"FREE":`${cost}s`}</span>
+            </div>
+          );
+
+          if(equipLines.length===0 && skillSections.length===0) return null;
+
+          return (
+            <div style={{marginTop:14,paddingTop:12,borderTop:"2px solid var(--border-main)"}}>
+              <div style={{fontSize:9,color:"var(--text-label)",letterSpacing:"0.2em",marginBottom:10,fontWeight:700}}>SPENDING BREAKDOWN</div>
+
+              {/* Equipment */}
+              {equipLines.length>0&&(
+                <div style={{marginBottom:12}}>
+                  <SectionHdr label="EQUIPMENT" total={equipTotal} color="#4cc8e0"/>
+                  {equipLines.map((l,i)=>(
+                    <LineItem key={i} name={l.name} cost={l.cost} badge={l.category} badgeCol={catCol(l.category)}/>
+                  ))}
+                </div>
+              )}
+
+              {/* Skills */}
+              {skillSections.length>0&&(
+                <div style={{marginBottom:12}}>
+                  <SectionHdr label="SKILLS, TRAININGS & TECHNIQUES" total={skillTotal} color="#9a70d8"/>
+                  {skillSections.map((sec,si)=>(
+                    <div key={si} style={{marginBottom:8}}>
+                      <div style={{fontSize:9,color:"var(--text-sub)",fontWeight:700,letterSpacing:"0.1em",padding:"3px 0 2px 0",marginBottom:2}}>{sec.treeName.toUpperCase()}</div>
+                      {sec.lines.map((l,li)=>(
+                        <LineItem key={li} name={l.name} cost={l.cost}
+                          badge={l.tier.charAt(0).toUpperCase()+l.tier.slice(1)}
+                          badgeCol={tierCol[l.tier]||"var(--text-label)"}
+                          note={l.note}/>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Grand total */}
+              <div style={{padding:"8px 10px",background:"var(--bg-panel-alt)",border:"1px solid var(--border-main)",borderRadius:3,marginTop:4}}>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:11,marginBottom:4}}>
+                  <span style={{color:"var(--text-muted)"}}>Starting Silver</span>
+                  <span style={{fontWeight:600,color:"var(--text-row-val)"}}>{starting}s</span>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:11,marginBottom:4}}>
+                  <span style={{color:"var(--text-muted)"}}>Equipment spent</span>
+                  <span style={{fontWeight:600,color:"var(--text-row-val)"}}>−{equipTotal}s</span>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:11,paddingBottom:6,borderBottom:"1px solid var(--border-row)",marginBottom:6}}>
+                  <span style={{color:"var(--text-muted)"}}>Skills spent</span>
+                  <span style={{fontWeight:600,color:"var(--text-row-val)"}}>−{skillTotal}s</span>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:13,fontWeight:700}}>
+                  <span style={{color:"var(--text-label)"}}>Remaining</span>
+                  <span style={{color:remaining<0?"var(--text-danger)":"#c8a84a"}}>{remaining}s {remaining<0?"⚠ OVER BUDGET":""}</span>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </Card>
       <div style={{marginTop:12,padding:"10px 14px",background:"var(--bg-panel)",border:"1px solid var(--border-main)",borderRadius:3,fontSize:10,color:"var(--text-row-label)",textAlign:"center"}}>
         Character complete! Submit to an Admin for approval. Use "Copy Sheet" to get your formatted sheet. Head to the Level Up tab to grow your character.
