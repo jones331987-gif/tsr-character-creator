@@ -1728,6 +1728,38 @@ const ATTACK_ENHANCERS_DATA = [
     effect: "Touch Magic twice in a single attack. Both spells stack as Secondary Damage.",
     req: { skill: { id: "spellcraft", rank: 3 } },
   },
+  // ── CQC Master Technique ─────────────────────────────────────────────────
+  {
+    name: "Overwhelming Stampede",
+    type: "martial",
+    cost: "1 Action",
+    effect: "+2 Accuracy & +2 Primary Damage, plus adds your Strength dice to the next attack. Melee.",
+    statBonuses: { acc: 2, dmg: 2 },
+    req: { skill: { id: "cqc", rank: 3 }, weaponType: "melee" },
+    note: "Also adds +STR dice to the attack",
+  },
+  // ── Marksmanship Technique ───────────────────────────────────────────────
+  {
+    name: "Hunter's Vow",
+    type: "martial",
+    cost: "1 Action",
+    effect: "Mark a target. +3 Accuracy against them on your next round.",
+    statBonuses: { acc: 3 },
+    req: { skill: { id: "marksmanship", rank: 3 }, weaponType: "ranged" },
+  },
+  // ── Endurance Master Perk (Punishing Draw) ───────────────────────────────
+  // Not a technique — a perk bonus. Handled via hasPunishingDraw in derived.
+  // Listed here so it can appear in presets when the perk is taken.
+  {
+    name: "Punishing Draw",
+    type: "martial",
+    cost: "Passive (first attack, initiating combat)",
+    effect: "+2 Accuracy & +2 Primary Damage on the first attack when initiating combat.",
+    statBonuses: { acc: 2, dmg: 2 },
+    req: null,
+    isPerk: true,     // sourced from master perk, not a purchased technique
+    perkSource: { skillId: "endurance", perkName: "Punishing Draw" },
+  },
 ];
 
 // ─── STEPS ───────────────────────────────────────────────────────────────────
@@ -3685,6 +3717,12 @@ function AttackPresetsCard({char, setChar, derived}) {
   // ── isPurchased: technique bought OR training autoFeat OR universal ───────
   const isPurchased = (enh) => {
     if(enh.universal) return true;
+    // Perk-sourced enhancers (e.g. Punishing Draw from Endurance mastery)
+    if(enh.isPerk && enh.perkSource) {
+      const { skillId, perkName } = enh.perkSource;
+      const v = char.masterPerks[skillId];
+      return Array.isArray(v) ? v.includes(perkName) : v === perkName;
+    }
     for(const tree of SKILL_TREES){
       if(Object.values(char.techniques[tree.id]||{}).flat().includes(enh.name)) return true;
     }
@@ -3824,6 +3862,12 @@ function AttackPresetsCard({char, setChar, derived}) {
       ...(mithVal>0                  ? [{label:"Mithril",     val:mithVal}] : []),
       ...(scopeAcc>0                 ? [{label:"Scope",       val:scopeAcc}] : []),
     ];
+    // Rune secondary elemental damage (all runes give elemental dice, shown separately)
+    const runeSecDice = (() => {
+      if(!rune) return null;
+      const rd = WEAPON_RUNES_DATA.find(r=>r.name===rune);
+      return rd && rd.dmg !== "—" ? rd.dmg : null; // e.g. "+1d6 Wind"
+    })();
     const dmgBreakdown = [
       {label: hasPrimalMass?"Vig (Primal Mass)":hasEagleEye&&isRng?"Dex (Eagle Eye)":"Str", val: dmgDie, isDie:true},
       ...(wpnDiceOnly                ? [{label:w.name,        val:wpnDiceOnly, isDie:true}] : []),
@@ -3834,8 +3878,10 @@ function AttackPresetsCard({char, setChar, derived}) {
       ...(jewelryDmgBonus>0          ? [{label:"Jewelry",     val:jewelryDmgBonus}] : []),
       ...(sizeB.primDmg>0            ? [{label:"Size",        val:sizeB.primDmg}] : []),
       ...(!isOffhand&&savageFightingBonus>0?[{label:"Savage Fighting",val:savageFightingBonus}]:[]),
-      ...(runeDmg>0                  ? [{label:rune,          val:runeDmg}] : []),
+      ...(runeDmg>0                  ? [{label:rune+" bonus", val:runeDmg}] : []),
       ...(mithVal>0                  ? [{label:"Mithril",     val:mithVal}] : []),
+      // Secondary elemental damage from rune — listed separately as it's a different damage type
+      ...(runeSecDice                ? [{label:rune+" (secondary)", val:runeSecDice, isDie:true, isSecondary:true, color:"#9a70d8"}] : []),
     ];
     return { accDie, dmgDie, acc: sharedAcc+accMod, dmg: sharedDmg+dmgMod, dmgFormula: w.dmg,
              isRanged: isRng, name: w.name, wpnDiceOnly,
@@ -3877,11 +3923,13 @@ function AttackPresetsCard({char, setChar, derived}) {
       : `1–${reach} Melee${size>=2?" (Size "+size+", Reach)":""}`;
 
     // ── Breakdown sub-row component ──────────────────────────────────────
-    const BreakdownRow = ({label, val, isDie, color}) => (
+    const BreakdownRow = ({label, val, isDie, isSecondary, color}) => (
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",padding:"1px 0 1px 10px",gap:8}}>
-        <span style={{fontSize:9,color:"var(--text-muted)"}}>└ {label}</span>
+        <span style={{fontSize:9,color:isSecondary?"var(--text-sub)":"var(--text-muted)"}}>
+          {isSecondary?"⊕":"└"} {label}
+        </span>
         <span style={{fontSize:9,fontWeight:600,color:color||"var(--text-label)",flexShrink:0}}>
-          {isDie ? val : `+${val}`}
+          {isSecondary ? val : isDie ? val : `+${val}`}
         </span>
       </div>
     );
@@ -3939,8 +3987,7 @@ function AttackPresetsCard({char, setChar, derived}) {
       const core = elemM?elemM[1]:raw; const elem = elemM?" "+elemM[2]:"";
       const spM = core.match(/^(Str|Mind)\+(.+)$/); const soM = core.match(/^(Str|Mind)$/);
       let base;
-      if(isVicious&&spM)   base = `(${mh.dmgDie})×2 + ${spM[2]}${elem}`;
-      else if(spM)          base = `${mh.dmgDie}+${spM[2]}${elem}`;
+      if(spM)               base = `${mh.dmgDie}+${spM[2]}${elem}`;
       else if(soM)          base = `${mh.dmgDie}${elem}`;
       else                  base = `${core}${elem}`;
       const tot = mh.dmg+eb.dmg+sb.dmg;
@@ -4022,7 +4069,7 @@ function AttackPresetsCard({char, setChar, derived}) {
                 ] : mh ? [
                   ...mh.dmgBreakdown,
                   ...enhDmgRows,
-                  ...(isVicious?[{label:"×2 (Vicious Strike)",val:"×2",isDie:true,color:"var(--text-danger)"}]:[]),
+                  ...(isVicious?[{label:"Str ×2 (Vicious Strike)", val:mh.dmgDie, isDie:true, color:"var(--text-danger)"}]:[]),
                 ] : []}
                 extra={isDualStrike&&oh&&<div style={{marginTop:4,paddingTop:4,borderTop:"1px dashed var(--border-row)",fontSize:10,color:"var(--text-muted)"}}>Off-hand: {fmtDmg(oh.dmgFormula,oh.dmgDie,oh.dmg,false)}</div>}
               />
@@ -5055,6 +5102,11 @@ function StepSummary({char,setChar,derived,totalSP}){
 
         const isPurchased = (enh) => {
           if(enh.universal) return true;
+          if(enh.isPerk && enh.perkSource) {
+            const { skillId, perkName } = enh.perkSource;
+            const v = char.masterPerks[skillId];
+            return Array.isArray(v) ? v.includes(perkName) : v === perkName;
+          }
           for(const tree of SKILL_TREES){
             if(Object.values(char.techniques[tree.id]||{}).flat().includes(enh.name)) return true;
           }
