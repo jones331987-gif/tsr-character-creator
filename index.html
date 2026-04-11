@@ -3983,9 +3983,105 @@ function StepSummary({char,setChar,derived,totalSP}){
   const TIERS=["novice","adept","master"];
 
   const copySheet=()=>{
+    // ── Silver cost helpers ───────────────────────────────────────────────
+    const TIER_C = {novice:50, adept:100, master:150};
+    const freeAutoNames = new Set();
+    for(const tree of SKILL_TREES){
+      for(const perk of (tree.masterPerks||[])){
+        if(perk.autoSpell) freeAutoNames.add(perk.autoSpell.name);
+      }
+    }
+    const cs = (cost) => cost > 0 ? ` (${cost}s)` : "";
+    const eq = char.equipment;
+
+    // ── Build equipment spent breakdown ──────────────────────────────────
+    let equipTotal = 0;
+    const equipLines = [];
+    const addEL = (label, cost) => { equipLines.push(`    └ ${label}${cs(cost)}`); equipTotal += cost; };
+
+    // Weapon
+    if(eq.weapon){
+      equipLines.push(`  Weapon: ${eq.weapon.name}${cs(eq.weapon.cost||0)}`);
+      equipTotal += eq.weapon.cost||0;
+      if(char.weaponMithril && !(eq.weapon.props||"").includes("Gun")){
+        const wt=getWeaponHandedness(eq.weapon);
+        addEL(`Mithril Silver — Acc+1, Dmg+1`, MITHRIL_WEAPON_COST(wt));
+      }
+      if(char.weaponRune){ const r=WEAPON_RUNES_DATA.find(x=>x.name===char.weaponRune); if(r&&!r.special) addEL(`Rune: ${char.weaponRune} — ${r.dmg} · ${r.effect}`, r.cost); }
+      if(char.weaponSpell){ const s=WEAPON_SPELLS_DATA.find(x=>x.name===char.weaponSpell); if(s) addEL(`Spell Enchant: ${char.weaponSpell} — ${s.effect}`, s.cost); }
+      (char.weaponMods||[]).forEach(m=>{ const md=GUN_MODS_DATA.find(x=>x.name===m); if(md) addEL(`Mod: ${m} — ${md.effect}`, md.cost); });
+    } else {
+      equipLines.push(`  Weapon: —`);
+    }
+
+    // Off-hand
+    if(eq.offhand){
+      equipLines.push(`  Off-hand: ${eq.offhand.name}${cs(eq.offhand.cost||0)}`);
+      equipTotal += eq.offhand.cost||0;
+      if(char.offhandMithril && !(eq.offhand.props||"").includes("Gun")){
+        const wt=getWeaponHandedness(eq.offhand);
+        addEL(`Mithril Silver — Acc+1, Dmg+1`, MITHRIL_WEAPON_COST(wt));
+      }
+      if(char.offhandRune){ const r=WEAPON_RUNES_DATA.find(x=>x.name===char.offhandRune); if(r&&!r.special) addEL(`Rune: ${char.offhandRune} — ${r.dmg} · ${r.effect}`, r.cost); }
+      if(char.offhandSpell){ const s=WEAPON_SPELLS_DATA.find(x=>x.name===char.offhandSpell); if(s) addEL(`Spell Enchant: ${char.offhandSpell} — ${s.effect}`, s.cost); }
+      (char.offhandMods||[]).forEach(m=>{ const md=GUN_MODS_DATA.find(x=>x.name===m); if(md) addEL(`Mod: ${m} — ${md.effect}`, md.cost); });
+    } else {
+      equipLines.push(`  Off-hand: —`);
+    }
+
+    equipLines.push(`  Armor: ${eq.armor ? eq.armor.name+cs(eq.armor.cost||0) : "—"}`);
+    equipTotal += eq.armor?.cost||0;
+    equipLines.push(`  Catalyst: ${eq.catalyst ? eq.catalyst.name+cs(eq.catalyst.cost||0) : "—"}`);
+    equipTotal += eq.catalyst?.cost||0;
+    if(eq.jewelry.length) {
+      equipLines.push(`  Jewelry: ${eq.jewelry.map(j=>j.name+cs(j.cost||0)).join(", ")}`);
+      eq.jewelry.forEach(j=>{ equipTotal += j.cost||0; });
+    } else {
+      equipLines.push(`  Jewelry: —`);
+    }
+    if(eq.items.length) {
+      equipLines.push(`  Items: ${eq.items.map(i=>i.name+cs(i.cost||0)).join(", ")}`);
+      eq.items.forEach(i=>{ equipTotal += i.cost||0; });
+    } else {
+      equipLines.push(`  Items: —`);
+    }
+
+    // ── Build skills / techniques breakdown ───────────────────────────────
+    let skillTotal = 0;
+    const skillLines = [];
+    for(const tree of SKILL_TREES){
+      if(!(char.skills[tree.id]>0)) continue;
+      const rank = char.skills[tree.id];
+      const perkVal = char.masterPerks[tree.id];
+      const perkArr = Array.isArray(perkVal)?perkVal:perkVal?[perkVal]:[];
+      const perkStr = perkArr.filter(Boolean).length ? ` [Perk: ${perkArr.filter(Boolean).join(" + ")}]` : "";
+      skillLines.push(`  ${tree.name}: ${RANK_LABELS[rank]}${perkStr}`);
+      for(const tier of ["novice","adept","master"]){
+        const tc = TIER_C[tier];
+        const tLabel = tier.charAt(0).toUpperCase()+tier.slice(1);
+        if(char.purchasedTrainings.has(`${tree.id}:${tier}`)){
+          skillLines.push(`    └ [${tLabel} Training] (${tc}s)`);
+          skillTotal += tc;
+        }
+        const techs = ((char.techniques[tree.id]||{})[tier])||[];
+        for(const techName of techs){
+          if(freeAutoNames.has(techName)){
+            skillLines.push(`    └ [${tLabel}] ${techName} (FREE — master perk)`);
+          } else {
+            skillLines.push(`    └ [${tLabel}] ${techName} (${tc}s)`);
+            skillTotal += tc;
+          }
+        }
+      }
+    }
+
+    const grandTotal = equipTotal + skillTotal;
+    const starting   = char.money||500;
+    const remaining  = starting - grandTotal;
+
     const lines=[
       `=== TSR 5.0 CHARACTER SHEET ===`,
-      `Name: ${char.name||"—"}  |  Race: ${char.race||"—"}  |  Level: 1`,
+      `Name: ${char.name||"—"}  |  Race: ${char.race||"—"}  |  Level: ${char.level||1}`,
       `Role: ${char.role||"—"}  |  Starting Boon: ${char.boon?.name||"—"}`,
       ``,`STATS:`,
       ...STATS.map(s=>`  ${s}: ${char.stats[s]}`),
@@ -3995,31 +4091,107 @@ function StepSummary({char,setChar,derived,totalSP}){
       `  Melee Accuracy: ${finalMeleeAcc.die}${finalMeleeAcc.bonus!==0?" (+"+ finalMeleeAcc.bonus+")":""}  |  Primary Damage: ${finalMeleeDmg.die}${finalMeleeDmg.bonus!==0?" (+"+finalMeleeDmg.bonus+")":""}`,
       `  Parry: ${finalParry}  |  Armor: ${finalArmor}  |  Ward: ${finalWard}`,
       `  Movement: ${finalMove}  |  Carry Cap: ${finalStamina} wt  |  Tech Slots: ${slotsUsed}/${totalTechSlots}${bonusTechSlots>0?" (+"+bonusTechSlots+" training bonus)":""}  |  Spell Slots: ${spellSlotsUsed}/${totalSpellSlots}`,
-      ``,`SKILLS:`,
-      ...SKILL_TREES.filter(t=>char.skills[t.id]>0).map(t=>{
-        const rank=char.skills[t.id];
-        const perkVal=char.masterPerks[t.id];
-        const perkArr=Array.isArray(perkVal)?perkVal:perkVal?[perkVal]:[];
-        const perkStr=perkArr.filter(Boolean).length?` [Perk: ${perkArr.filter(Boolean).join(" + ")}]`:"";
-        const techList=Object.entries(char.techniques[t.id]||{}).flatMap(([,ts])=>ts);
-        return `  ${t.name}: ${RANK_LABELS[rank]}${perkStr}${techList.length?" — "+techList.join(", "):""}`;
-      }),
-      ``,`EQUIPMENT:`,
-      `  Weapon: ${char.equipment.weapon?.name||"—"}`,
-      ...(char.weaponMithril&&char.equipment.weapon&&!(char.equipment.weapon.props||"").includes("Gun")?[`    └ Mithril Silver: Acc+1, Dmg+1`]:[]),
-      ...(char.weaponRune?[`    └ Rune: ${char.weaponRune} — ${WEAPON_RUNES_DATA.find(r=>r.name===char.weaponRune)?.dmg||""} · ${WEAPON_RUNES_DATA.find(r=>r.name===char.weaponRune)?.effect||""}`]:[]),
-      ...(char.weaponSpell?[`    └ Spell Enchant: ${char.weaponSpell} — ${WEAPON_SPELLS_DATA.find(s=>s.name===char.weaponSpell)?.effect||""}`]:[]),
-      ...((char.weaponMods||[]).map(m=>`    └ Mod: ${m} — ${GUN_MODS_DATA.find(x=>x.name===m)?.effect||""}`)),
-      `  Off-hand: ${char.equipment.offhand?.name||"—"}`,
-      ...(char.offhandMithril&&char.equipment.offhand&&!(char.equipment.offhand.props||"").includes("Gun")?[`    └ Mithril Silver: Acc+1, Dmg+1`]:[]),
-      ...(char.offhandRune?[`    └ Rune: ${char.offhandRune} — ${WEAPON_RUNES_DATA.find(r=>r.name===char.offhandRune)?.dmg||""} · ${WEAPON_RUNES_DATA.find(r=>r.name===char.offhandRune)?.effect||""}`]:[]),
-      ...(char.offhandSpell?[`    └ Spell Enchant: ${char.offhandSpell} — ${WEAPON_SPELLS_DATA.find(s=>s.name===char.offhandSpell)?.effect||""}`]:[]),
-      ...((char.offhandMods||[]).map(m=>`    └ Mod: ${m} — ${GUN_MODS_DATA.find(x=>x.name===m)?.effect||""}`)),
-      `  Armor: ${char.equipment.armor?.name||"—"}`,
-      `  Catalyst: ${char.equipment.catalyst?.name||"—"}`,
-      `  Jewelry: ${char.equipment.jewelry.map(j=>j.name).join(", ")||"—"}`,
-      `  Items: ${char.equipment.items.map(i=>i.name).join(", ")||"—"}`,
-      `  Money remaining: ${moneyLeft} Silver`,
+      ``,`SKILLS & TECHNIQUES (with silver costs):`,
+      ...skillLines,
+      ``,`EQUIPMENT (with silver costs):`,
+      ...equipLines,
+      ``,`SILVER SUMMARY:`,
+      `  Starting Silver:   ${starting}s`,
+      `  Equipment spent:  -${equipTotal}s`,
+      `  Skills spent:     -${skillTotal}s`,
+      `  ─────────────────────────────`,
+      `  Remaining:         ${remaining}s${remaining<0?" ⚠ OVER BUDGET":""}`,
+      // ── Attack Presets ──────────────────────────────────────────────────
+      ...((char.attackPresets||[]).length > 0 ? (()=>{
+        const STANCE_META = {
+          normal:    {label:"Basic Attack",   actions:1},
+          vicious:   {label:"Vicious Strike", actions:2},
+          dual:      {label:"Dual Strike",    actions:2},
+          cleave:    {label:"Cleave",         actions:2},
+          lunge:     {label:"Rapid Lunge",    actions:1},
+          touchmagic:{label:"Touch Magic",    actions:2},
+          spell:     {label:"Cast Spell",     actions:2},
+        };
+        const mmt = char.purchasedTrainings.has("martial_arts:master");
+        // Compute enhancer bonuses for a preset (mirrors AttackPresetsCard logic)
+        const presetBonuses = (preset) => {
+          let acc=0, dmg=0, spellAcc=0;
+          for(const eName of (preset.enhancers||[])){
+            const enh = ATTACK_ENHANCERS_DATA.find(e=>e.name===eName);
+            if(!enh?.statBonuses) continue;
+            const b = enh.statBonuses;
+            const m = mmt && (enh.type==="martial"||enh.type==="both") ? 1 : 0;
+            if(enh.type!=="spell"){
+              if(b.acc!==undefined) acc+=b.acc+m;
+              if(b.accHigh!==undefined) acc+=b.accHigh+m;
+              if(b.dmg!==undefined) dmg+=b.dmg+m;
+              if(b.dmgHigh!==undefined) dmg+=b.dmgHigh+m;
+            }
+            if(enh.type==="spell"||enh.type==="both"){
+              if(b.acc!==undefined) spellAcc+=b.acc;
+              if(b.accHigh!==undefined) spellAcc+=b.accHigh;
+            }
+          }
+          return {acc, dmg, spellAcc};
+        };
+        // Shared stat bonuses (training, tech, boon, jewelry)
+        const sharedAcc = trainBonuses.Acc + slottedTechBonuses.Acc + boonOffensive + jewelryAccBonus;
+        const sharedDmg = trainBonuses.PrimDmg + slottedTechBonuses.PrimDmg + boonOffensive + jewelryDmgBonus + sizeB.primDmg + savageFightingBonus;
+        const wpn = char.equipment.weapon;
+        const wpnAccProp = parseInt((wpn?.props?.match(/Acc\+(\d+)/)||[0,0])[1]);
+        const wpnDmgProp = parseInt((wpn?.props?.match(/Dmg\+(\d+)/)||[0,0])[1]);
+        const runeAccBonus = char.weaponRune==="Rune of Wind"?1:char.weaponRune==="Demon"?2:0;
+        const runeDmgBonus = char.weaponRune==="Demon"?3:0;
+        const mithBonus    = (char.weaponMithril && wpn && !(wpn.props||"").includes("Gun")) ? 1 : 0;
+        const baseWpnAcc   = wpnAccProp + runeAccBonus + mithBonus;
+        const baseWpnDmg   = wpnDmgProp + runeDmgBonus + mithBonus;
+        const accDie = hasBrute ? char.stats.Strength : char.stats.Dexterity;
+        const dmgDie = hasPrimalMass ? char.stats.Vigor : char.stats.Strength;
+        const spellAccBase = (trainBonuses.SpellAcc||0) + catalystAccBonus + catalystAttunementBonus;
+
+        const presetLines = [``, `ATTACK PRESETS:`];
+        for(const preset of char.attackPresets){
+          const sm = STANCE_META[preset.stance] || STANCE_META.normal;
+          const eb = presetBonuses(preset);
+          const isSpell = preset.stance==="spell";
+          const isVicious = preset.stance==="vicious";
+          presetLines.push(`  ${preset.name}`);
+          presetLines.push(`    Cast: ${sm.actions} Action${sm.actions>1?"s":""} (${sm.label})`);
+          if(isSpell){
+            const spAcc = spellAccBase + eb.spellAcc;
+            presetLines.push(`    Accuracy: ${char.stats.Mind}${spAcc>0?"+"+spAcc:spAcc<0?spAcc:""} (Mind)`);
+            presetLines.push(`    Damage:   ${char.stats.Mind} + Spell Dice`);
+          } else if(wpn){
+            const totalAcc = sharedAcc + baseWpnAcc + eb.acc;
+            const totalDmg = sharedDmg + baseWpnDmg + eb.dmg;
+            const accStr = `${accDie}${totalAcc>0?" (+"+totalAcc+")":totalAcc<0?" ("+totalAcc+")":""}`;
+            // Damage formula
+            const raw = wpn.dmg;
+            const elemM = raw.match(/^(.+?)\s+([A-Z][a-z]+)$/);
+            const core = elemM?elemM[1]:raw; const elem = elemM?" "+elemM[2]:"";
+            const statPlusM = core.match(/^(Str|Mind)\+(.+)$/); const statOnlyM = core.match(/^(Str|Mind)$/);
+            let dmgBase;
+            if(isVicious && statPlusM) dmgBase = `(${dmgDie})×2 + ${statPlusM[2]}${elem}`;
+            else if(statPlusM) dmgBase = `${dmgDie}+${statPlusM[2]}${elem}`;
+            else if(statOnlyM) dmgBase = `${dmgDie}${elem}`;
+            else dmgBase = `${core}${elem}`;
+            const dmgStr = `${dmgBase}${totalDmg>0?" (+"+totalDmg+")":totalDmg<0?" ("+totalDmg+")":""}`;
+            presetLines.push(`    Accuracy: ${accStr}`);
+            presetLines.push(`    Damage:   ${dmgStr}`);
+            presetLines.push(`    Range:    1–${finalReach} Melee${size>=2?" (Size "+size+", Reach)":""}`);
+          }
+          if((preset.enhancers||[]).length>0){
+            presetLines.push(`    Enhancers: ${preset.enhancers.join(", ")}`);
+          }
+          if(wpn && (wpn.props||"").includes("Versatile")){
+            presetLines.push(`    Grip: ${preset.grip==="2h"?"Two-Hand":"One-Hand"}`);
+          }
+          if(preset.notes){
+            presetLines.push(`    Notes: ${preset.notes}`);
+          }
+        }
+        return presetLines;
+      })() : []),
     ];
     navigator.clipboard.writeText(lines.join("\n")).catch(()=>{});
   };
