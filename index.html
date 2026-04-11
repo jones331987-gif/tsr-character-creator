@@ -2554,7 +2554,7 @@ function App() {
   };
 
   const gunModAmmoBonus = (char.weaponMods||[]).includes("Extended Magazine") ? 6 : 0;
-  const derived = {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,finalFlight,isWinged,isMultiLimbed,hasVacuumSoul,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive,boonArmorBonus,boonWardBonus,weaponCritBonus,offhandCritBonus,jewelryWardBonus,jewelrySpellPowerBonus,armorSizeBonus,weaponParryB,weaponReachB,finalSecDmg,finalCC,finalCritRes,catalystAccBonus,catalystCritBonus,offhandAccBonus,slottedSpellNotes,manaAugParry,catalystAttunementBonus,enhancerAcc,enhancerDmg,enhancerSpellAcc,enhancerSecDmg,versatileGrip,hasMasterMartialTrainingGlobal};
+  const derived = {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,finalFlight,isWinged,isMultiLimbed,hasVacuumSoul,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive,boonArmorBonus,boonWardBonus,weaponCritBonus,offhandCritBonus,jewelryWardBonus,jewelrySpellPowerBonus,armorSizeBonus,weaponParryB,weaponReachB,finalSecDmg,finalCC,finalCritRes,catalystAccBonus,catalystCritBonus,offhandAccBonus,slottedSpellNotes,manaAugParry,catalystAttunementBonus,enhancerAcc,enhancerDmg,enhancerSpellAcc,enhancerSecDmg,versatileGrip,hasMasterMartialTrainingGlobal,unarmoredParryBonus};
 
   return (
     <div style={{minHeight:"100vh",background:"var(--bg-page-grad)",color:"var(--text-body)",fontFamily:"'Palatino Linotype',Palatino,Georgia,serif",display:"flex",flexDirection:"column"}}>
@@ -3961,25 +3961,63 @@ function AttackPresetsCard({char, setChar, derived}) {
       const core = elemM?elemM[1]:raw; const elem = elemM?" "+elemM[2]:"";
       const spM = core.match(/^(Str|Mind)\+(.+)$/); const soM = core.match(/^(Str|Mind)$/);
 
-      // Collect all dice parts and flat bonus separately so we can build one clean string
-      const diceParts = [];   // e.g. ["d12+5", "d8"]
-      const flatBonus = mh.dmg+eb.dmg+sb.dmg; // all flat +X bonuses already computed
+      // ── Collect all raw dice, then consolidate same-type dice together ──────
+      // Each entry: { die: "d12", elem: "" } or { die: "d6", elem: " Physical" }
+      const rawDice = [];
+      const flatBonus = mh.dmg+eb.dmg+sb.dmg;
 
-      // Weapon base dice
-      if(spM)       diceParts.push(`${mh.dmgDie}+${spM[2]}${elem}`);
-      else if(soM)  diceParts.push(`${mh.dmgDie}${elem}`);
-      else          diceParts.push(`${core}${elem}`);
+      // Parse weapon base: "d12+d8 Fire" → Str die d12, weapon die d8 Fire
+      // spM = Str+wpnDie form (e.g. "Str+d8"), soM = Str only
+      if(spM) {
+        rawDice.push({die: mh.dmgDie, elem: ""});            // Str die
+        // Weapon die part e.g. "d8" or "d8 Fire"
+        const wdieM = spM[2].match(/^(d\d+)(?:\s+([A-Z][a-z]+))?$/);
+        if(wdieM) rawDice.push({die: wdieM[1], elem: wdieM[2] ? " "+wdieM[2] : ""});
+        else rawDice.push({die: spM[2], elem: elem}); // fallback
+      } else if(soM) {
+        rawDice.push({die: mh.dmgDie, elem: ""});
+      } else {
+        // Fixed-dice weapons like "2d6" — keep as-is, don't try to consolidate
+        const diceStr2 = `${core}${elem}`;
+        const bonusStr2 = flatBonus!==0 ? (flatBonus>0?" +"+flatBonus:" "+flatBonus) : "";
+        return `${diceStr2}${bonusStr2}`;
+      }
 
-      // Vicious Strike: add another copy of the Str die (total becomes 2× Str + weapon dice)
-      if(isVicious && spM)  diceParts.push(`${mh.dmgDie}${elem}`);
+      // Vicious Strike: extra Str die
+      if(isVicious) rawDice.push({die: mh.dmgDie, elem: ""});
 
-      // Overwhelming Stampede: adds +STR dice to the next attack
-      if(sb.hasStrDiceBonus && mh) diceParts.push(`${mh.dmgDie}`);
+      // Overwhelming Stampede: extra Str die on next attack
+      if(sb.hasStrDiceBonus) rawDice.push({die: mh.dmgDie, elem: " (next)"});
 
-      // Rune secondary elemental dice (e.g. "+1d6 Physical") — a second damage source
-      if(mh.runeSecDice) diceParts.push(mh.runeSecDice.replace(/^\+/,""));
+      // Rune secondary dice — parse e.g. "+1d6 Physical" → {die:"d6", elem:" Physical"}
+      if(mh.runeSecDice) {
+        const rm = mh.runeSecDice.replace(/^\+/,"").match(/^(\d+)(d\d+)(?:\s+(.+))?$/);
+        if(rm) {
+          const count = parseInt(rm[1])||1;
+          const die = rm[2]; const el = rm[3] ? " "+rm[3] : "";
+          for(let i=0;i<count;i++) rawDice.push({die, elem: el});
+        }
+      }
 
-      const diceStr = diceParts.join("+");
+      // ── Consolidate: group by die+elem key, count occurrences ──────────────
+      // Keep "next attack" dice separate from primary dice
+      const counts = {}; // key → count
+      const order = [];  // insertion-order keys
+      for(const entry of rawDice) {
+        const key = entry.die + entry.elem;
+        if(!counts[key]) { counts[key] = 0; order.push(key); }
+        counts[key]++;
+      }
+
+      // Build consolidated dice string
+      // Format: "3d12+1d8+1d6 Physical" — always show count even if 1 for clarity
+      const parts = order.map(key => {
+        const count = counts[key];
+        // key is e.g. "d12", "d8", "d6 Physical", "d12 (next)"
+        return count > 1 ? `${count}${key}` : `1${key}`;
+      });
+
+      const diceStr = parts.join("+");
       const bonusStr = flatBonus!==0 ? (flatBonus>0?" +"+flatBonus:" "+flatBonus) : "";
       return `${diceStr}${bonusStr}`;
     })();
@@ -4262,7 +4300,7 @@ function AttackPresetsCard({char, setChar, derived}) {
 
 // ─── STEP SUMMARY ─────────────────────────────────────────────────────────────
 function StepSummary({char,setChar,derived,totalSP}){
-  const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,finalFlight,isWinged,isMultiLimbed,hasVacuumSoul,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive,boonArmorBonus,boonWardBonus,weaponCritBonus,offhandCritBonus,jewelryWardBonus,jewelrySpellPowerBonus,armorSizeBonus,weaponParryB,weaponReachB,finalSecDmg,finalCC,finalCritRes,catalystAccBonus,catalystCritBonus,offhandAccBonus,slottedSpellNotes,manaAugParry,catalystAttunementBonus,enhancerAcc,enhancerDmg,enhancerSpellAcc,enhancerSecDmg,versatileGrip,hasMasterMartialTrainingGlobal}=derived;
+  const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,finalFlight,isWinged,isMultiLimbed,hasVacuumSoul,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive,boonArmorBonus,boonWardBonus,weaponCritBonus,offhandCritBonus,jewelryWardBonus,jewelrySpellPowerBonus,armorSizeBonus,weaponParryB,weaponReachB,finalSecDmg,finalCC,finalCritRes,catalystAccBonus,catalystCritBonus,offhandAccBonus,slottedSpellNotes,manaAugParry,catalystAttunementBonus,enhancerAcc,enhancerDmg,enhancerSpellAcc,enhancerSecDmg,versatileGrip,hasMasterMartialTrainingGlobal,unarmoredParryBonus}=derived;
   const fmt = ({die,bonus}) => bonus>0?`${die} (+${bonus})`:bonus<0?`${die} (${bonus})`:die;
   const RANK_LABELS=["","Novice","Adept","Master"];
   const TIERS=["novice","adept","master"];
@@ -4680,7 +4718,7 @@ function StepSummary({char,setChar,derived,totalSP}){
               )}
               {[
                 ["Reach", `${finalReach} space${finalReach>1?"s":""}${weaponReachB>0?` (+${weaponReachB})`:""}${size>=2?" (size 2+)":""}`],
-                ["Parry", `${finalParry}`+(weaponParryB>0?` (+${weaponParryB} wpn)`:"")+(size>1?` (${sizeB.parry} size)`:"")+((char.equipment.offhand?.parry)?` (+${char.equipment.offhand.parry} shield)`:""), true],
+                ["Parry", `${finalParry}`+(weaponParryB>0?` (+${weaponParryB} wpn)`:"")+(size>1?` (${sizeB.parry} size)`:"")+((char.equipment.offhand?.parry)?` (+${char.equipment.offhand.parry} shield)`:"")+(unarmoredParryBonus>0?` (+${unarmoredParryBonus} unarmored)`:""), true],
                 ["Armor", `${finalArmor}`+(size>1?` (+${sizeB.armor} size)`:""), true],
                 ...(finalCritRes>0?[["Crit Resistance", `+${finalCritRes}`, true]]:[]),
                 ["Ward",  `${finalWard}`+(jewelryWardBonus>0?` (+${jewelryWardBonus})`:""), true],
