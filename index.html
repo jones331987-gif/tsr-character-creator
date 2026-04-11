@@ -1728,16 +1728,7 @@ const ATTACK_ENHANCERS_DATA = [
     effect: "Touch Magic twice in a single attack. Both spells stack as Secondary Damage.",
     req: { skill: { id: "spellcraft", rank: 3 } },
   },
-  // ── CQC Master Technique ─────────────────────────────────────────────────
-  {
-    name: "Overwhelming Stampede",
-    type: "martial",
-    cost: "1 Action",
-    effect: "+2 Accuracy & +2 Primary Damage, plus adds your Strength dice to the next attack. Melee.",
-    statBonuses: { acc: 2, dmg: 2 },
-    req: { skill: { id: "cqc", rank: 3 }, weaponType: "melee" },
-    note: "Also adds +STR dice to the attack",
-  },
+  // Overwhelming Stampede is an Attack Type (1 Action setup), not a stackable enhancer
   // ── Marksmanship Technique ───────────────────────────────────────────────
   {
     name: "Hunter's Vow",
@@ -1747,19 +1738,8 @@ const ATTACK_ENHANCERS_DATA = [
     statBonuses: { acc: 3 },
     req: { skill: { id: "marksmanship", rank: 3 }, weaponType: "ranged" },
   },
-  // ── Endurance Master Perk (Punishing Draw) ───────────────────────────────
-  // Not a technique — a perk bonus. Handled via hasPunishingDraw in derived.
-  // Listed here so it can appear in presets when the perk is taken.
-  {
-    name: "Punishing Draw",
-    type: "martial",
-    cost: "Passive (first attack, initiating combat)",
-    effect: "+2 Accuracy & +2 Primary Damage on the first attack when initiating combat.",
-    statBonuses: { acc: 2, dmg: 2 },
-    req: null,
-    isPerk: true,     // sourced from master perk, not a purchased technique
-    perkSource: { skillId: "endurance", perkName: "Punishing Draw" },
-  },
+  // Punishing Draw is a conditional perk bonus (first attack initiating combat only).
+  // Handled as a separate toggle in the preset editor, not a stackable enhancer.
 ];
 
 // ─── STEPS ───────────────────────────────────────────────────────────────────
@@ -1909,6 +1889,8 @@ const SLOTTED_BONUS_TECHS = {
   "Masterful Marksmanship Style":   {Acc:3, PrimDmg:3},
   "Practiced Stance":  {Acc:1, PrimDmg:1},
   "Perfected Stance":  {Acc:2, PrimDmg:2, Parry:2},
+  // Conditional perk bonus — stored alongside stances for preset calculations
+  "Punishing Draw":    {Acc:2, PrimDmg:2},
 };
 
 // Spells that grant passive bonuses when slotted (always-on while slotted)
@@ -3768,13 +3750,14 @@ function AttackPresetsCard({char, setChar, derived}) {
 
   // ── Stances ───────────────────────────────────────────────────────────────
   const OFFENSE_STANCES = [
-    {id:"normal",    label:"Basic Attack",   actions:1, desc:"Standard attack action."},
-    {id:"vicious",   label:"Vicious Strike", actions:2, desc:"2 Actions. STR added twice to damage. Two-Handed only. Counts as 2 MAP."},
-    {id:"dual",      label:"Dual Strike",    actions:2, desc:"2 Actions. 2 attacks at current MAP. Dual Wield."},
-    {id:"cleave",    label:"Cleave",         actions:2, desc:"2 Actions. AoE swing around you. Two-Handed only. Counts as 2 MAP."},
-    {id:"lunge",     label:"Rapid Lunge",    actions:1, desc:"Universal. 1H empty offhand. +2 Acc."},
-    {id:"touchmagic",label:"Touch Magic",    actions:2, desc:"2 Actions. Deliver a spell through a weapon attack. Counts as 2 MAP."},
-    {id:"spell",     label:"Cast Spell",     actions:2, desc:"Standard spell cast (2 Actions base)."},
+    {id:"normal",    label:"Basic Attack",        actions:1, desc:"Standard attack action."},
+    {id:"vicious",   label:"Vicious Strike",      actions:2, desc:"2 Actions. STR added twice to damage. Two-Handed only. Counts as 2 MAP."},
+    {id:"dual",      label:"Dual Strike",         actions:2, desc:"2 Actions. 2 attacks at current MAP. Dual Wield."},
+    {id:"cleave",    label:"Cleave",              actions:2, desc:"2 Actions. AoE swing around you. Two-Handed only. Counts as 2 MAP."},
+    {id:"lunge",     label:"Rapid Lunge",         actions:1, desc:"Universal. 1H empty offhand. +2 Acc."},
+    {id:"stampede",  label:"Overwhelming Stampede", actions:1, desc:"1 Action setup. Next attack gains +2 Acc, +2 Dmg, +STR dice bonus. Melee. CQC Master required."},
+    {id:"touchmagic",label:"Touch Magic",         actions:2, desc:"2 Actions. Deliver a spell through a weapon attack. Counts as 2 MAP."},
+    {id:"spell",     label:"Cast Spell",          actions:2, desc:"Standard spell cast (2 Actions base)."},
   ];
 
   const maxEnhM = (() => { const v=char.masterPerks["martial_arts"]; return (Array.isArray(v)?v.includes("Style Master"):v==="Style Master")?3:2; })();
@@ -3912,6 +3895,10 @@ function AttackPresetsCard({char, setChar, derived}) {
     const isVicious    = preset.stance==="vicious";
     const isDualStrike = preset.stance==="dual";
     const isSpell      = preset.stance==="spell";
+    const isStampede   = preset.stance==="stampede";
+    // Stampede gives +2 Acc & +2 Dmg (plus +STR dice noted separately)
+    const stampedeBonusAcc = isStampede ? 2 : 0;
+    const stampedeBonusDmg = isStampede ? 2 : 0;
     const stanceDef    = OFFENSE_STANCES.find(s=>s.id===preset.stance)||OFFENSE_STANCES[0];
     const mh = calcWeaponStats(wpn||null, false);
     const oh = (offhand&&!offhand.parry&&!offhand.minMind) ? calcWeaponStats(offhand, true) : null;
@@ -3960,6 +3947,12 @@ function AttackPresetsCard({char, setChar, derived}) {
       if(b.Acc)     enhAccRows.push({label:sName+" (stance)", val:b.Acc,     color:"#c8a84a"});
       if(b.PrimDmg) enhDmgRows.push({label:sName+" (stance)", val:b.PrimDmg, color:"#c8a84a"});
     }
+    // Overwhelming Stampede bonus rows
+    if(isStampede){
+      enhAccRows.push({label:"Overwhelming Stampede", val:2, color:"#4cc8e0"});
+      enhDmgRows.push({label:"Overwhelming Stampede", val:2, color:"#4cc8e0"});
+      enhDmgRows.push({label:"Overwhelming Stampede (+STR dice on next attack)", val:mh?mh.dmgDie:"Str", isDie:true, color:"#4cc8e0", isSecondary:true});
+    }
 
     // ── Stat column: label + total inline, breakdown rows below ───────────
     const StatCol = ({label, totalStr, rows, extra}) => (
@@ -3976,7 +3969,7 @@ function AttackPresetsCard({char, setChar, derived}) {
     // ── Build accuracy total string ──────────────────────────────────────
     const accTotalStr = isSpell
       ? (spellAccTotal!==0 ? `${char.stats.Mind} ${spellAccTotal>0?"+":""}${spellAccTotal}` : `${char.stats.Mind}`)
-      : mh ? (mh.acc+eb.acc+sb.acc!==0 ? `${mh.accDie} +${mh.acc+eb.acc+sb.acc}` : `${mh.accDie}`) : "—";
+      : mh ? (mh.acc+eb.acc+sb.acc+stampedeBonusAcc!==0 ? `${mh.accDie} +${mh.acc+eb.acc+sb.acc+stampedeBonusAcc}` : `${mh.accDie}`) : "—";
 
     // ── Build damage total string ────────────────────────────────────────
     const dmgTotalStr = (() => {
@@ -3990,7 +3983,7 @@ function AttackPresetsCard({char, setChar, derived}) {
       if(spM)               base = `${mh.dmgDie}+${spM[2]}${elem}`;
       else if(soM)          base = `${mh.dmgDie}${elem}`;
       else                  base = `${core}${elem}`;
-      const tot = mh.dmg+eb.dmg+sb.dmg;
+      const tot = mh.dmg+eb.dmg+sb.dmg+stampedeBonusDmg;
       return `${base}${tot!==0?(tot>0?" +"+tot:" "+tot):""}`;
     })();
 
@@ -4016,7 +4009,9 @@ function AttackPresetsCard({char, setChar, derived}) {
               <span style={{fontSize:9,padding:"1px 6px",background:"var(--bg-tag)",borderRadius:3,color:"var(--text-gold)",fontWeight:700,letterSpacing:"0.05em"}}>{stanceDef.actions} {stanceDef.actions===1?"ACTION":"ACTIONS"} · {stanceDef.label}</span>
               {hasVers&&<span style={{fontSize:9,padding:"1px 5px",background:"rgba(200,168,74,0.1)",border:"1px solid rgba(200,168,74,0.3)",borderRadius:3,color:"#c8a84a"}}>{grip==="2h"?"Two-Hand":"One-Hand"}</span>}
               {["vicious","cleave","dual","touchmagic"].includes(preset.stance)&&<span style={{fontSize:9,padding:"1px 5px",background:"rgba(139,26,42,0.08)",border:"1px solid rgba(139,26,42,0.3)",borderRadius:3,color:"var(--text-danger)"}}>2 MAP</span>}
-              {(preset.activeStances||[]).map(s=><span key={s} style={{fontSize:9,padding:"1px 5px",background:"rgba(200,168,74,0.1)",border:"1px solid rgba(200,168,74,0.4)",borderRadius:3,color:"#c8a84a",fontStyle:"italic"}}>⚡ {s}</span>)}
+              {isStampede&&<span style={{fontSize:9,padding:"1px 5px",background:"rgba(76,200,224,0.08)",border:"1px solid rgba(76,200,224,0.3)",borderRadius:3,color:"#4cc8e0"}}>+1 Action setup</span>}
+              {(preset.activeStances||[]).filter(s=>s!=="Punishing Draw").map(s=><span key={s} style={{fontSize:9,padding:"1px 5px",background:"rgba(200,168,74,0.1)",border:"1px solid rgba(200,168,74,0.4)",borderRadius:3,color:"#c8a84a",fontStyle:"italic"}}>⚡ {s}</span>)}
+              {(preset.activeStances||[]).includes("Punishing Draw")&&<span style={{fontSize:9,padding:"1px 5px",background:"rgba(139,26,42,0.08)",border:"1px solid rgba(139,26,42,0.3)",borderRadius:3,color:"var(--text-danger)",fontStyle:"italic"}}>⚡ Punishing Draw</span>}
               {/* Quick stat summary shown when collapsed */}
               {isCollapsed&&<>
                 <span style={{fontSize:9,padding:"1px 6px",background:"rgba(76,200,224,0.08)",border:"1px solid rgba(76,200,224,0.25)",borderRadius:3,color:"#4cc8e0",fontWeight:600}}>Acc {accTotalStr}</span>
@@ -4165,12 +4160,17 @@ function AttackPresetsCard({char, setChar, derived}) {
       {(()=>{
         // Find all slotted techniques that have Acc or PrimDmg bonuses (i.e. stances)
         const stanceOptions = Object.entries(SLOTTED_BONUS_TECHS).filter(([name, b]) =>
+          name !== "Punishing Draw" &&   // handled separately below
           (b.Acc || b.PrimDmg) &&
           Object.values(char.techniques).some(tierMap =>
             Object.values(tierMap).some(arr => arr.includes(name))
           )
         );
-        if(stanceOptions.length===0) return null;
+        const hasPunishingDrawPerk = (() => {
+          const v = char.masterPerks["endurance"];
+          return Array.isArray(v) ? v.includes("Punishing Draw") : v === "Punishing Draw";
+        })();
+        if(stanceOptions.length===0 && !hasPunishingDrawPerk) return null;
         return (
           <div style={{marginBottom:10}}>
             <Lbl>Active Stances (toggle if the stance is active this attack)</Lbl>
@@ -4194,6 +4194,25 @@ function AttackPresetsCard({char, setChar, derived}) {
               })}
             </div>
             <div style={{fontSize:9,color:"var(--text-muted)",marginTop:4,fontStyle:"italic"}}>These are upkeep stances — toggling them ON shows their bonus in the preset as if the stance were active. Remember they have a Stamina upkeep cost each round.</div>
+            {hasPunishingDrawPerk&&(
+              <div style={{marginTop:8}}>
+                <div style={{fontSize:9,color:"var(--text-label)",letterSpacing:"0.1em",fontWeight:700,marginBottom:4}}>CONDITIONAL PERK BONUS</div>
+                {(()=>{
+                  const pdOn = editActiveStances.includes("Punishing Draw");
+                  return (
+                    <div onClick={()=>toggleEditStance("Punishing Draw")}
+                      style={{padding:"6px 8px",border:`1px solid ${pdOn?"#c8a84a":"var(--border-soft)"}`,borderRadius:3,cursor:"pointer",background:pdOn?"rgba(200,168,74,0.1)":"var(--bg-panel)",transition:"all 0.12s",display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:6}}>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:10,fontWeight:pdOn?700:400,color:pdOn?"#c8a84a":"var(--text-head)"}}>Punishing Draw</div>
+                        <div style={{fontSize:9,color:pdOn?"#c8a84a":"var(--text-label)",fontWeight:600,marginTop:1}}>Acc +2  Dmg +2</div>
+                        <div style={{fontSize:9,color:"var(--text-muted)",marginTop:1,fontStyle:"italic"}}>First attack only when initiating combat — no Stamina cost</div>
+                      </div>
+                      <span style={{fontSize:8,padding:"1px 5px",borderRadius:2,fontWeight:700,background:pdOn?"#c8a84a":"var(--bg-panel-alt)",color:pdOn?"#1a1030":"var(--text-muted)",flexShrink:0}}>{pdOn?"ON":"OFF"}</span>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
           </div>
         );
       })()}
