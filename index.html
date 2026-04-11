@@ -3853,7 +3853,7 @@ function AttackPresetsCard({char, setChar, derived}) {
       ...(runeSecDice                ? [{label:rune+" (secondary)", val:runeSecDice, isDie:true, isSecondary:true, color:"#9a70d8"}] : []),
     ];
     // AP from weapon props + High Caliber mod
-    const wpnAP = parseInt((wProps(w).match(/AP (\d+)/)||[0,0])[1])
+    const wpnAP = parseInt((wProps(w).match(/(?:^|\s|,)AP (\d+)/)||[0,0])[1])
                 + (isGun && mods.includes("High Caliber") ? 2 : 0)
                 // Rune of Earth gives AP 2
                 + (rune==="Rune of Earth" ? 2 : 0);
@@ -4056,6 +4056,7 @@ function AttackPresetsCard({char, setChar, derived}) {
               {isCollapsed&&<>
                 <span style={{fontSize:9,padding:"1px 6px",background:"rgba(76,200,224,0.08)",border:"1px solid rgba(76,200,224,0.25)",borderRadius:3,color:"#4cc8e0",fontWeight:600}}>Acc {accTotalStr}</span>
                 <span style={{fontSize:9,padding:"1px 6px",background:"rgba(76,200,224,0.08)",border:"1px solid rgba(76,200,224,0.25)",borderRadius:3,color:"#4cc8e0",fontWeight:600}}>Dmg {dmgTotalStr}</span>
+                {mh&&mh.wpnAP>0&&<span style={{fontSize:9,padding:"1px 6px",background:"rgba(76,200,224,0.08)",border:"1px solid rgba(76,200,224,0.25)",borderRadius:3,color:"#4cc8e0",fontWeight:600}}>AP {mh.wpnAP}</span>}
               </>}
             </div>
           </div>
