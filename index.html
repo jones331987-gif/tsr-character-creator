@@ -1698,11 +1698,11 @@ const ATTACK_ENHANCERS_DATA = [
     req: { skill: { id: "tactics", rank: 2 } },
   },
   {
-    name: "Master Tactical Strike",
+    name: "Masterful Tactical Strike",
     type: "martial",
     cost: "8 Stamina",
-    effect: "+3 Accuracy & +3 Primary Damage.",
-    statBonuses: { acc: 3, dmg: 3 },
+    effect: "+2 Accuracy + True Hit for the attack phase.",
+    statBonuses: { acc: 2 },
     req: { skill: { id: "tactics", rank: 3 } },
   },
   // ── Spellcraft Enhancers ──────────────────────────────────────────────────
@@ -1728,7 +1728,6 @@ const ATTACK_ENHANCERS_DATA = [
     effect: "Touch Magic twice in a single attack. Both spells stack as Secondary Damage.",
     req: { skill: { id: "spellcraft", rank: 3 } },
   },
-  // Overwhelming Stampede is an Attack Type (1 Action setup), not a stackable enhancer
   // ── Marksmanship Technique ───────────────────────────────────────────────
   {
     name: "Hunter's Vow",
@@ -1740,6 +1739,23 @@ const ATTACK_ENHANCERS_DATA = [
   },
   // Punishing Draw is a conditional perk bonus (first attack initiating combat only).
   // Handled as a separate toggle in the preset editor, not a stackable enhancer.
+  // ── Endurance Master Technique ────────────────────────────────────────────
+  {
+    name: "Masterful Armored Blow",
+    type: "martial",
+    cost: "8 Stamina",
+    effect: "+2 Accuracy & +2 Primary Damage. Before accuracy roll, proc STR-dice Cloak AoE.",
+    statBonuses: { acc: 2, dmg: 2 },
+    req: { skill: { id: "endurance", rank: 3 } },
+  },
+  // ── Tactics Adept Technique ───────────────────────────────────────────────
+  {
+    name: "Backbreaker",
+    type: "martial",
+    cost: "4 Stamina",
+    effect: "HP damage → Str vs Vig → Prone.",
+    req: { skill: { id: "tactics", rank: 2 } },
+  },
 ];
 
 // ─── STEPS ───────────────────────────────────────────────────────────────────
@@ -1948,7 +1964,7 @@ const EMPTY_CHAR = {
 // Serialize Set → array for storage/export
 const charToJSON = (c) => ({...c, purchasedTrainings: [...(c.purchasedTrainings||[])], slottedTechniques: [...(c.slottedTechniques||[])], slottedSpells: [...(c.slottedSpells||[])], activeTechBuffs: [...(c.activeTechBuffs||[])], activeEnhancers: [...(c.activeEnhancers||[])]});
 // Restore array → Set on load
-const charFromJSON = (obj) => ({...EMPTY_CHAR, ...obj, purchasedTrainings: new Set(obj.purchasedTrainings||[]), slottedTechniques: new Set(obj.slottedTechniques||[]), slottedSpells: new Set(obj.slottedSpells||[]), activeTechBuffs: new Set(obj.activeTechBuffs||[]), activeEnhancers: new Set(obj.activeEnhancers||[])});
+const charFromJSON = (obj) => ({...EMPTY_CHAR, ...obj, purchasedTrainings: new Set(obj.purchasedTrainings||[]), slottedTechniques: new Set(obj.slottedTechniques||[]), slottedSpells: new Set(obj.slottedSpells||[]), activeTechBuffs: new Set(obj.activeTechBuffs||[]), activeEnhancers: new Set(obj.activeEnhancers||[]), attackPresets: obj.attackPresets||[]});
 
 const SAVE_SLOTS = ["slot_1","slot_2","slot_3","slot_4","slot_5"];
 
@@ -2274,7 +2290,7 @@ function App() {
   const boonOffensive  = bopLevel >= 4 ? 2 : bopLevel > 0 ? 1 : 0;
   const boonArmorBonus = bopLevel >= 4 ? 2 : 0;
   const boonWardBonus  = bopLevel >= 4 ? 2 : 0;
-  const finalWard     = calcWard(char.stats.Willpower) + boonOffensive + jewelryWardBonus + boonWardBonus;
+  const finalWard     = calcWard(char.stats.Willpower) + boonWardBonus + jewelryWardBonus;
 
   const armorBonus    = char.equipment.armor?.armor||0;
   // Machine Armor: Size+1 from armor bonus field — feeds into actual size calc
@@ -2284,8 +2300,31 @@ function App() {
   const finalArmor    = calcArmor(char.stats.Vigor) + armorBonus + sizeB.armor + boonArmorBonus;
   const finalSpellRange = calcSpellRange(char.stats.Mind, char.stats.Willpower);
 
+  const hasSavageFighting = (() => {
+    const perks = char.masterPerks["savagery"];
+    if(!perks) return false;
+    const arr = Array.isArray(perks) ? perks : [perks];
+    return arr.includes("Savage Fighting");
+  })();
+  const isUnarmored = !char.equipment.armor || char.equipment.armor.name === "Clothes";
+  const unarmoredParryBonus = (() => {
+    if(!isUnarmored) return 0;
+    const savTechs = char.techniques["savagery"] || {};
+    const allTechs = Object.values(savTechs).flat();
+    if(allTechs.includes("Raging Barbarism")) return 3;
+    if(allTechs.includes("Barbarism")) return 2;
+    if(allTechs.includes("Crude Barbarism")) return 1;
+    // Also check Martial Arts unarmored styles
+    const maTechs = Object.values(char.techniques["martial_arts"] || {}).flat();
+    if(maTechs.includes("Perfected Unarmored Style")) return 3;
+    if(maTechs.includes("Unarmored Style")) return 2;
+    if(maTechs.includes("Crude Unarmored Style")) return 1;
+    return 0;
+  })();
+  const savageFightingBonus = hasSavageFighting ? unarmoredParryBonus : 0;
+
   // finalParry and finalReach depend on sizeB — declared here after sizeB
-  const finalParry    = baseParry + armorParryB + shieldParryB + weaponParryB + trainBonuses.Parry + slottedTechBonuses.Parry + boonOffensive + sizeB.parry + manaAugParry;
+  const finalParry    = baseParry + armorParryB + shieldParryB + weaponParryB + trainBonuses.Parry + slottedTechBonuses.Parry + boonOffensive + sizeB.parry + manaAugParry + unarmoredParryBonus;
   const finalReach    = 1 + weaponReachB + sizeB.reach;
 
   // CritRes from armor (Half Plate +1, Plate Armor +2)
@@ -2415,85 +2454,34 @@ function App() {
   // Punishing Draw: +2 Acc & Dmg on initiating attack (show as flat bonus on sheet)
   const hasPunishingDraw = hasPerk("endurance", "Punishing Draw");
 
-
-  // Savage Fighting: Parry bonuses from Unarmored techniques also add to Primary Damage
-  const hasSavageFighting = (() => {
-    const perks = char.masterPerks["savagery"];
-    if(!perks) return false;
-    const arr = Array.isArray(perks) ? perks : [perks];
-    return arr.includes("Savage Fighting");
-  })();
-  const isUnarmored = !char.equipment.armor || char.equipment.armor.name === "Clothes";
-  const unarmoredParryBonus = (() => {
-    if(!isUnarmored) return 0;
-    const savTechs = char.techniques["savagery"] || {};
-    const allTechs = Object.values(savTechs).flat();
-    if(allTechs.includes("Raging Barbarism")) return 3;
-    if(allTechs.includes("Barbarism")) return 2;
-    if(allTechs.includes("Crude Barbarism")) return 1;
-    // Also check Martial Arts unarmored styles
-    const maTechs = Object.values(char.techniques["martial_arts"] || {}).flat();
-    if(maTechs.includes("Perfected Unarmored Style")) return 3;
-    if(maTechs.includes("Unarmored Style")) return 2;
-    if(maTechs.includes("Crude Unarmored Style")) return 1;
-    return 0;
-  })();
-  const savageFightingBonus = hasSavageFighting ? unarmoredParryBonus : 0;
-
   // ── Active Enhancer bonuses ─────────────────────────────────────────────
   // Compute the acc/dmg/secDmg/spellAcc bonus from currently toggled enhancers.
   // Master Martial Training gives +1 to each stat bonus on martial/both enhancers.
   const hasMasterMartialTrainingGlobal = char.purchasedTrainings.has("martial_arts:master");
-  const enhancerAcc      = (() => {
-    let tot = 0;
+  // Single-pass enhancer bonus accumulator — iterates activeEnhancers once
+  const {enhancerAcc, enhancerDmg, enhancerSpellAcc, enhancerSecDmg} = (() => {
+    let acc=0, dmg=0, spellAcc=0, secDmg=0;
     (char.activeEnhancers||new Set()).forEach(name => {
       const enh = ATTACK_ENHANCERS_DATA.find(e=>e.name===name);
       if(!enh?.statBonuses) return;
-      // Only martial/both enhancers add to weapon (primary damage) accuracy
-      // Pure spell enhancers like Homing Spell only add to spell accuracy
-      if(enh.type==="spell") return;
-      const mmt = hasMasterMartialTrainingGlobal && (enh.type==="martial"||enh.type==="both") ? 1 : 0;
       const b = enh.statBonuses;
-      if(b.acc      !== undefined) tot += b.acc + mmt;
-      if(b.accHigh  !== undefined) tot += b.accHigh + mmt;
-    });
-    return tot;
-  })();
-  const enhancerDmg      = (() => {
-    let tot = 0;
-    (char.activeEnhancers||new Set()).forEach(name => {
-      const enh = ATTACK_ENHANCERS_DATA.find(e=>e.name===name);
-      if(!enh?.statBonuses) return;
       const mmt = hasMasterMartialTrainingGlobal && (enh.type==="martial"||enh.type==="both") ? 1 : 0;
-      const b = enh.statBonuses;
-      if(b.dmg      !== undefined) tot += b.dmg + mmt;
-      if(b.dmgHigh  !== undefined) tot += b.dmgHigh + mmt;
-    });
-    return tot;
-  })();
-  const enhancerSpellAcc = (() => {
-    let tot = 0;
-    (char.activeEnhancers||new Set()).forEach(name => {
-      const enh = ATTACK_ENHANCERS_DATA.find(e=>e.name===name);
-      if(!enh?.statBonuses) return;
-      // spell and both type enhancers contribute to spell acc
-      if(enh.type==="spell"||enh.type==="both") {
-        const b = enh.statBonuses;
-        if(b.acc !== undefined) tot += b.acc;
-        if(b.accHigh !== undefined) tot += b.accHigh;
+      // Weapon accuracy (martial/both only)
+      if(enh.type!=="spell") {
+        if(b.acc     !== undefined) acc += b.acc + mmt;
+        if(b.accHigh !== undefined) acc += b.accHigh + mmt;
+        if(b.dmg     !== undefined) dmg += b.dmg + mmt;
+        if(b.dmgHigh !== undefined) dmg += b.dmgHigh + mmt;
       }
+      // Spell accuracy (spell/both)
+      if(enh.type==="spell"||enh.type==="both") {
+        if(b.acc     !== undefined) spellAcc += b.acc;
+        if(b.accHigh !== undefined) spellAcc += b.accHigh;
+      }
+      // Secondary damage
+      if(b.secDmg !== undefined) secDmg += b.secDmg + mmt;
     });
-    return tot;
-  })();
-  const enhancerSecDmg   = (() => {
-    let tot = 0;
-    (char.activeEnhancers||new Set()).forEach(name => {
-      const enh = ATTACK_ENHANCERS_DATA.find(e=>e.name===name);
-      if(!enh?.statBonuses?.secDmg) return;
-      const mmt = hasMasterMartialTrainingGlobal && (enh.type==="martial"||enh.type==="both") ? 1 : 0;
-      tot += enh.statBonuses.secDmg + mmt;
-    });
-    return tot;
+    return {enhancerAcc:acc, enhancerDmg:dmg, enhancerSpellAcc:spellAcc, enhancerSecDmg:secDmg};
   })();
 
   // Versatile grip — affects whether 2H enhancers are available and weapon bonus
@@ -3700,7 +3688,6 @@ function AttackPresetsCard({char, setChar, derived}) {
   // ── isPurchased: technique bought OR training autoFeat OR universal ───────
   const isPurchased = (enh) => {
     if(enh.universal) return true;
-    // Perk-sourced enhancers (e.g. Punishing Draw from Endurance mastery)
     if(enh.isPerk && enh.perkSource) {
       const { skillId, perkName } = enh.perkSource;
       const v = char.masterPerks[skillId];
@@ -3708,8 +3695,6 @@ function AttackPresetsCard({char, setChar, derived}) {
     }
     for(const tree of SKILL_TREES){
       if(Object.values(char.techniques[tree.id]||{}).flat().includes(enh.name)) return true;
-    }
-    for(const tree of SKILL_TREES){
       for(const tier of ["novice","adept","master"]){
         const tr = tree.tiers[tier]?.training;
         if(tr?.autoFeat?.name===enh.name && char.purchasedTrainings.has(`${tree.id}:${tier}`)) return true;
@@ -3868,7 +3853,7 @@ function AttackPresetsCard({char, setChar, derived}) {
       ...(runeSecDice                ? [{label:rune+" (secondary)", val:runeSecDice, isDie:true, isSecondary:true, color:"#9a70d8"}] : []),
     ];
     return { accDie, dmgDie, acc: sharedAcc+accMod, dmg: sharedDmg+dmgMod, dmgFormula: w.dmg,
-             isRanged: isRng, name: w.name, wpnDiceOnly,
+             isRanged: isRng, name: w.name, wpnDiceOnly, runeSecDice,
              accBreakdown, dmgBreakdown };
   };
 
@@ -3975,12 +3960,28 @@ function AttackPresetsCard({char, setChar, derived}) {
       const elemM = raw.match(/^(.+?)\s+([A-Z][a-z]+)$/);
       const core = elemM?elemM[1]:raw; const elem = elemM?" "+elemM[2]:"";
       const spM = core.match(/^(Str|Mind)\+(.+)$/); const soM = core.match(/^(Str|Mind)$/);
-      let base;
-      if(spM)               base = `${mh.dmgDie}+${spM[2]}${elem}`;
-      else if(soM)          base = `${mh.dmgDie}${elem}`;
-      else                  base = `${core}${elem}`;
-      const tot = mh.dmg+eb.dmg+sb.dmg;
-      return `${base}${tot!==0?(tot>0?" +"+tot:" "+tot):""}`;
+
+      // Collect all dice parts and flat bonus separately so we can build one clean string
+      const diceParts = [];   // e.g. ["d12+5", "d8"]
+      const flatBonus = mh.dmg+eb.dmg+sb.dmg; // all flat +X bonuses already computed
+
+      // Weapon base dice
+      if(spM)       diceParts.push(`${mh.dmgDie}+${spM[2]}${elem}`);
+      else if(soM)  diceParts.push(`${mh.dmgDie}${elem}`);
+      else          diceParts.push(`${core}${elem}`);
+
+      // Vicious Strike: add another copy of the Str die (total becomes 2× Str + weapon dice)
+      if(isVicious && spM)  diceParts.push(`${mh.dmgDie}${elem}`);
+
+      // Overwhelming Stampede: adds +STR dice to the next attack
+      if(sb.hasStrDiceBonus && mh) diceParts.push(`${mh.dmgDie}`);
+
+      // Rune secondary elemental dice (e.g. "+1d6 Physical") — a second damage source
+      if(mh.runeSecDice) diceParts.push(mh.runeSecDice.replace(/^\+/,""));
+
+      const diceStr = diceParts.join("+");
+      const bonusStr = flatBonus!==0 ? (flatBonus>0?" +"+flatBonus:" "+flatBonus) : "";
+      return `${diceStr}${bonusStr}`;
     })();
 
     const isCollapsed = collapsedPresets.has(idx);
@@ -5151,8 +5152,6 @@ function StepSummary({char,setChar,derived,totalSP}){
           }
           for(const tree of SKILL_TREES){
             if(Object.values(char.techniques[tree.id]||{}).flat().includes(enh.name)) return true;
-          }
-          for(const tree of SKILL_TREES){
             for(const tier of ["novice","adept","master"]){
               const tr = tree.tiers[tier]?.training;
               if(tr?.autoFeat?.name===enh.name && char.purchasedTrainings.has(`${tree.id}:${tier}`)) return true;
