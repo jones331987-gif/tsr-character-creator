@@ -3852,8 +3852,13 @@ function AttackPresetsCard({char, setChar, derived}) {
       // Secondary elemental damage from rune — listed separately as it's a different damage type
       ...(runeSecDice                ? [{label:rune+" (secondary)", val:runeSecDice, isDie:true, isSecondary:true, color:"#9a70d8"}] : []),
     ];
+    // AP from weapon props + High Caliber mod
+    const wpnAP = parseInt((wProps(w).match(/AP (\d+)/)||[0,0])[1])
+                + (isGun && mods.includes("High Caliber") ? 2 : 0)
+                // Rune of Earth gives AP 2
+                + (rune==="Rune of Earth" ? 2 : 0);
     return { accDie, dmgDie, acc: sharedAcc+accMod, dmg: sharedDmg+dmgMod, dmgFormula: w.dmg,
-             isRanged: isRng, name: w.name, wpnDiceOnly, runeSecDice,
+             isRanged: isRng, name: w.name, wpnDiceOnly, runeSecDice, wpnAP,
              accBreakdown, dmgBreakdown };
   };
 
@@ -4110,6 +4115,7 @@ function AttackPresetsCard({char, setChar, derived}) {
                   <span style={{fontSize:9,color:"var(--text-label)",letterSpacing:"0.1em",fontWeight:700}}>DETAILS</span>
                 </div>
                 <div style={{fontSize:10,color:"var(--text-muted)",lineHeight:1.6}}>
+                  {mh&&mh.wpnAP>0&&<div style={{color:"#4cc8e0",fontWeight:600,marginBottom:2}}>AP {mh.wpnAP} — ignores {mh.wpnAP} Armor</div>}
                   <div>{stanceDef.desc}</div>
                   {preset.notes&&<div style={{marginTop:4,color:"var(--text-sub)",fontStyle:"italic"}}>📝 {preset.notes}</div>}
                 </div>
