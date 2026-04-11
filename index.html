@@ -3786,11 +3786,45 @@ function AttackPresetsCard({char, setChar, derived}) {
     const rune = !isOffhand ? char.weaponRune : char.offhandRune;
     const mith = !isOffhand ? char.weaponMithril : char.offhandMithril;
     const mods = !isOffhand ? (char.weaponMods||[]) : (char.offhandMods||[]);
-    const accMod = wpnAccProp + (rune==="Rune of Wind"?1:0) + (rune==="Demon"?2:0) + (!isGun&&mith?1:0) + (mods.includes("Scope")?2:0);
-    const dmgMod = wpnDmgProp + (rune==="Demon"?3:0) + (!isGun&&mith?1:0);
+    const runeAcc = (rune==="Rune of Wind"?1:rune==="Demon"?2:0);
+    const runeDmg = (rune==="Demon"?3:0);
+    const mithVal = (!isGun&&mith?1:0);
+    const scopeAcc = mods.includes("Scope")?2:0;
+    const accMod = wpnAccProp + runeAcc + mithVal + scopeAcc;
+    const dmgMod = wpnDmgProp + runeDmg + mithVal;
     const sharedAcc = trainBonuses.Acc + slottedTechBonuses.Acc + boonOffensive + jewelryAccBonus;
     const sharedDmg = trainBonuses.PrimDmg + slottedTechBonuses.PrimDmg + boonOffensive + jewelryDmgBonus + sizeB.primDmg + (!isOffhand?savageFightingBonus:0);
-    return { accDie, dmgDie, acc: sharedAcc+accMod, dmg: sharedDmg+dmgMod, dmgFormula: w.dmg, isRanged: isRng, name: w.name };
+    // Weapon dice from damage formula (e.g. "d8" from "Str+d8")
+    const rawCore = (w.dmg.match(/^(.+?)\s+[A-Z][a-z]+$/)||[,""])[1] || w.dmg;
+    const wpnDiceOnly = (rawCore.match(/^(?:Str|Mind)\+(.+)$/)||[,null])[1]; // e.g. "d8"
+    // Breakdown components for detailed display
+    const accBreakdown = [
+      {label: hasBrute?"Str (Brute)":"Dex", val: accDie, isDie:true},
+      ...(trainBonuses.Acc>0         ? [{label:"Training",    val:trainBonuses.Acc}] : []),
+      ...(slottedTechBonuses.Acc>0   ? [{label:"Techniques",  val:slottedTechBonuses.Acc}] : []),
+      ...(boonOffensive>0            ? [{label:"Boon",        val:boonOffensive}] : []),
+      ...(jewelryAccBonus>0          ? [{label:"Jewelry",     val:jewelryAccBonus}] : []),
+      ...(wpnAccProp>0               ? [{label:w.name,        val:wpnAccProp}] : []),
+      ...(runeAcc>0                  ? [{label:rune,          val:runeAcc}] : []),
+      ...(mithVal>0                  ? [{label:"Mithril",     val:mithVal}] : []),
+      ...(scopeAcc>0                 ? [{label:"Scope",       val:scopeAcc}] : []),
+    ];
+    const dmgBreakdown = [
+      {label: hasPrimalMass?"Vig (Primal Mass)":hasEagleEye&&isRng?"Dex (Eagle Eye)":"Str", val: dmgDie, isDie:true},
+      ...(wpnDiceOnly                ? [{label:w.name,        val:wpnDiceOnly, isDie:true}] : []),
+      ...(wpnDmgProp>0               ? [{label:w.name+" bonus", val:wpnDmgProp}] : []),
+      ...(trainBonuses.PrimDmg>0     ? [{label:"Training",    val:trainBonuses.PrimDmg}] : []),
+      ...(slottedTechBonuses.PrimDmg>0?[{label:"Techniques",  val:slottedTechBonuses.PrimDmg}] : []),
+      ...(boonOffensive>0            ? [{label:"Boon",        val:boonOffensive}] : []),
+      ...(jewelryDmgBonus>0          ? [{label:"Jewelry",     val:jewelryDmgBonus}] : []),
+      ...(sizeB.primDmg>0            ? [{label:"Size",        val:sizeB.primDmg}] : []),
+      ...(!isOffhand&&savageFightingBonus>0?[{label:"Savage Fighting",val:savageFightingBonus}]:[]),
+      ...(runeDmg>0                  ? [{label:rune,          val:runeDmg}] : []),
+      ...(mithVal>0                  ? [{label:"Mithril",     val:mithVal}] : []),
+    ];
+    return { accDie, dmgDie, acc: sharedAcc+accMod, dmg: sharedDmg+dmgMod, dmgFormula: w.dmg,
+             isRanged: isRng, name: w.name, wpnDiceOnly,
+             accBreakdown, dmgBreakdown };
   };
 
   const fmtAcc  = (die, bonus) => bonus!==0 ? `${die} (${bonus>0?"+":""}${bonus})` : die;
@@ -3825,15 +3859,79 @@ function AttackPresetsCard({char, setChar, derived}) {
     const rangeStr = mh?.isRanged
       ? (()=>{ const m=wProps(wpn).match(/(?:Bow|Trigger|Throwing)\((\d+)\)/); return m?m[1]+" spaces":"—"; })()
       : `1–${reach} Melee${size>=2?" (Size "+size+", Reach)":""}`;
+
+    // ── Breakdown sub-row component ──────────────────────────────────────
+    const BreakdownRow = ({label, val, isDie, color}) => (
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",padding:"1px 0 1px 10px",gap:8}}>
+        <span style={{fontSize:9,color:"var(--text-muted)"}}>└ {label}</span>
+        <span style={{fontSize:9,fontWeight:600,color:color||"var(--text-label)",flexShrink:0}}>
+          {isDie ? val : `+${val}`}
+        </span>
+      </div>
+    );
+
+    // ── Build enhancer breakdown rows for acc/dmg ────────────────────────
+    const enhAccRows = [];
+    const enhDmgRows = [];
+    for(const eName of (preset.enhancers||[])){
+      const enh = ATTACK_ENHANCERS_DATA.find(e=>e.name===eName);
+      if(!enh?.statBonuses) continue;
+      const b = enh.statBonuses;
+      const m = hasMasterMartialTrainingGlobal&&(enh.type==="martial"||enh.type==="both")?1:0;
+      if(enh.type!=="spell"){
+        const av = b.acc!==undefined?b.acc+m : b.accHigh!==undefined?b.accHigh+m : 0;
+        const dv = b.dmg!==undefined?b.dmg+m : b.dmgHigh!==undefined?b.dmgHigh+m : 0;
+        if(av>0) enhAccRows.push({label:eName+(m>0?" ★":""), val:av, color:"#4cc8e0"});
+        if(dv>0) enhDmgRows.push({label:eName+(m>0?" ★":""), val:dv, color:"#4cc8e0"});
+      }
+      if(enh.type==="spell"||enh.type==="both"){
+        const sv = b.acc!==undefined?b.acc:b.accHigh!==undefined?b.accHigh:0;
+        if(sv>0) enhAccRows.push({label:eName+" (spell)", val:sv, color:"#9a70d8"});
+      }
+    }
+
+    // ── Stat column: label + total + breakdown rows ──────────────────────
+    const StatCol = ({label, totalStr, rows, extra}) => (
+      <div>
+        <div style={{fontSize:9,color:"var(--text-label)",letterSpacing:"0.1em",marginBottom:3,fontWeight:700}}>{label}</div>
+        <div style={{fontSize:12,fontWeight:700,color:"var(--text-value-hi)",marginBottom:3}}>{totalStr}</div>
+        {rows.map((r,i)=><BreakdownRow key={i} label={r.label} val={r.val} isDie={r.isDie} color={r.color}/>)}
+        {extra}
+      </div>
+    );
+
+    // ── Build accuracy total string ──────────────────────────────────────
+    const accTotalStr = isSpell
+      ? (spellAccTotal!==0 ? `${char.stats.Mind} ${spellAccTotal>0?"+":""}${spellAccTotal}` : `${char.stats.Mind}`)
+      : mh ? (mh.acc+eb.acc!==0 ? `${mh.accDie} +${mh.acc+eb.acc}` : `${mh.accDie}`) : "—";
+
+    // ── Build damage total string ────────────────────────────────────────
+    const dmgTotalStr = (() => {
+      if(isSpell) return `${char.stats.Mind} + Spell Dice${spellPwrBonus>0?" (+"+spellPwrBonus+")":""}`;
+      if(!mh) return "—";
+      const raw = mh.dmgFormula;
+      const elemM = raw.match(/^(.+?)\s+([A-Z][a-z]+)$/);
+      const core = elemM?elemM[1]:raw; const elem = elemM?" "+elemM[2]:"";
+      const spM = core.match(/^(Str|Mind)\+(.+)$/); const soM = core.match(/^(Str|Mind)$/);
+      let base;
+      if(isVicious&&spM)   base = `(${mh.dmgDie})×2 + ${spM[2]}${elem}`;
+      else if(spM)          base = `${mh.dmgDie}+${spM[2]}${elem}`;
+      else if(soM)          base = `${mh.dmgDie}${elem}`;
+      else                  base = `${core}${elem}`;
+      const tot = mh.dmg+eb.dmg;
+      return `${base}${tot!==0?(tot>0?" +"+tot:" "+tot):""}`;
+    })();
+
     return (
       <div key={idx} style={{marginBottom:10,padding:"12px 14px",background:"var(--bg-panel)",border:"1px solid var(--border-main)",borderTop:"2px solid var(--border-modal)",borderRadius:3}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+        {/* Header */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
           <div>
             <div style={{fontSize:13,fontWeight:700,color:"var(--text-value-hi)",fontFamily:"'Palatino Linotype',Palatino,Georgia,serif",fontStyle:"italic"}}>{preset.name}</div>
-            <div style={{display:"flex",gap:6,marginTop:3,flexWrap:"wrap",alignItems:"center"}}>
-              <span style={{fontSize:9,padding:"1px 6px",background:"var(--bg-tag)",borderRadius:3,color:"var(--text-gold)",fontWeight:700,letterSpacing:"0.05em"}}>{stanceDef.actions} {stanceDef.actions===1?"ACTION":"ACTIONS"}</span>
-              {(preset.enhancers||[]).map(n=>{const enh=ATTACK_ENHANCERS_DATA.find(e=>e.name===n);return(<span key={n} style={{fontSize:9,padding:"1px 6px",background:"rgba(76,200,224,0.1)",border:"1px solid rgba(76,200,224,0.3)",borderRadius:3,color:typeColor[enh?.type]||"#4cc8e0",fontWeight:600}}>{n}</span>);})}
+            <div style={{display:"flex",gap:6,marginTop:4,flexWrap:"wrap",alignItems:"center"}}>
+              <span style={{fontSize:9,padding:"1px 6px",background:"var(--bg-tag)",borderRadius:3,color:"var(--text-gold)",fontWeight:700,letterSpacing:"0.05em"}}>{stanceDef.actions} {stanceDef.actions===1?"ACTION":"ACTIONS"} · {stanceDef.label}</span>
               {hasVers&&<span style={{fontSize:9,padding:"1px 5px",background:"rgba(200,168,74,0.1)",border:"1px solid rgba(200,168,74,0.3)",borderRadius:3,color:"#c8a84a"}}>{grip==="2h"?"Two-Hand":"One-Hand"}</span>}
+              {["vicious","cleave","dual","touchmagic"].includes(preset.stance)&&<span style={{fontSize:9,padding:"1px 5px",background:"rgba(139,26,42,0.08)",border:"1px solid rgba(139,26,42,0.3)",borderRadius:3,color:"var(--text-danger)"}}>2 MAP</span>}
             </div>
           </div>
           <div style={{display:"flex",gap:5,flexShrink:0,marginLeft:8}}>
@@ -3841,37 +3939,56 @@ function AttackPresetsCard({char, setChar, derived}) {
             <button onClick={()=>deletePreset(idx)} style={{...mic,color:"var(--text-danger)",border:"1px solid rgba(139,26,42,0.4)"}}>✕</button>
           </div>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"4px 16px",fontSize:11}}>
+
+        {/* Stat columns */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 20px"}}>
+          {/* Accuracy */}
+          <StatCol label="ACCURACY" totalStr={accTotalStr}
+            rows={isSpell ? [
+              {label:"Mind", val:char.stats.Mind, isDie:true},
+              ...(trainBonuses.SpellAcc>0        ?[{label:"Training",   val:trainBonuses.SpellAcc}]:[]),
+              ...(catalystAccBonus>0             ?[{label:"Catalyst",   val:catalystAccBonus}]:[]),
+              ...(catalystAttunementBonus>0      ?[{label:"Attunement", val:catalystAttunementBonus}]:[]),
+              ...enhAccRows,
+            ] : mh ? [
+              ...mh.accBreakdown,
+              ...enhAccRows,
+            ] : []}
+            extra={isDualStrike&&oh&&<div style={{marginTop:4,paddingTop:4,borderTop:"1px dashed var(--border-row)",fontSize:10,color:"var(--text-muted)"}}>Off-hand: {oh.accDie}{oh.acc>0?" +"+oh.acc:oh.acc<0?" "+oh.acc:""}</div>}
+          />
+
+          {/* Range */}
           <div>
-            <div style={{fontSize:9,color:"var(--text-label)",letterSpacing:"0.1em",marginBottom:2,fontWeight:700}}>ACCURACY</div>
-            {isSpell?(<div style={{color:"var(--text-value-hi)",fontWeight:700}}>{fmtAcc(char.stats.Mind,spellAccTotal)}</div>)
-            :mh?(<div><div style={{color:"var(--text-value-hi)",fontWeight:700}}>{fmtAcc(mh.accDie,mh.acc+eb.acc)}</div>
-              {(mh.acc+eb.acc)!==0&&<div style={{fontSize:9,color:"var(--text-muted)",lineHeight:1.5}}>{trainBonuses.Acc>0&&<span>(+{trainBonuses.Acc} train) </span>}{slottedTechBonuses.Acc>0&&<span>(+{slottedTechBonuses.Acc} tech) </span>}{boonOffensive>0&&<span>(+{boonOffensive} boon) </span>}{eb.acc!==0&&<span style={{color:"#4cc8e0"}}>({fmtBonus(eb.acc)} enh) </span>}</div>}
-              {isDualStrike&&oh&&<div style={{color:"var(--text-muted)",fontSize:10,marginTop:2}}>+ Off-hand: {fmtAcc(oh.accDie,oh.acc)}</div>}</div>)
-            :<div style={{color:"var(--text-muted)",fontSize:10}}>No weapon</div>}
+            <div style={{fontSize:9,color:"var(--text-label)",letterSpacing:"0.1em",marginBottom:3,fontWeight:700}}>RANGE</div>
+            <div style={{fontSize:12,fontWeight:700,color:"var(--text-value-hi)"}}>{rangeStr}</div>
+            {eb.secDmg>0&&<div style={{marginTop:6}}>
+              <div style={{fontSize:9,color:"var(--text-label)",letterSpacing:"0.1em",marginBottom:3,fontWeight:700}}>SEC DMG</div>
+              <div style={{fontSize:12,fontWeight:700,color:"#c8a84a"}}>+{eb.secDmg}</div>
+            </div>}
           </div>
+
+          {/* Damage */}
+          <StatCol label="DAMAGE" totalStr={dmgTotalStr}
+            rows={isSpell ? [
+              {label:"Mind", val:char.stats.Mind, isDie:true},
+              ...(spellPwrBonus>0?[{label:"Spell Power",val:spellPwrBonus}]:[]),
+            ] : mh ? [
+              ...mh.dmgBreakdown,
+              ...enhDmgRows,
+              ...(isVicious?[{label:"×2 (Vicious Strike)",val:"STR×2",isDie:true,color:"var(--text-danger)"}]:[]),
+            ] : []}
+            extra={isDualStrike&&oh&&<div style={{marginTop:4,paddingTop:4,borderTop:"1px dashed var(--border-row)",fontSize:10,color:"var(--text-muted)"}}>Off-hand: {fmtDmg(oh.dmgFormula,oh.dmgDie,oh.dmg,false)}</div>}
+          />
+
+          {/* MAP / Notes column */}
           <div>
-            <div style={{fontSize:9,color:"var(--text-label)",letterSpacing:"0.1em",marginBottom:2,fontWeight:700}}>RANGE</div>
-            <div style={{color:"var(--text-value-hi)",fontWeight:700}}>{rangeStr}</div>
-          </div>
-          <div style={{marginTop:4}}>
-            <div style={{fontSize:9,color:"var(--text-label)",letterSpacing:"0.1em",marginBottom:2,fontWeight:700}}>DAMAGE</div>
-            {isSpell?(<div style={{color:"var(--text-value-hi)",fontWeight:700}}>{char.stats.Mind} + Spell Dice{spellPwrBonus>0?` (+${spellPwrBonus})`:""}{eb.spellAcc>0&&<span style={{color:"#9a70d8",fontSize:10}}> [+{eb.spellAcc} acc]</span>}</div>)
-            :mh?(<div><div style={{color:"var(--text-value-hi)",fontWeight:700}}>{fmtDmg(mh.dmgFormula,mh.dmgDie,mh.dmg+eb.dmg,isVicious)}</div>
-              {(mh.dmg+eb.dmg)!==0&&<div style={{fontSize:9,color:"var(--text-muted)",lineHeight:1.5}}>{trainBonuses.PrimDmg>0&&<span>(+{trainBonuses.PrimDmg} train) </span>}{slottedTechBonuses.PrimDmg>0&&<span>(+{slottedTechBonuses.PrimDmg} tech) </span>}{boonOffensive>0&&<span>(+{boonOffensive} boon) </span>}{sizeB.primDmg>0&&<span>(+{sizeB.primDmg} size) </span>}{eb.dmg!==0&&<span style={{color:"#4cc8e0"}}>({fmtBonus(eb.dmg)} enh) </span>}</div>}
-              {isDualStrike&&oh&&<div style={{color:"var(--text-muted)",fontSize:10,marginTop:2}}>+ {fmtDmg(oh.dmgFormula,oh.dmgDie,oh.dmg,false)} (off-hand)</div>}</div>)
-            :<div style={{color:"var(--text-muted)",fontSize:10}}>No weapon</div>}
-          </div>
-          <div style={{marginTop:4}}>
-            <div style={{fontSize:9,color:"var(--text-label)",letterSpacing:"0.1em",marginBottom:2,fontWeight:700}}>MAP</div>
-            <div style={{fontSize:10,color:"var(--text-muted)"}}>{["vicious","cleave","dual","touchmagic"].includes(preset.stance)?"Counts as 2 attacks":"1 attack"}</div>
-            {eb.secDmg>0&&<div style={{fontSize:10,color:"var(--text-muted)",marginTop:2}}>Sec Dmg +{eb.secDmg}</div>}
+            <div style={{fontSize:9,color:"var(--text-label)",letterSpacing:"0.1em",marginBottom:3,fontWeight:700}}>DETAILS</div>
+            <div style={{fontSize:10,color:"var(--text-muted)",lineHeight:1.6}}>
+              <div>{stanceDef.desc}</div>
+              {preset.notes&&<div style={{marginTop:4,color:"var(--text-sub)",fontStyle:"italic"}}>📝 {preset.notes}</div>}
+            </div>
           </div>
         </div>
-        <div style={{marginTop:6,paddingTop:6,borderTop:"1px solid var(--border-row)",fontSize:10,color:"var(--text-muted)"}}>
-          <strong style={{color:"var(--text-label)"}}>{stanceDef.label}:</strong> {stanceDef.desc}
-        </div>
-        {preset.notes&&<div style={{marginTop:4,fontSize:10,color:"var(--text-sub)",fontStyle:"italic"}}>{preset.notes}</div>}
       </div>
     );
   };
