@@ -3986,8 +3986,8 @@ function AttackPresetsCard({char, setChar, derived}) {
       // Vicious Strike: extra Str die
       if(isVicious) rawDice.push({die: mh.dmgDie, elem: ""});
 
-      // Overwhelming Stampede: extra Str die on next attack
-      if(sb.hasStrDiceBonus) rawDice.push({die: mh.dmgDie, elem: " (next)"});
+      // Overwhelming Stampede: extra Str die (consolidates with other Str dice)
+      if(sb.hasStrDiceBonus) rawDice.push({die: mh.dmgDie, elem: ""});
 
       // Rune secondary dice — parse e.g. "+1d6 Physical" → {die:"d6", elem:" Physical"}
       if(mh.runeSecDice) {
