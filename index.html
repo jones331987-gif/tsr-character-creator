@@ -3557,9 +3557,11 @@ function StepEquipment({char,setChar,moneyLeft}){
         const availableDmgTypes = showDmgTypeSelector ? [
           "Physical",
           ...(hasManifestWpn ? ["Magic"] : []),
-          ...(hasManifestRelic || hasAngelic || hasManifestWpn ? ["Holy"] : []),
+          ...(hasManifestRelic || hasAngelic ? ["Holy"] : []),
+          // Glyph spells on Thaumic weapons add Holy + all elementals
+          ...(hasManifestWpn && hasAdeptRunic && hasGlyphSpell ? ["Holy"] : []),
           ...(hasAdeptRunic && hasGlyphSpell ? ["Fire","Water","Wind","Lightning","Dark"] : []),
-        ] : [];
+        ].filter((v,i,a)=>a.indexOf(v)===i) : []; // deduplicate
         const setDmgType = (type) => setChar(c => ({...c, [dmgTypeKey]: c[dmgTypeKey]===type ? null : type}));
 
         const toggleMod = (modName) => setChar(c=>{
@@ -3656,38 +3658,62 @@ function StepEquipment({char,setChar,moneyLeft}){
             </>)}
 
             {/* MELEE / NON-GUN ENCHANTMENTS */}
-            {wpn && !isGun && (<>
-              {secHdr("MITHRIL SILVER UPGRADE", `+1 Accuracy, +1 Damage — ${mithrilCost} Silver`)}
-              <div style={{marginBottom:12}}>
-                {addonBtn(currentMithril,toggleMithril,"Mithril Silver",`Acc+1, Dmg+1 on ${wpn.name}`,mithrilCost,false,"")}
-              </div>
+            {wpn && !isGun && (()=>{
+              // Manifested weapons (non-Physical type) can't be Mithril-silvered,
+              // and only get rune/spell enchantments if character has Adept Runic Training.
+              const resolvedType = currentDmgType || defaultDmgType;
+              const isManifested = showDmgTypeSelector && resolvedType !== "Physical";
+              const canEnchant   = !isManifested || hasAdeptRunic;
+              return (<>
+                {/* Mithril — hidden for manifested weapons */}
+                {!isManifested && (<>
+                  {secHdr("MITHRIL SILVER UPGRADE", `+1 Accuracy, +1 Damage — ${mithrilCost} Silver`)}
+                  <div style={{marginBottom:12}}>
+                    {addonBtn(currentMithril,toggleMithril,"Mithril Silver",`Acc+1, Dmg+1 on ${wpn.name}`,mithrilCost,false,"")}
+                  </div>
+                </>)}
 
-              {secHdr("WEAPON RUNE ENCHANTMENT", showDmgTypeSelector ? "Rune matching weapon's damage type stacks as primary; others are secondary" : "Same physical type (Earth Rune) stacks as primary; elementals are secondary")}
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:4}}>
-                {WEAPON_RUNES_DATA.map(r=>{
-                  const sel = currentRune===r.name;
-                  return addonBtn(sel,()=>setRune(r.name),r.name,`${r.dmg} · ${r.effect}`,r.special?"Special price":r.cost,false,"");
-                })}
-              </div>
-              {currentRune&&(
-                <div style={{marginTop:4,padding:"6px 10px",background:"rgba(154,112,216,0.08)",border:"1px solid #9a70d8",borderRadius:3,fontSize:10}}>
-                  <span style={{color:"#9a70d8",fontWeight:600}}>Rune active: </span>{currentRune}
-                </div>
-              )}
+                {/* Rune enchantment — locked for manifested until Adept Runic */}
+                {secHdr("WEAPON RUNE ENCHANTMENT", showDmgTypeSelector ? "Rune matching weapon's damage type stacks as primary; others are secondary" : "Same physical type (Earth Rune) stacks as primary; elementals are secondary")}
+                {!canEnchant ? (
+                  <div style={{padding:"8px 10px",background:"var(--bg-panel-alt)",border:"1px solid var(--border-soft)",borderRadius:3,fontSize:10,color:"var(--text-muted)",fontStyle:"italic",marginBottom:8}}>
+                    🔒 Adept Runic Training required to enchant manifested weapons with runes.
+                  </div>
+                ) : (<>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:4}}>
+                    {WEAPON_RUNES_DATA.map(r=>{
+                      const sel = currentRune===r.name;
+                      return addonBtn(sel,()=>setRune(r.name),r.name,`${r.dmg} · ${r.effect}`,r.special?"Special price":r.cost,false,"");
+                    })}
+                  </div>
+                  {currentRune&&(
+                    <div style={{marginTop:4,padding:"6px 10px",background:"rgba(154,112,216,0.08)",border:"1px solid #9a70d8",borderRadius:3,fontSize:10}}>
+                      <span style={{color:"#9a70d8",fontWeight:600}}>Rune active: </span>{currentRune}
+                    </div>
+                  )}
+                </>)}
 
-              {secHdr("WEAPON SPELL ENCHANTMENT","One spell enchant at a time — activated abilities")}
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                {WEAPON_SPELLS_DATA.map(s=>{
-                  const sel = currentSpell===s.name;
-                  return addonBtn(sel,()=>setSpell(s.name),s.name,s.effect,s.cost,false,"");
-                })}
-              </div>
-              {currentSpell&&(
-                <div style={{marginTop:6,padding:"6px 10px",background:"rgba(200,168,74,0.08)",border:"1px solid var(--accent-gold)",borderRadius:3,fontSize:10}}>
-                  <span style={{color:"var(--accent-gold)",fontWeight:600}}>Spell active: </span>{currentSpell}
-                </div>
-              )}
-            </>)}
+                {/* Spell enchantment — locked for manifested until Adept Runic */}
+                {secHdr("WEAPON SPELL ENCHANTMENT","One spell enchant at a time — activated abilities")}
+                {!canEnchant ? (
+                  <div style={{padding:"8px 10px",background:"var(--bg-panel-alt)",border:"1px solid var(--border-soft)",borderRadius:3,fontSize:10,color:"var(--text-muted)",fontStyle:"italic",marginBottom:8}}>
+                    🔒 Adept Runic Training required to enchant manifested weapons with spells.
+                  </div>
+                ) : (<>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                    {WEAPON_SPELLS_DATA.map(s=>{
+                      const sel = currentSpell===s.name;
+                      return addonBtn(sel,()=>setSpell(s.name),s.name,s.effect,s.cost,false,"");
+                    })}
+                  </div>
+                  {currentSpell&&(
+                    <div style={{marginTop:6,padding:"6px 10px",background:"rgba(200,168,74,0.08)",border:"1px solid var(--accent-gold)",borderRadius:3,fontSize:10}}>
+                      <span style={{color:"var(--accent-gold)",fontWeight:600}}>Spell active: </span>{currentSpell}
+                    </div>
+                  )}
+                </>)}
+              </>);
+            })()}
 
             {/* Rules reminder */}
             <div style={{marginTop:20,padding:"10px 14px",background:"var(--bg-panel)",border:"1px solid var(--border-light)",borderRadius:3,fontSize:10,color:"var(--text-muted)",lineHeight:1.7}}>
