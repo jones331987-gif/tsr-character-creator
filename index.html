@@ -3981,7 +3981,7 @@ function AttackPresetsCard({char, setChar, derived}) {
       // mh.dmg contains training/boon/weapon bonuses — NOT the Str stat flat (+5).
       // The strDieFlat (+5) is embedded in dmgDie display string only.
       // For each extra Str die beyond the first, add another copy of strDieFlat.
-      const flatBonus = mh.dmg+eb.dmg+sb.dmg + strDieFlat * (strDiceCount - 1);
+      const flatBonus = mh.dmg+eb.dmg+sb.dmg + strDieFlat * strDiceCount;
 
       // ── Collect raw dice ──────────────────────────────────────────────────
       const rawDice = [];
