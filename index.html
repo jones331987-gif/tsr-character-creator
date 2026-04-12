@@ -4115,15 +4115,7 @@ function AttackPresetsCard({char, setChar, derived}) {
           for(let i=0;i<cnt;i++) rawDice.push({die: rpm[2], elem: ""});
         }
       }
-      // Different-type rune dice → secondary (own elem label)
-      if(mh.runeSecDice) {
-        const rm = mh.runeSecDice.replace(/^\+/,"").match(/^(\d+)(d\d+)(?:\s+(.+))?$/);
-        if(rm) {
-          const cnt = parseInt(rm[1])||1;
-          const die = rm[2]; const el = rm[3] ? " "+rm[3] : "";
-          for(let i=0;i<cnt;i++) rawDice.push({die, elem: el});
-        }
-      }
+      // Secondary rune dice are shown in the separate SECONDARY DMG column, not here
 
       // ── Consolidate: group same die+elem keys ─────────────────────────────
       const counts = {};
@@ -4214,31 +4206,70 @@ function AttackPresetsCard({char, setChar, derived}) {
                 </div>}
               </div>
 
-              {/* Damage */}
-              <StatCol label="DAMAGE" totalStr={dmgTotalStr}
-                rows={isSpell ? [
-                  {label:"Mind", val:char.stats.Mind, isDie:true},
-                  ...(spellPwrBonus>0?[{label:"Spell Power",val:spellPwrBonus}]:[]),
-                ] : mh ? [
-                  ...mh.dmgBreakdown,
-                  ...enhDmgRows,
-                  ...(isVicious?[{label:"Str ×2 (Vicious Strike)", val:mh.dmgDie, isDie:true, color:"var(--text-danger)"}]:[]),
-                ] : []}
-                extra={isDualStrike&&oh&&<div style={{marginTop:4,paddingTop:4,borderTop:"1px dashed var(--border-row)",fontSize:10,color:"var(--text-muted)"}}>Off-hand: {fmtDmg(oh.dmgFormula,oh.dmgDie,oh.dmg,false)}</div>}
-              />
+              {/* Damage — primary only (secondary separated below) */}
+              {(()=>{
+                // Split breakdown into primary rows and secondary rows
+                const primRows = mh ? mh.dmgBreakdown.filter(r=>!r.isSecondary) : [];
+                const secBkRows = mh ? mh.dmgBreakdown.filter(r=>r.isSecondary) : [];
+                // Build secondary total string from rune secondary dice
+                const secTotalStr = (() => {
+                  if(!mh?.runeSecDice) return null;
+                  const cleaned = mh.runeSecDice.replace(/^\+/,"");
+                  return cleaned; // e.g. "1d6 Physical"
+                })();
+                const hasSecondary = secBkRows.length > 0 || eb.secDmg > 0;
+                return (<>
+                  <StatCol label="DAMAGE" totalStr={dmgTotalStr}
+                    rows={isSpell ? [
+                      {label:"Mind", val:char.stats.Mind, isDie:true},
+                      ...(spellPwrBonus>0?[{label:"Spell Power",val:spellPwrBonus}]:[]),
+                    ] : mh ? [
+                      ...primRows,
+                      ...enhDmgRows,
+                      ...(isVicious?[{label:"Str ×2 (Vicious Strike)", val:mh.dmgDie, isDie:true, color:"var(--text-danger)"}]:[]),
+                    ] : []}
+                    extra={isDualStrike&&oh&&<div style={{marginTop:4,paddingTop:4,borderTop:"1px dashed var(--border-row)",fontSize:10,color:"var(--text-muted)"}}>Off-hand: {fmtDmg(oh.dmgFormula,oh.dmgDie,oh.dmg,false)}</div>}
+                  />
 
-              {/* Details */}
-              <div>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:4,paddingBottom:3,borderBottom:"1px solid var(--border-row)"}}>
-                  <span style={{fontSize:9,color:"var(--text-label)",letterSpacing:"0.1em",fontWeight:700}}>DETAILS</span>
+                  {/* Secondary damage — own column when present */}
+                  {hasSecondary ? (
+                    <StatCol label="SECONDARY DMG" totalStr={secTotalStr||(eb.secDmg>0?`+${eb.secDmg}`:"")}
+                      rows={[
+                        ...secBkRows,
+                        ...(eb.secDmg>0?[{label:"Sec Dmg bonus", val:eb.secDmg, color:"#c8a84a"}]:[]),
+                      ]}
+                    />
+                  ) : (
+                    // No secondary — show Details in this slot
+                    <div>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:4,paddingBottom:3,borderBottom:"1px solid var(--border-row)"}}>
+                        <span style={{fontSize:9,color:"var(--text-label)",letterSpacing:"0.1em",fontWeight:700}}>DETAILS</span>
+                      </div>
+                      <div style={{fontSize:10,color:"var(--text-muted)",lineHeight:1.6}}>
+                        {mh&&mh.wpnDmgType&&mh.wpnDmgType!=="Physical"&&<div style={{color:"#9a70d8",fontWeight:600,marginBottom:2}}>Primary Damage Type: {mh.wpnDmgType}</div>}
+                        {mh&&mh.wpnAP>0&&<div style={{color:"#4cc8e0",fontWeight:600,marginBottom:2}}>AP {mh.wpnAP} — ignores {mh.wpnAP} Armor</div>}
+                        <div>{stanceDef.desc}</div>
+                        {preset.notes&&<div style={{marginTop:4,color:"var(--text-sub)",fontStyle:"italic"}}>📝 {preset.notes}</div>}
+                      </div>
+                    </div>
+                  )}
+                </>);
+              })()}
+
+              {/* Details row — spans full width when secondary damage is present */}
+              {(mh?.runeSecDice||eb.secDmg>0)&&(
+                <div style={{gridColumn:"1/-1",paddingTop:6,borderTop:"1px solid var(--border-row)"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:4,paddingBottom:3,borderBottom:"1px solid var(--border-row)"}}>
+                    <span style={{fontSize:9,color:"var(--text-label)",letterSpacing:"0.1em",fontWeight:700}}>DETAILS</span>
+                  </div>
+                  <div style={{fontSize:10,color:"var(--text-muted)",lineHeight:1.6}}>
+                    {mh&&mh.wpnDmgType&&mh.wpnDmgType!=="Physical"&&<div style={{color:"#9a70d8",fontWeight:600,marginBottom:2}}>Primary Damage Type: {mh.wpnDmgType}</div>}
+                    {mh&&mh.wpnAP>0&&<div style={{color:"#4cc8e0",fontWeight:600,marginBottom:2}}>AP {mh.wpnAP} — ignores {mh.wpnAP} Armor</div>}
+                    <div>{stanceDef.desc}</div>
+                    {preset.notes&&<div style={{marginTop:4,color:"var(--text-sub)",fontStyle:"italic"}}>📝 {preset.notes}</div>}
+                  </div>
                 </div>
-                <div style={{fontSize:10,color:"var(--text-muted)",lineHeight:1.6}}>
-                  {mh&&mh.wpnDmgType&&mh.wpnDmgType!=="Physical"&&<div style={{color:"#9a70d8",fontWeight:600,marginBottom:2}}>Primary Damage Type: {mh.wpnDmgType}</div>}
-                  {mh&&mh.wpnAP>0&&<div style={{color:"#4cc8e0",fontWeight:600,marginBottom:2}}>AP {mh.wpnAP} — ignores {mh.wpnAP} Armor</div>}
-                  <div>{stanceDef.desc}</div>
-                  {preset.notes&&<div style={{marginTop:4,color:"var(--text-sub)",fontStyle:"italic"}}>📝 {preset.notes}</div>}
-                </div>
-              </div>
+              )}
             </div>
           </div>
         )}
