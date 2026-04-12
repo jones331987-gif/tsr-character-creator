@@ -1957,6 +1957,9 @@ const EMPTY_CHAR = {
   // Summary combat toggles
   activeEnhancers: new Set(), // Set of enhancer names currently toggled ON
   versatileGrip: "1h",        // "1h" | "2h" — only relevant for Versatile weapons
+  // Ethereal weapon damage type overrides (null = use formula default)
+  weaponDmgTypeOverride: null,
+  offhandDmgTypeOverride: null,
   // Attack presets — user-defined attack configurations
   attackPresets: [],
 };
@@ -3338,7 +3341,7 @@ function StepEquipment({char,setChar,moneyLeft}){
       const newIsGun = val && (val.props||"").includes("Gun");
       const wasGun = c.equipment.weapon && (c.equipment.weapon.props||"").includes("Gun");
       if(newIsGun !== wasGun || !val) {
-        return {...c, equipment:{...c.equipment,[key]:val}, weaponRune:null, weaponSpell:null, weaponMithril:false, weaponMods:[]};
+        return {...c, equipment:{...c.equipment,[key]:val}, weaponRune:null, weaponSpell:null, weaponMithril:false, weaponMods:[], weaponDmgTypeOverride:null, offhandDmgTypeOverride:null};
       }
       if(newIsGun && val) {
         const newMax = val.name==="Lasgun"?1:["Pistol","Musket","Boomstick","Autogun"].includes(val.name)?1:2;
@@ -3532,6 +3535,26 @@ function StepEquipment({char,setChar,moneyLeft}){
         // Off-hand shields and catalysts can't be enchanted as weapons
         const offIsWeapon = hasOffWpn && !char.equipment.offhand?.parry && !char.equipment.offhand?.minMind;
 
+        const dmgTypeKey = isMain ? "weaponDmgTypeOverride" : "offhandDmgTypeOverride";
+        const currentDmgType = char[dmgTypeKey] || null;
+        // Adept Runic Training + a Glyph spell = can change any weapon's damage type
+        const hasAdeptRunic  = char.purchasedTrainings.has("thaumaturgy:adept");
+        const hasGlyphSpell  = Object.values(char.techniques["thaumaturgy"]||{}).flat()
+          .some(t=>["Manifest Glyph","Manifest Potent Glyph"].includes(t));
+        // Novice Thaumaturgy = can create/use Ethereal weapons (Magic/Holy types)
+        const hasNoviceThaumaturgy = (char.skills["thaumaturgy"]||0) >= 1;
+        const hasManifestWpn = Object.values(char.techniques["thaumaturgy"]||{}).flat()
+          .some(t=>["Manifest Weapon","Manifest Ethereal Weapon"].includes(t));
+        // Show selector if: has ethereal weapon technique, OR has Adept+Glyph (can change any weapon)
+        const showDmgTypeSelector = wpn && (hasManifestWpn || (hasAdeptRunic && hasGlyphSpell));
+        // Available types based on what's unlocked
+        const availableDmgTypes = showDmgTypeSelector ? [
+          "Physical",
+          ...(hasManifestWpn || hasNoviceThaumaturgy ? ["Magic","Holy"] : []),
+          ...(hasAdeptRunic && hasGlyphSpell ? ["Fire","Water","Wind","Lightning","Dark"] : []),
+        ] : [];
+        const setDmgType = (type) => setChar(c => ({...c, [dmgTypeKey]: c[dmgTypeKey]===type ? null : type}));
+
         const toggleMod = (modName) => setChar(c=>{
           const cur = c[modsKey]||[];
           if(cur.includes(modName)) return {...c, [modsKey]: cur.filter(m=>m!==modName)};
@@ -3605,6 +3628,26 @@ function StepEquipment({char,setChar,moneyLeft}){
               )}
             </>)}
 
+            {/* ETHEREAL WEAPON DAMAGE TYPE SELECTOR */}
+            {showDmgTypeSelector && availableDmgTypes.length > 0 && (<>
+              {secHdr("WEAPON DAMAGE TYPE", "Sets the primary damage type — determines which runes stack as primary vs secondary damage")}
+              <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
+                {availableDmgTypes.map(type => {
+                  const sel = currentDmgType ? currentDmgType === type : type === "Physical";
+                  const typeColor = {Magic:"#9a70d8",Holy:"#c8a84a",Fire:"#e05a6a",Water:"#4cc8e0",Wind:"#7ac87a",Lightning:"#f0d060",Dark:"#7a60b0",Physical:"#8a8a9a"};
+                  const col = typeColor[type]||"var(--text-label)";
+                  return (
+                    <button key={type} onClick={()=>setDmgType(type)}
+                      style={{padding:"5px 14px",border:`1px solid ${sel?col:"var(--border-main)"}`,borderRadius:3,cursor:"pointer",fontSize:10,fontWeight:sel?700:400,background:sel?`rgba(${type==="Magic"?"154,112,216":type==="Holy"?"200,168,74":type==="Fire"?"224,90,106":type==="Water"?"76,200,224":type==="Wind"?"122,200,122":type==="Lightning"?"240,208,96":type==="Dark"?"122,96,176":"138,138,154"},0.12)`:"var(--bg-panel)",color:sel?col:"var(--text-muted)",fontFamily:"inherit"}}>
+                      {type}
+                    </button>
+                  );
+                })}
+              </div>
+              {!hasAdeptRunic&&!hasGlyphSpell&&<div style={{fontSize:9,color:"var(--text-muted)",fontStyle:"italic",marginBottom:10}}>Purchase Adept Runic Training + a Glyph spell to unlock elemental damage types.</div>}
+              {hasAdeptRunic&&!hasGlyphSpell&&<div style={{fontSize:9,color:"var(--text-muted)",fontStyle:"italic",marginBottom:10}}>Purchase Manifest Glyph or Manifest Potent Glyph to unlock elemental types.</div>}
+            </>)}
+
             {/* MELEE / NON-GUN ENCHANTMENTS */}
             {wpn && !isGun && (<>
               {secHdr("MITHRIL SILVER UPGRADE", `+1 Accuracy, +1 Damage — ${mithrilCost} Silver`)}
@@ -3612,7 +3655,7 @@ function StepEquipment({char,setChar,moneyLeft}){
                 {addonBtn(currentMithril,toggleMithril,"Mithril Silver",`Acc+1, Dmg+1 on ${wpn.name}`,mithrilCost,false,"")}
               </div>
 
-              {secHdr("WEAPON RUNE ENCHANTMENT","One rune at a time — adds elemental secondary damage")}
+              {secHdr("WEAPON RUNE ENCHANTMENT", showDmgTypeSelector ? "Rune matching weapon's damage type stacks as primary; others are secondary" : "Same physical type (Earth Rune) stacks as primary; elementals are secondary")}
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:4}}>
                 {WEAPON_RUNES_DATA.map(r=>{
                   const sel = currentRune===r.name;
@@ -3833,8 +3876,9 @@ function AttackPresetsCard({char, setChar, derived}) {
     ];
     // Determine weapon's primary damage type from its formula
     // "Str+d8" or "Str" → Physical, "2d10 Fire" → Fire, "Mind+d6 Water" → Water
-    const wpnDmgType = (() => {
-      const typeMatch = w.dmg.match(/(Fire|Water|Wind|Lightning|Dark|Holy|Physical|Magic)/);
+    const dmgTypeKey = !isOffhand ? "weaponDmgTypeOverride" : "offhandDmgTypeOverride";
+    const wpnDmgType = char[dmgTypeKey] || (() => {
+      const typeMatch = w.dmg.match(/(Fire|Water|Wind|Lightning|Dark|Holy|Physical|Magic)/);
       return typeMatch ? typeMatch[1] : "Physical";
     })();
     // Rune damage: check if rune type matches weapon type
@@ -3845,7 +3889,7 @@ function AttackPresetsCard({char, setChar, derived}) {
       const rd = WEAPON_RUNES_DATA.find(r=>r.name===rune);
       if(!rd || rd.dmg === "—") return null;
       // Parse rune damage type e.g. "+1d6 Physical" → "Physical"
-      const runeTypeMatch = rd.dmg.match(/(Fire|Water|Wind|Lightning|Dark|Holy|Physical|Magic)/);
+      const runeTypeMatch = rd.dmg.match(/(Fire|Water|Wind|Lightning|Dark|Holy|Physical|Magic)/);
       const runeType = runeTypeMatch ? runeTypeMatch[1] : "Physical";
       // If rune type matches weapon primary type → not secondary (stacks with primary)
       if(runeType === wpnDmgType) return null;
@@ -3856,7 +3900,7 @@ function AttackPresetsCard({char, setChar, derived}) {
       if(!rune) return null;
       const rd = WEAPON_RUNES_DATA.find(r=>r.name===rune);
       if(!rd || rd.dmg === "—") return null;
-      const runeTypeMatch = rd.dmg.match(/(Fire|Water|Wind|Lightning|Dark|Holy|Physical|Magic)/);
+      const runeTypeMatch = rd.dmg.match(/(Fire|Water|Wind|Lightning|Dark|Holy|Physical|Magic)/);
       const runeType = runeTypeMatch ? runeTypeMatch[1] : "Physical";
       if(runeType !== wpnDmgType) return null;
       // Return just the dice part e.g. "d6" from "+1d6 Physical"
