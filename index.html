@@ -3966,60 +3966,66 @@ function AttackPresetsCard({char, setChar, derived}) {
       const core = elemM?elemM[1]:raw; const elem = elemM?" "+elemM[2]:"";
       const spM = core.match(/^(Str|Mind)\+(.+)$/); const soM = core.match(/^(Str|Mind)$/);
 
-      // ── Collect all raw dice, then consolidate same-type dice together ──────
-      // Each entry: { die: "d12", elem: "" } or { die: "d6", elem: " Physical" }
-      const rawDice = [];
-      const flatBonus = mh.dmg+eb.dmg+sb.dmg;
+      // ── Parse Str die — separate die face from any embedded flat bonus ──────
+      // mh.dmgDie can be e.g. "d12+5" (Str die + stat chain bonus).
+      // When Vicious/Stampede add extra Str dice, each copy also carries that +N.
+      const strDieMatch = mh.dmgDie.match(/^(d\d+)(?:\+(-?\d+))?$/);
+      const strDieFace  = strDieMatch ? strDieMatch[1] : mh.dmgDie; // e.g. "d12"
+      const strDieFlat  = strDieMatch && strDieMatch[2] ? parseInt(strDieMatch[2]) : 0; // e.g. 5
 
-      // Parse weapon base: "d12+d8 Fire" → Str die d12, weapon die d8 Fire
-      // spM = Str+wpnDie form (e.g. "Str+d8"), soM = Str only
+      // Base flat bonus: training, enhancers, stances, weapon mods etc.
+      // strDieFlat is NOT included here yet — it's added per-copy of the Str die below.
+      const baseFlatBonus = mh.dmg+eb.dmg+sb.dmg - strDieFlat; // remove the 1 copy already in mh.dmg
+
+      // Count how many Str dice we're rolling
+      let strDiceCount = 1;                           // base weapon attack
+      if(isVicious)         strDiceCount += 1;        // Vicious Strike doubles Str
+      if(sb.hasStrDiceBonus) strDiceCount += 1;       // Overwhelming Stampede adds one
+
+      // Total flat = base bonuses + strDieFlat × number of Str dice
+      const flatBonus = baseFlatBonus + strDieFlat * strDiceCount;
+
+      // ── Collect raw dice ──────────────────────────────────────────────────
+      const rawDice = [];
+
       if(spM) {
-        rawDice.push({die: mh.dmgDie, elem: ""});            // Str die
-        // Weapon die part e.g. "d8" or "d8 Fire"
+        // Str+weapon formula: push Str die face × strDiceCount, then weapon die
+        for(let i=0;i<strDiceCount;i++) rawDice.push({die: strDieFace, elem: ""});
         const wdieM = spM[2].match(/^(d\d+)(?:\s+([A-Z][a-z]+))?$/);
         if(wdieM) rawDice.push({die: wdieM[1], elem: wdieM[2] ? " "+wdieM[2] : ""});
-        else rawDice.push({die: spM[2], elem: elem}); // fallback
+        else rawDice.push({die: spM[2], elem: elem});
       } else if(soM) {
-        rawDice.push({die: mh.dmgDie, elem: ""});
+        // Str-only formula
+        for(let i=0;i<strDiceCount;i++) rawDice.push({die: strDieFace, elem: ""});
       } else {
-        // Fixed-dice weapons like "2d6" — keep as-is, don't try to consolidate
+        // Fixed-dice weapons like "2d6" — keep as-is
         const diceStr2 = `${core}${elem}`;
         const bonusStr2 = flatBonus!==0 ? (flatBonus>0?" +"+flatBonus:" "+flatBonus) : "";
         return `${diceStr2}${bonusStr2}`;
       }
 
-      // Vicious Strike: extra Str die
-      if(isVicious) rawDice.push({die: mh.dmgDie, elem: ""});
-
-      // Overwhelming Stampede: extra Str die (consolidates with other Str dice)
-      if(sb.hasStrDiceBonus) rawDice.push({die: mh.dmgDie, elem: ""});
-
-      // Rune secondary dice — parse e.g. "+1d6 Physical" → {die:"d6", elem:" Physical"}
+      // Rune secondary dice — e.g. "+1d6 Physical"
       if(mh.runeSecDice) {
         const rm = mh.runeSecDice.replace(/^\+/,"").match(/^(\d+)(d\d+)(?:\s+(.+))?$/);
         if(rm) {
-          const count = parseInt(rm[1])||1;
+          const cnt = parseInt(rm[1])||1;
           const die = rm[2]; const el = rm[3] ? " "+rm[3] : "";
-          for(let i=0;i<count;i++) rawDice.push({die, elem: el});
+          for(let i=0;i<cnt;i++) rawDice.push({die, elem: el});
         }
       }
 
-      // ── Consolidate: group by die+elem key, count occurrences ──────────────
-      // Keep "next attack" dice separate from primary dice
-      const counts = {}; // key → count
-      const order = [];  // insertion-order keys
+      // ── Consolidate: group same die+elem keys ─────────────────────────────
+      const counts = {};
+      const order  = [];
       for(const entry of rawDice) {
         const key = entry.die + entry.elem;
         if(!counts[key]) { counts[key] = 0; order.push(key); }
         counts[key]++;
       }
 
-      // Build consolidated dice string
-      // Format: "3d12+1d8+1d6 Physical" — always show count even if 1 for clarity
       const parts = order.map(key => {
-        const count = counts[key];
-        // key is e.g. "d12", "d8", "d6 Physical", "d12 (next)"
-        return count > 1 ? `${count}${key}` : `1${key}`;
+        const c = counts[key];
+        return c > 1 ? `${c}${key}` : `1${key}`;
       });
 
       const diceStr = parts.join("+");
