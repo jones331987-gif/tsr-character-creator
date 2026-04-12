@@ -3973,17 +3973,15 @@ function AttackPresetsCard({char, setChar, derived}) {
       const strDieFace  = strDieMatch ? strDieMatch[1] : mh.dmgDie; // e.g. "d12"
       const strDieFlat  = strDieMatch && strDieMatch[2] ? parseInt(strDieMatch[2]) : 0; // e.g. 5
 
-      // Base flat bonus: training, enhancers, stances, weapon mods etc.
-      // strDieFlat is NOT included here yet — it's added per-copy of the Str die below.
-      const baseFlatBonus = mh.dmg+eb.dmg+sb.dmg - strDieFlat; // remove the 1 copy already in mh.dmg
-
       // Count how many Str dice we're rolling
       let strDiceCount = 1;                           // base weapon attack
       if(isVicious)         strDiceCount += 1;        // Vicious Strike doubles Str
       if(sb.hasStrDiceBonus) strDiceCount += 1;       // Overwhelming Stampede adds one
 
-      // Total flat = base bonuses + strDieFlat × number of Str dice
-      const flatBonus = baseFlatBonus + strDieFlat * strDiceCount;
+      // mh.dmg contains training/boon/weapon bonuses — NOT the Str stat flat (+5).
+      // The strDieFlat (+5) is embedded in dmgDie display string only.
+      // For each extra Str die beyond the first, add another copy of strDieFlat.
+      const flatBonus = mh.dmg+eb.dmg+sb.dmg + strDieFlat * (strDiceCount - 1);
 
       // ── Collect raw dice ──────────────────────────────────────────────────
       const rawDice = [];
