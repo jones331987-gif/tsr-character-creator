@@ -3831,11 +3831,37 @@ function AttackPresetsCard({char, setChar, derived}) {
       ...(mithVal>0                  ? [{label:"Mithril",     val:mithVal}] : []),
       ...(scopeAcc>0                 ? [{label:"Scope",       val:scopeAcc}] : []),
     ];
-    // Rune secondary elemental damage (all runes give elemental dice, shown separately)
+    // Determine weapon's primary damage type from its formula
+    // "Str+d8" or "Str" → Physical, "2d10 Fire" → Fire, "Mind+d6 Water" → Water
+    const wpnDmgType = (() => {
+      const typeMatch = w.dmg.match(/(Fire|Water|Wind|Lightning|Dark|Holy|Physical|Magic)/);
+      return typeMatch ? typeMatch[1] : "Physical";
+    })();
+    // Rune damage: check if rune type matches weapon type
+    // Same type → stacks with primary (Rune of Earth on Physical weapon)
+    // Different type → secondary damage source
     const runeSecDice = (() => {
       if(!rune) return null;
       const rd = WEAPON_RUNES_DATA.find(r=>r.name===rune);
-      return rd && rd.dmg !== "—" ? rd.dmg : null; // e.g. "+1d6 Wind"
+      if(!rd || rd.dmg === "—") return null;
+      // Parse rune damage type e.g. "+1d6 Physical" → "Physical"
+      const runeTypeMatch = rd.dmg.match(/(Fire|Water|Wind|Lightning|Dark|Holy|Physical|Magic)/);
+      const runeType = runeTypeMatch ? runeTypeMatch[1] : "Physical";
+      // If rune type matches weapon primary type → not secondary (stacks with primary)
+      if(runeType === wpnDmgType) return null;
+      return rd.dmg; // e.g. "+1d6 Fire"
+    })();
+    // Same-type rune: adds its dice to primary damage pool
+    const runePrimaryDice = (() => {
+      if(!rune) return null;
+      const rd = WEAPON_RUNES_DATA.find(r=>r.name===rune);
+      if(!rd || rd.dmg === "—") return null;
+      const runeTypeMatch = rd.dmg.match(/(Fire|Water|Wind|Lightning|Dark|Holy|Physical|Magic)/);
+      const runeType = runeTypeMatch ? runeTypeMatch[1] : "Physical";
+      if(runeType !== wpnDmgType) return null;
+      // Return just the dice part e.g. "d6" from "+1d6 Physical"
+      const diceMatch = rd.dmg.match(/\+?(\d+)(d\d+)/);
+      return diceMatch ? diceMatch[0].replace(/^\+/,"") : null; // e.g. "1d6"
     })();
     const dmgBreakdown = [
       {label: hasPrimalMass?"Vig (Primal Mass)":hasEagleEye&&isRng?"Dex (Eagle Eye)":"Str", val: dmgDie, isDie:true},
@@ -3849,7 +3875,9 @@ function AttackPresetsCard({char, setChar, derived}) {
       ...(!isOffhand&&savageFightingBonus>0?[{label:"Savage Fighting",val:savageFightingBonus}]:[]),
       ...(runeDmg>0                  ? [{label:rune+" bonus", val:runeDmg}] : []),
       ...(mithVal>0                  ? [{label:"Mithril",     val:mithVal}] : []),
-      // Secondary elemental damage from rune — listed separately as it's a different damage type
+      // Same-type rune dice stack with primary damage
+      ...(runePrimaryDice            ? [{label:rune+" (primary)",   val:runePrimaryDice, isDie:true, color:"#c8a84a"}] : []),
+      // Secondary elemental damage from rune — different type only
       ...(runeSecDice                ? [{label:rune+" (secondary)", val:runeSecDice, isDie:true, isSecondary:true, color:"#9a70d8"}] : []),
     ];
     // AP from weapon props + High Caliber mod
@@ -3858,8 +3886,8 @@ function AttackPresetsCard({char, setChar, derived}) {
                 // Rune of Earth gives AP 2
                 + (rune==="Rune of Earth" ? 2 : 0);
     return { accDie, dmgDie, acc: sharedAcc+accMod, dmg: sharedDmg+dmgMod, dmgFormula: w.dmg,
-             isRanged: isRng, name: w.name, wpnDiceOnly, runeSecDice, wpnAP,
-             accBreakdown, dmgBreakdown };
+             isRanged: isRng, name: w.name, wpnDiceOnly, runeSecDice, runePrimaryDice, wpnAP,
+             wpnDmgType, accBreakdown, dmgBreakdown };
   };
 
   const fmtAcc  = (die, bonus) => bonus!==0 ? `${die} (${bonus>0?"+":""}${bonus})` : die;
@@ -4002,7 +4030,15 @@ function AttackPresetsCard({char, setChar, derived}) {
         return `${diceStr2}${bonusStr2}`;
       }
 
-      // Rune secondary dice — e.g. "+1d6 Physical"
+      // Same-type rune dice → merge with primary pool
+      if(mh.runePrimaryDice) {
+        const rpm = mh.runePrimaryDice.match(/^(\d+)(d\d+)$/);
+        if(rpm) {
+          const cnt = parseInt(rpm[1])||1;
+          for(let i=0;i<cnt;i++) rawDice.push({die: rpm[2], elem: ""});
+        }
+      }
+      // Different-type rune dice → secondary (own elem label)
       if(mh.runeSecDice) {
         const rm = mh.runeSecDice.replace(/^\+/,"").match(/^(\d+)(d\d+)(?:\s+(.+))?$/);
         if(rm) {
@@ -4120,6 +4156,7 @@ function AttackPresetsCard({char, setChar, derived}) {
                   <span style={{fontSize:9,color:"var(--text-label)",letterSpacing:"0.1em",fontWeight:700}}>DETAILS</span>
                 </div>
                 <div style={{fontSize:10,color:"var(--text-muted)",lineHeight:1.6}}>
+                  {mh&&mh.wpnDmgType&&mh.wpnDmgType!=="Physical"&&<div style={{color:"#9a70d8",fontWeight:600,marginBottom:2}}>Primary Damage Type: {mh.wpnDmgType}</div>}
                   {mh&&mh.wpnAP>0&&<div style={{color:"#4cc8e0",fontWeight:600,marginBottom:2}}>AP {mh.wpnAP} — ignores {mh.wpnAP} Armor</div>}
                   <div>{stanceDef.desc}</div>
                   {preset.notes&&<div style={{marginTop:4,color:"var(--text-sub)",fontStyle:"italic"}}>📝 {preset.notes}</div>}
