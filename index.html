@@ -3541,16 +3541,23 @@ function StepEquipment({char,setChar,moneyLeft}){
         const hasAdeptRunic  = char.purchasedTrainings.has("thaumaturgy:adept");
         const hasGlyphSpell  = Object.values(char.techniques["thaumaturgy"]||{}).flat()
           .some(t=>["Manifest Glyph","Manifest Potent Glyph"].includes(t));
-        // Novice Thaumaturgy = can create/use Ethereal weapons (Magic/Holy types)
-        const hasNoviceThaumaturgy = (char.skills["thaumaturgy"]||0) >= 1;
+        // Thaumaturgy manifest weapons (Magic damage default)
         const hasManifestWpn = Object.values(char.techniques["thaumaturgy"]||{}).flat()
-          .some(t=>["Manifest Weapon","Manifest Ethereal Weapon"].includes(t));
-        // Show selector if: has ethereal weapon technique, OR has Adept+Glyph (can change any weapon)
-        const showDmgTypeSelector = wpn && (hasManifestWpn || (hasAdeptRunic && hasGlyphSpell));
+          .some(t=>["Manifest Minor Weapon","Manifest Weapon","Manifest Ethereal Weapon"].includes(t));
+        // Holy manifest weapons (Holy damage default)
+        const hasManifestRelic = Object.values(char.techniques["holy"]||{}).flat()
+          .some(t=>["Manifest Minor Relic","Manifest Relic","Summon Angelic Relic"].includes(t));
+        // Angelic Radiance perk from Holy = unlocks Manifest Relic spells (CQC/Marksman)
+        const hasAngelic = (() => { const v=char.masterPerks["holy"]; return Array.isArray(v)?v.includes("Angelic Radiance"):v==="Angelic Radiance"; })();
+        // Show selector if: has any manifest weapon technique OR has Adept+Glyph (can change any weapon)
+        const showDmgTypeSelector = wpn && (hasManifestWpn || hasManifestRelic || hasAngelic || (hasAdeptRunic && hasGlyphSpell));
+        // Default type for display highlighting: Holy if has Relic spells (no Thaumic), Magic if Thaumic, Physical otherwise
+        const defaultDmgType = hasManifestRelic || hasAngelic ? "Holy" : hasManifestWpn ? "Magic" : "Physical";
         // Available types based on what's unlocked
         const availableDmgTypes = showDmgTypeSelector ? [
           "Physical",
-          ...(hasManifestWpn || hasNoviceThaumaturgy ? ["Magic","Holy"] : []),
+          ...(hasManifestWpn ? ["Magic"] : []),
+          ...(hasManifestRelic || hasAngelic || hasManifestWpn ? ["Holy"] : []),
           ...(hasAdeptRunic && hasGlyphSpell ? ["Fire","Water","Wind","Lightning","Dark"] : []),
         ] : [];
         const setDmgType = (type) => setChar(c => ({...c, [dmgTypeKey]: c[dmgTypeKey]===type ? null : type}));
@@ -3633,7 +3640,7 @@ function StepEquipment({char,setChar,moneyLeft}){
               {secHdr("WEAPON DAMAGE TYPE", "Sets the primary damage type — determines which runes stack as primary vs secondary damage")}
               <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
                 {availableDmgTypes.map(type => {
-                  const sel = currentDmgType ? currentDmgType === type : type === "Physical";
+                  const sel = currentDmgType ? currentDmgType === type : type === defaultDmgType;
                   const typeColor = {Magic:"#9a70d8",Holy:"#c8a84a",Fire:"#e05a6a",Water:"#4cc8e0",Wind:"#7ac87a",Lightning:"#f0d060",Dark:"#7a60b0",Physical:"#8a8a9a"};
                   const col = typeColor[type]||"var(--text-label)";
                   return (
