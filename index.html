@@ -1908,6 +1908,8 @@ const SLOTTED_BONUS_TECHS = {
   // Conditional bonuses — stored alongside stances for preset calculations
   "Punishing Draw":        {Acc:2, PrimDmg:2},
   "Overwhelming Stampede": {Acc:2, PrimDmg:2, StrDiceBonus:true},
+  "Determined Strike":     {WpnDiceBonus:true},           // +1 weapon dice, melee
+  "Overwhelming Strike":   {Acc:2, PrimDmg:2, WpnDiceBonus:true}, // +2 Acc/Dmg +1 wpn dice, melee
 };
 
 // Spells that grant passive bonuses when slotted (always-on while slotted)
@@ -3860,15 +3862,16 @@ function AttackPresetsCard({char, setChar, derived}) {
 
   // Compute Acc/PrimDmg bonuses from stances toggled active in a preset
   const calcStanceBonuses = (preset) => {
-    let acc=0, dmg=0, hasStrDiceBonus=false;
+    let acc=0, dmg=0, hasStrDiceBonus=false, hasWpnDiceBonus=false;
     for(const sName of (preset.activeStances||[])){
       const b = SLOTTED_BONUS_TECHS[sName];
       if(!b) continue;
       if(b.Acc)          acc += b.Acc;
       if(b.PrimDmg)      dmg += b.PrimDmg;
       if(b.StrDiceBonus) hasStrDiceBonus = true;
+      if(b.WpnDiceBonus) hasWpnDiceBonus = true;
     }
-    return {acc, dmg, hasStrDiceBonus};
+    return {acc, dmg, hasStrDiceBonus, hasWpnDiceBonus};
   };
 
   const calcWeaponStats = (w, isOffhand) => {
@@ -4044,6 +4047,10 @@ function AttackPresetsCard({char, setChar, derived}) {
     if(sb.hasStrDiceBonus && mh){
       enhDmgRows.push({label:"Overwhelming Stampede (+STR dice bonus attack)", val:mh.dmgDie, isDie:true, color:"#4cc8e0", isSecondary:true});
     }
+    // Determined/Overwhelming Strike: extra weapon die
+    if(sb.hasWpnDiceBonus && mh && mh.wpnDiceOnly){
+      enhDmgRows.push({label:"Bonus weapon die", val:mh.wpnDiceOnly, isDie:true, color:"#4cc8e0", isSecondary:true});
+    }
 
     // ── Stat column: label + total inline, breakdown rows below ───────────
     const StatCol = ({label, totalStr, rows, extra}) => (
@@ -4095,8 +4102,14 @@ function AttackPresetsCard({char, setChar, derived}) {
         // Str+weapon formula: push Str die face × strDiceCount, then weapon die
         for(let i=0;i<strDiceCount;i++) rawDice.push({die: strDieFace, elem: ""});
         const wdieM = spM[2].match(/^(d\d+)(?:\s+([A-Z][a-z]+))?$/);
-        if(wdieM) rawDice.push({die: wdieM[1], elem: wdieM[2] ? " "+wdieM[2] : ""});
-        else rawDice.push({die: spM[2], elem: elem});
+        if(wdieM) {
+          rawDice.push({die: wdieM[1], elem: wdieM[2] ? " "+wdieM[2] : ""});
+          // Determined/Overwhelming Strike: extra weapon die
+          if(sb.hasWpnDiceBonus) rawDice.push({die: wdieM[1], elem: wdieM[2] ? " "+wdieM[2] : ""});
+        } else {
+          rawDice.push({die: spM[2], elem: elem});
+          if(sb.hasWpnDiceBonus) rawDice.push({die: spM[2], elem: elem});
+        }
       } else if(soM) {
         // Str-only formula
         for(let i=0;i<strDiceCount;i++) rawDice.push({die: strDieFace, elem: ""});
@@ -4353,6 +4366,8 @@ function AttackPresetsCard({char, setChar, derived}) {
         const stanceOptions = Object.entries(SLOTTED_BONUS_TECHS).filter(([name, b]) =>
           name !== "Punishing Draw" &&       // conditional — handled below
           name !== "Overwhelming Stampede" && // conditional — handled below
+          name !== "Determined Strike" &&    // conditional — handled below
+          name !== "Overwhelming Strike" &&  // conditional — handled below
           (b.Acc || b.PrimDmg) &&
           Object.values(char.techniques).some(tierMap =>
             Object.values(tierMap).some(arr => arr.includes(name))
@@ -4362,8 +4377,10 @@ function AttackPresetsCard({char, setChar, derived}) {
           const v = char.masterPerks["endurance"];
           return Array.isArray(v) ? v.includes("Punishing Draw") : v === "Punishing Draw";
         })();
-        const hasStampedeTechOuter = Object.values(char.techniques["cqc"]||{}).flat().includes("Overwhelming Stampede");
-        if(stanceOptions.length===0 && !hasPunishingDrawPerk && !hasStampedeTechOuter) return null;
+        const hasStampedeTechOuter     = Object.values(char.techniques["cqc"]||{}).flat().includes("Overwhelming Stampede");
+        const hasDeterminedStrikeOuter  = Object.values(char.techniques["cqc"]||{}).flat().includes("Determined Strike");
+        const hasOverwhelmingStrikeOuter= Object.values(char.techniques["cqc"]||{}).flat().includes("Overwhelming Strike");
+        if(stanceOptions.length===0 && !hasPunishingDrawPerk && !hasStampedeTechOuter && !hasDeterminedStrikeOuter && !hasOverwhelmingStrikeOuter) return null;
         return (
           <div style={{marginBottom:10}}>
             <Lbl>Active Stances (toggle if the stance is active this attack)</Lbl>
@@ -4389,7 +4406,11 @@ function AttackPresetsCard({char, setChar, derived}) {
             <div style={{fontSize:9,color:"var(--text-muted)",marginTop:4,fontStyle:"italic"}}>These are upkeep stances — toggling them ON shows their bonus in the preset as if the stance were active. Remember they have a Stamina upkeep cost each round.</div>
             {(()=>{
               const hasStampedeTech = Object.values(char.techniques["cqc"]||{}).flat().includes("Overwhelming Stampede");
-              if(!hasPunishingDrawPerk && !hasStampedeTech) return null;
+              if(!hasPunishingDrawPerk && !hasStampedeTech
+                 && !Object.values(char.techniques["cqc"]||{}).flat().includes("Determined Strike")
+                 && !Object.values(char.techniques["cqc"]||{}).flat().includes("Overwhelming Strike")) return null;
+              const hasDeterminedStrike = Object.values(char.techniques["cqc"]||{}).flat().includes("Determined Strike");
+              const hasOverwhelmingStrike = Object.values(char.techniques["cqc"]||{}).flat().includes("Overwhelming Strike");
               const conditionals = [
                 ...(hasPunishingDrawPerk ? [{
                   name:"Punishing Draw",
@@ -4400,6 +4421,16 @@ function AttackPresetsCard({char, setChar, derived}) {
                   name:"Overwhelming Stampede",
                   bonusLabel:"Acc +2  Dmg +2  +STR dice (bonus attack)",
                   note:"Costs 1 Action to set up. The bonus applies to the next attack made this phase.",
+                }] : []),
+                ...(hasDeterminedStrike ? [{
+                  name:"Determined Strike",
+                  bonusLabel:"+1 Weapon die",
+                  note:"Costs 1 Action. Adds one extra primary weapon damage die to this attack. Melee only.",
+                }] : []),
+                ...(hasOverwhelmingStrike ? [{
+                  name:"Overwhelming Strike",
+                  bonusLabel:"Acc +2  Dmg +2  +1 Weapon die",
+                  note:"Costs 1 Action. Adds +2 Acc, +2 Dmg and one extra weapon die to this attack. Melee only.",
                 }] : []),
               ];
               return (
