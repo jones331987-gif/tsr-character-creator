@@ -2302,7 +2302,7 @@ function App() {
   const armorSizeBonus = parseIntProp(char.equipment.armor?.bonus, "Size");
   const size         = (char.size || 1) + armorSizeBonus;
   const sizeB        = calcSizeBonus(size);
-  const finalArmor    = calcArmor(char.stats.Vigor) + armorBonus + sizeB.armor + boonArmorBonus;
+  const finalArmor    = calcArmor(char.stats.Vigor) + armorBonus + sizeB.armor + boonArmorBonus + (trainBonuses.PhysRes||0) + (slottedTechBonuses.PhysRes||0);
   const finalSpellRange = calcSpellRange(char.stats.Mind, char.stats.Willpower);
 
   const hasSavageFighting = (() => {
