@@ -2141,7 +2141,7 @@ function App() {
 
   // Slotted technique persistent bonuses — only applied when the buff is toggled ON
   const slottedTechBonuses = (() => {
-    const b = {HP:0,Stamina:0,Mana:0,Parry:0,PhysRes:0,PrimDmg:0,Acc:0};
+    const b = {HP:0,Stamina:0,Mana:0,Parry:0,PhysRes:0,PrimDmg:0,Acc:0,WpnDiceBonus:false};
     (char.slottedTechniques||new Set()).forEach(key => {
       // key format: "skillId||techName"
       const techName = key.split("||")[1];
@@ -2149,7 +2149,11 @@ function App() {
       if(!bonus) return;
       // Only apply if this buff is toggled active
       if(!(char.activeTechBuffs||new Set()).has(key)) return;
-      Object.entries(bonus).forEach(([k,v]) => { b[k] = (b[k]||0) + v; });
+      Object.entries(bonus).forEach(([k,v]) => {
+        if(k === "WpnDiceBonus") b.WpnDiceBonus = b.WpnDiceBonus || v;
+        else if(k === "StrDiceBonus") {} // StrDiceBonus not used in live card
+        else b[k] = (b[k]||0) + v;
+      });
     });
     return b;
   })();
@@ -4781,6 +4785,7 @@ function StepSummary({char,setChar,derived,totalSP}){
               const wpnDmgBase = wpn.props?.match(/Dmg\+(\d+)/);
               let wpnDmg = wpnDmgBase ? parseInt(wpnDmgBase[1]) : 0;
               if(mithrilOn && !isGun) wpnDmg += 1;
+              if(runeN === "Demon") wpnDmg += 3;
               const sharedDmg = trainBonuses.PrimDmg + slottedTechBonuses.PrimDmg + boonOffensive + jewelryDmgBonus + sizeB.primDmg + (!ohSlot?savageFightingBonus:0) + (!ohSlot ? enhancerDmg : 0);
               const totalDmg = sharedDmg + wpnDmg;
 
@@ -4800,6 +4805,11 @@ function StepSummary({char,setChar,derived,totalSP}){
                 dmgStr = `${sd}${elem}`;
               } else {
                 dmgStr = `${dmgCore}${elem}`;
+              }
+              // Extra weapon die from Determined Strike / Overwhelming Strike
+              if(slottedTechBonuses.WpnDiceBonus && statPlusMatch) {
+                const wdieOnly = statPlusMatch[2].match(/^(d\d+)/);
+                if(wdieOnly) dmgStr = `${dmgStr.replace(/ \(.*\)$/,"")} + ${wdieOnly[1]}${elem}`;
               }
               if(totalDmg!==0) dmgStr += ` (${totalDmg>0?"+":""}${totalDmg})`;
               // Cloak AoE suffix
@@ -4842,7 +4852,14 @@ function StepSummary({char,setChar,derived,totalSP}){
                   {(rune||spell||mithrilOn) && (
                     <div style={{marginTop:6,paddingTop:5,borderTop:"1px solid var(--border-row)"}}>
                       {mithrilOn && <div style={{fontSize:10,color:"#c8a84a",marginBottom:2}}>✦ Mithril Silver — Acc+1, Dmg+1</div>}
-                      {rune && <div style={{fontSize:10,color:"#9a70d8",marginBottom:2}}>◈ {rune.name} — {rune.dmg!=="—"?rune.dmg+" · ":""}{rune.effect}</div>}
+                      {rune && (()=>{
+                        const wpnType = char.weaponDmgTypeOverride || (()=>{const m=wpn.dmg.match(/(Fire|Water|Wind|Lightning|Dark|Holy|Physical|Magic)/);return m?m[1]:"Physical";})();
+                        const runeType = rune.dmg!=="—" ? (rune.dmg.match(/(Fire|Water|Wind|Lightning|Dark|Holy|Physical|Magic)/)||[,"Physical"])[1] : null;
+                        const isPrimary = runeType && runeType===wpnType;
+                        return <div style={{fontSize:10,color:isPrimary?"#c8a84a":"#9a70d8",marginBottom:2}}>
+                          {isPrimary?"◈ (primary)":"⊕ (secondary)"} {rune.name} — {rune.dmg!=="—"?rune.dmg+" · ":""}{rune.effect}
+                        </div>;
+                      })()}
                       {spell && <div style={{fontSize:10,color:"var(--accent-gold)",marginBottom:2}}>⚡ {spell.name} — {spell.effect}</div>}
                     </div>
                   )}
@@ -4961,6 +4978,7 @@ function StepSummary({char,setChar,derived,totalSP}){
               const wpnDmgBase = propsStr.match(/Dmg\+(\d+)/);
               let wpnDmg = wpnDmgBase ? parseInt(wpnDmgBase[1]) : 0;
               if(!isGun && mithrilOn) wpnDmg += 1;
+              if(runeN === "Demon") wpnDmg += 3;
               const hasHighCaliber = modsArr.includes("High Caliber");
               const sharedDmg = trainBonuses.PrimDmg + slottedTechBonuses.PrimDmg + boonOffensive + jewelryDmgBonus + sizeB.primDmg + (!ohSlot ? enhancerDmg : 0);
               const totalDmg = sharedDmg + wpnDmg;
@@ -4980,6 +4998,11 @@ function StepSummary({char,setChar,derived,totalSP}){
                 const sd = statOnlyMatch[1]==="Str"?dmgDieRaw:char.stats.Mind;
                 dmgStr = `${sd}${elem}`;
               } else { dmgStr = `${dmgCore}${elem}`; }
+              // Extra weapon die from Determined Strike / Overwhelming Strike
+              if(slottedTechBonuses.WpnDiceBonus && statPlusMatch) {
+                const wdieOnly = statPlusMatch[2].match(/^(d\d+)/);
+                if(wdieOnly) dmgStr = `${dmgStr.replace(/ \(.*\)$/,"")} + ${wdieOnly[1]}${elem}`;
+              }
               if(totalDmg!==0) dmgStr += ` (${totalDmg>0?"+":""}${totalDmg})`;
               // Cloak AoE suffix
               const cloakMatch = propsStr.match(/Cloak\((\d+ft)\)/);
@@ -5038,14 +5061,28 @@ function StepSummary({char,setChar,derived,totalSP}){
                         return md?<div key={mn} style={{fontSize:10,color:"var(--accent-teal)",marginBottom:2}}>🔧 {md.name} — {md.effect}</div>:null;
                       })}
                       {(!isGun&&mithrilOn) && <div style={{fontSize:10,color:"#c8a84a",marginBottom:2}}>✦ Mithril Silver — Acc+1, Dmg+1</div>}
-                      {rune && <div style={{fontSize:10,color:"#9a70d8",marginBottom:2}}>◈ {rune.name} — {rune.dmg!=="—"?rune.dmg+" · ":""}{rune.effect}</div>}
+                      {rune && (()=>{
+                        const wpnType = char.weaponDmgTypeOverride || (()=>{const m=wpn.dmg.match(/(Fire|Water|Wind|Lightning|Dark|Holy|Physical|Magic)/);return m?m[1]:"Physical";})();
+                        const runeType = rune.dmg!=="—" ? (rune.dmg.match(/(Fire|Water|Wind|Lightning|Dark|Holy|Physical|Magic)/)||[,"Physical"])[1] : null;
+                        const isPrimary = runeType && runeType===wpnType;
+                        return <div style={{fontSize:10,color:isPrimary?"#c8a84a":"#9a70d8",marginBottom:2}}>
+                          {isPrimary?"◈ (primary)":"⊕ (secondary)"} {rune.name} — {rune.dmg!=="—"?rune.dmg+" · ":""}{rune.effect}
+                        </div>;
+                      })()}
                       {spell && <div style={{fontSize:10,color:"var(--accent-gold)",marginBottom:2}}>⚡ {spell.name} — {spell.effect}</div>}
                     </div>
                   )}
                   {modsArr.length===0&&(rune||spell||(!isGun&&mithrilOn))&&(
                     <div style={{marginTop:6,paddingTop:5,borderTop:"1px solid var(--border-row)"}}>
                       {(!isGun&&mithrilOn) && <div style={{fontSize:10,color:"#c8a84a",marginBottom:2}}>✦ Mithril Silver — Acc+1, Dmg+1</div>}
-                      {rune && <div style={{fontSize:10,color:"#9a70d8",marginBottom:2}}>◈ {rune.name} — {rune.dmg!=="—"?rune.dmg+" · ":""}{rune.effect}</div>}
+                      {rune && (()=>{
+                        const wpnType = char.weaponDmgTypeOverride || (()=>{const m=wpn.dmg.match(/(Fire|Water|Wind|Lightning|Dark|Holy|Physical|Magic)/);return m?m[1]:"Physical";})();
+                        const runeType = rune.dmg!=="—" ? (rune.dmg.match(/(Fire|Water|Wind|Lightning|Dark|Holy|Physical|Magic)/)||[,"Physical"])[1] : null;
+                        const isPrimary = runeType && runeType===wpnType;
+                        return <div style={{fontSize:10,color:isPrimary?"#c8a84a":"#9a70d8",marginBottom:2}}>
+                          {isPrimary?"◈ (primary)":"⊕ (secondary)"} {rune.name} — {rune.dmg!=="—"?rune.dmg+" · ":""}{rune.effect}
+                        </div>;
+                      })()}
                       {spell && <div style={{fontSize:10,color:"var(--accent-gold)",marginBottom:2}}>⚡ {spell.name} — {spell.effect}</div>}
                     </div>
                   )}
