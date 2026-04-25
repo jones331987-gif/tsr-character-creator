@@ -2505,8 +2505,8 @@ function App() {
   const finalMeleeDmg = { die: meleeDmgDie, bonus: dmgBonus };
   // Spell attack: Accuracy = Mind die. Spell Power = Mind die + spell's own dice (spell dice shown at cast time).
   const catalystAttunementBonus = (slottedSpellBonuses.SpellAcc > 0 && char.equipment.catalyst) ? slottedSpellBonuses.SpellAcc : 0;
-  const finalSpellAcc = { die: char.stats.Mind, bonus: (trainBonuses.SpellAcc||0) + catalystAccBonus + catalystAttunementBonus + enhancerSpellAcc };
-  const finalSpellPower = { die: char.stats.Mind, bonus: boonOffensive + (trainBonuses.SpellPower||0) };
+  const finalSpellAcc = { die: char.stats.Mind, bonus: (trainBonuses.SpellAcc||0) + catalystAccBonus + catalystAttunementBonus + enhancerSpellAcc + boonOffensive + jewelryAccBonus };
+  const finalSpellPower = { die: char.stats.Mind, bonus: boonOffensive + (trainBonuses.SpellPower||0) + jewelrySpellPowerBonus };
   const finalSecDmg = trainBonuses.SecDmg || 0;
   const finalCC     = trainBonuses.CC || 0;
 
@@ -3736,7 +3736,9 @@ function StepEquipment({char,setChar,moneyLeft}){
 function AttackPresetsCard({char, setChar, derived}) {
   const {trainBonuses, slottedTechBonuses, boonOffensive, jewelryAccBonus, jewelryDmgBonus,
          sizeB, savageFightingBonus, finalReach, size, catalystAccBonus, catalystAttunementBonus,
-         hasBrute, hasEagleEye, hasPrimalMass, hasMasterMartialTrainingGlobal} = derived;
+         hasBrute, hasEagleEye, hasPrimalMass, hasMasterMartialTrainingGlobal,
+         finalSpellAcc, finalSpellPower, finalSpellRange, finalSecDmg, finalCC,
+         jewelrySpellPowerBonus, enhancerSpellAcc} = derived;
 
   const wpn     = char.equipment.weapon;
   const offhand = char.equipment.offhand;
@@ -3751,6 +3753,7 @@ function AttackPresetsCard({char, setChar, derived}) {
   const [editNotes,    setEditNotes]    = useState("");
   const [editGrip,     setEditGrip]     = useState("1h");
   const [editActiveStances, setEditActiveStances] = useState([]);
+  const [editSpell,        setEditSpell]        = useState(null);
   const [collapsedPresets, setCollapsedPresets] = useState(new Set());
 
   // ── Weapon helpers ────────────────────────────────────────────────────────
@@ -3830,18 +3833,30 @@ function AttackPresetsCard({char, setChar, derived}) {
   const maxEnhM = (() => { const v=char.masterPerks["martial_arts"]; return (Array.isArray(v)?v.includes("Style Master"):v==="Style Master")?3:2; })();
   const hasVers = !!(wpn && isVers(wpn));
 
+  // Purchased spells: all techniques from magic-type trees, grouped by tree
+  const purchasedSpellsByTree = SKILL_TREES
+    .filter(t => t.type === "magic" && (char.skills[t.id]||0) > 0)
+    .map(t => ({
+      tree: t,
+      spells: Object.entries(char.techniques[t.id]||{}).flatMap(([tier, arr]) =>
+        arr.map(name => ({name, tier, treeId: t.id, treeName: t.name}))
+      )
+    }))
+    .filter(g => g.spells.length > 0);
+  const allPurchasedSpells = purchasedSpellsByTree.flatMap(g => g.spells);
+
   // ── Preset editor open/save/delete ────────────────────────────────────────
   const openNew = () => {
     setEditIdx(-1); setEditName("New Preset"); setEditStance("normal");
-    setEditEnhancers([]); setEditNotes(""); setEditGrip(char.versatileGrip||"1h"); setEditActiveStances([]);
+    setEditEnhancers([]); setEditNotes(""); setEditGrip(char.versatileGrip||"1h"); setEditActiveStances([]); setEditSpell(null);
   };
   const openEdit = (i) => {
     const p = presets[i];
     setEditIdx(i); setEditName(p.name); setEditStance(p.stance||"normal");
-    setEditEnhancers([...(p.enhancers||[])]); setEditNotes(p.notes||""); setEditGrip(p.grip||"1h"); setEditActiveStances([...(p.activeStances||[])]);
+    setEditEnhancers([...(p.enhancers||[])]); setEditNotes(p.notes||""); setEditGrip(p.grip||"1h"); setEditActiveStances([...(p.activeStances||[])]); setEditSpell(p.spell||null);
   };
   const savePreset = () => {
-    const preset = {name:editName||"Preset", stance:editStance, enhancers:editEnhancers, notes:editNotes, grip:editGrip, activeStances:editActiveStances};
+    const preset = {name:editName||"Preset", stance:editStance, enhancers:editEnhancers, notes:editNotes, grip:editGrip, activeStances:editActiveStances, spell:editSpell};
     setChar(c => { const arr=[...(c.attackPresets||[])]; if(editIdx===-1)arr.push(preset); else arr[editIdx]=preset; return {...c,attackPresets:arr}; });
     setEditIdx(null);
   };
@@ -4002,8 +4017,8 @@ function AttackPresetsCard({char, setChar, derived}) {
     const stanceDef    = OFFENSE_STANCES.find(s=>s.id===preset.stance)||OFFENSE_STANCES[0];
     const mh = calcWeaponStats(wpn||null, false);
     const oh = (offhand&&!offhand.parry&&!offhand.minMind) ? calcWeaponStats(offhand, true) : null;
-    const spellAccTotal  = (trainBonuses.SpellAcc||0) + catalystAccBonus + catalystAttunementBonus + eb.spellAcc + sb.acc;
-    const spellPwrBonus  = boonOffensive + (trainBonuses.SpellPower||0);
+    const spellAccTotal  = (finalSpellAcc?.bonus||0) + eb.spellAcc + sb.acc;
+    const spellPwrBonus  = (finalSpellPower?.bonus||0);
     const reach = finalReach + (preset.enhancers?.includes("Exploiting Lunge")?1:0) + (preset.enhancers?.includes("Bold Stance")?1:0);
     const rangeStr = mh?.isRanged
       ? (()=>{ const m=wProps(wpn).match(/(?:Bow|Trigger|Throwing)\((\d+)\)/); return m?m[1]+" spaces":"—"; })()
@@ -4070,12 +4085,12 @@ function AttackPresetsCard({char, setChar, derived}) {
 
     // ── Build accuracy total string ──────────────────────────────────────
     const accTotalStr = isSpell
-      ? (spellAccTotal!==0 ? `${char.stats.Mind} ${spellAccTotal>0?"+":""}${spellAccTotal}` : `${char.stats.Mind}`)
+      ? (spellAccTotal!==0 ? `${finalSpellAcc?.die||char.stats.Mind} +${spellAccTotal}` : `${finalSpellAcc?.die||char.stats.Mind}`)
       : mh ? (mh.acc+eb.acc+sb.acc!==0 ? `${mh.accDie} +${mh.acc+eb.acc+sb.acc}` : `${mh.accDie}`) : "—";
 
     // ── Build damage total string ────────────────────────────────────────
     const dmgTotalStr = (() => {
-      if(isSpell) return `${char.stats.Mind} + Spell Dice${spellPwrBonus>0?" (+"+spellPwrBonus+")":""}`;
+      if(isSpell) return `${finalSpellPower?.die||char.stats.Mind} + Spell Dice${(finalSpellPower?.bonus||0)>0?" (+"+(finalSpellPower?.bonus||0)+")":""}`;
       if(!mh) return "—";
       const raw = mh.dmgFormula;
       const elemM = raw.match(/^(.+?)\s+([A-Z][a-z]+)$/);
@@ -4175,6 +4190,7 @@ function AttackPresetsCard({char, setChar, derived}) {
               <span style={{fontSize:9,padding:"1px 6px",background:"var(--bg-tag)",borderRadius:3,color:"var(--text-gold)",fontWeight:700,letterSpacing:"0.05em"}}>{stanceDef.actions} {stanceDef.actions===1?"ACTION":"ACTIONS"} · {stanceDef.label}</span>
               {hasVers&&<span style={{fontSize:9,padding:"1px 5px",background:"rgba(200,168,74,0.1)",border:"1px solid rgba(200,168,74,0.3)",borderRadius:3,color:"#c8a84a"}}>{grip==="2h"?"Two-Hand":"One-Hand"}</span>}
               {["vicious","cleave","dual","touchmagic"].includes(preset.stance)&&<span style={{fontSize:9,padding:"1px 5px",background:"rgba(139,26,42,0.08)",border:"1px solid rgba(139,26,42,0.3)",borderRadius:3,color:"var(--text-danger)"}}>2 MAP</span>}
+              {preset.spell&&(preset.stance==="spell"||preset.stance==="touchmagic")&&<span style={{fontSize:9,padding:"1px 6px",background:"rgba(154,112,216,0.1)",border:"1px solid rgba(154,112,216,0.4)",borderRadius:3,color:"#9a70d8",fontWeight:600}}>✦ {preset.spell}</span>}
 
               {(preset.activeStances||[]).filter(s=>s!=="Punishing Draw").map(s=><span key={s} style={{fontSize:9,padding:"1px 5px",background:"rgba(200,168,74,0.1)",border:"1px solid rgba(200,168,74,0.4)",borderRadius:3,color:"#c8a84a",fontStyle:"italic"}}>⚡ {s}</span>)}
               {(preset.activeStances||[]).includes("Punishing Draw")&&<span style={{fontSize:9,padding:"1px 5px",background:"rgba(139,26,42,0.08)",border:"1px solid rgba(139,26,42,0.3)",borderRadius:3,color:"var(--text-danger)",fontStyle:"italic"}}>⚡ Punishing Draw</span>}
@@ -4199,11 +4215,13 @@ function AttackPresetsCard({char, setChar, derived}) {
               {/* Accuracy */}
               <StatCol label="ACCURACY" totalStr={accTotalStr}
                 rows={isSpell ? [
-                  {label:"Mind", val:char.stats.Mind, isDie:true},
-                  ...(trainBonuses.SpellAcc>0        ?[{label:"Training",   val:trainBonuses.SpellAcc}]:[]),
-                  ...(catalystAccBonus>0             ?[{label:"Catalyst",   val:catalystAccBonus}]:[]),
-                  ...(catalystAttunementBonus>0      ?[{label:"Attunement", val:catalystAttunementBonus}]:[]),
-                  ...enhAccRows,
+                  {label:"Mind (Spell Acc)", val:finalSpellAcc?.die||char.stats.Mind, isDie:true},
+                  ...(trainBonuses.SpellAcc>0        ?[{label:"Training",      val:trainBonuses.SpellAcc}]:[]),
+                  ...(boonOffensive>0                ?[{label:"Boon (BOP)",    val:boonOffensive, color:"#c8a84a"}]:[]),
+                  ...(catalystAccBonus>0             ?[{label:"Catalyst",      val:catalystAccBonus}]:[]),
+                  ...(catalystAttunementBonus>0      ?[{label:"Attunement",    val:catalystAttunementBonus}]:[]),
+                  ...(jewelryAccBonus>0              ?[{label:"Jewelry (Acc)", val:jewelryAccBonus}]:[]),
+                  ...enhAccRows.filter(r=>(r.color||"").includes("70d8")||(r.color||"").includes("c8a84a")),
                 ] : mh ? [
                   ...mh.accBreakdown,
                   ...enhAccRows,
@@ -4214,13 +4232,14 @@ function AttackPresetsCard({char, setChar, derived}) {
               {/* Range */}
               <div>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:4,paddingBottom:3,borderBottom:"1px solid var(--border-row)"}}>
-                  <span style={{fontSize:9,color:"var(--text-label)",letterSpacing:"0.1em",fontWeight:700}}>RANGE</span>
-                  <span style={{fontSize:12,fontWeight:700,color:"var(--text-value-hi)"}}>{rangeStr}</span>
+                  <span style={{fontSize:9,color:"var(--text-label)",letterSpacing:"0.1em",fontWeight:700}}>{isSpell?"SPELL RANGE":"RANGE"}</span>
+                  <span style={{fontSize:12,fontWeight:700,color:"var(--text-value-hi)"}}>{isSpell?`${finalSpellRange} spaces`:rangeStr}</span>
                 </div>
-                {eb.secDmg>0&&<div style={{marginTop:6,display:"flex",justifyContent:"space-between",alignItems:"baseline",paddingBottom:3,borderBottom:"1px solid var(--border-row)"}}>
+                {(eb.secDmg>0||(isSpell&&finalSecDmg>0))&&<div style={{marginTop:6,display:"flex",justifyContent:"space-between",alignItems:"baseline",paddingBottom:3,borderBottom:"1px solid var(--border-row)"}}>
                   <span style={{fontSize:9,color:"var(--text-label)",letterSpacing:"0.1em",fontWeight:700}}>SEC DMG</span>
-                  <span style={{fontSize:12,fontWeight:700,color:"#c8a84a"}}>+{eb.secDmg}</span>
+                  <span style={{fontSize:12,fontWeight:700,color:"#c8a84a"}}>+{isSpell?(finalSecDmg||0)+eb.secDmg:eb.secDmg}</span>
                 </div>}
+                {isSpell&&finalCC>0&&<div style={{marginTop:4,fontSize:9,color:"var(--text-muted)"}}>CC: +{finalCC} (Willpower)</div>}
               </div>
 
               {/* Damage — primary only (secondary separated below) */}
@@ -4238,8 +4257,11 @@ function AttackPresetsCard({char, setChar, derived}) {
                 return (<>
                   <StatCol label="DAMAGE" totalStr={dmgTotalStr}
                     rows={isSpell ? [
-                      {label:"Mind", val:char.stats.Mind, isDie:true},
-                      ...(spellPwrBonus>0?[{label:"Spell Power",val:spellPwrBonus}]:[]),
+                      {label:"Mind (Spell Power)", val:finalSpellPower?.die||char.stats.Mind, isDie:true},
+                      ...(boonOffensive>0                  ?[{label:"Boon (BOP)",    val:boonOffensive,              color:"#c8a84a"}]:[]),
+                      ...(trainBonuses.SpellPower>0        ?[{label:"Training",      val:trainBonuses.SpellPower}]:[]),
+                      ...(jewelrySpellPowerBonus>0         ?[{label:"Ring of Mind",  val:jewelrySpellPowerBonus}]:[]),
+                      ...(preset.spell?[{label:preset.spell, val:"+ Spell Dice", isDie:true, color:"#9a70d8"}]:[]),
                     ] : mh ? [
                       ...primRows,
                       ...enhDmgRows,
@@ -4314,6 +4336,36 @@ function AttackPresetsCard({char, setChar, derived}) {
           ))}
         </div>
       </div>
+      {/* Spell picker — shown when stance is spell or touchmagic */}
+      {(editStance==="spell"||editStance==="touchmagic") && allPurchasedSpells.length > 0 && (
+        <div style={{marginBottom:10}}>
+          <Lbl>Spell {editStance==="touchmagic"?"(delivered through weapon)":"(to cast)"}</Lbl>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,maxHeight:220,overflowY:"auto"}}>
+            {purchasedSpellsByTree.map(({tree, spells}) => (
+              <React.Fragment key={tree.id}>
+                <div style={{gridColumn:"1/-1",fontSize:8,color:"#9a70d8",fontWeight:700,letterSpacing:"0.1em",padding:"4px 0 2px 0",marginTop:4}}>
+                  {tree.name.toUpperCase()}
+                </div>
+                {spells.map(s => {
+                  const sel = editSpell===s.name;
+                  return (
+                    <div key={s.name} onClick={()=>setEditSpell(sel?null:s.name)}
+                      style={{padding:"5px 8px",border:`1px solid ${sel?"#9a70d8":"var(--border-soft)"}`,borderRadius:3,cursor:"pointer",background:sel?"rgba(154,112,216,0.12)":"var(--bg-panel)",transition:"all 0.12s",display:"flex",justifyContent:"space-between",alignItems:"center",gap:4}}>
+                      <div>
+                        <div style={{fontSize:10,fontWeight:sel?700:400,color:sel?"#9a70d8":"var(--text-head)"}}>{s.name}</div>
+                        <div style={{fontSize:8,color:"var(--text-muted)",textTransform:"capitalize"}}>{s.tier}</div>
+                      </div>
+                      {sel&&<span style={{fontSize:8,padding:"1px 5px",borderRadius:2,fontWeight:700,background:"#9a70d8",color:"#fff",flexShrink:0}}>✓</span>}
+                    </div>
+                  );
+                })}
+              </React.Fragment>
+            ))}
+          </div>
+          {editStance==="spell"&&!editSpell&&<div style={{fontSize:9,color:"var(--text-muted)",marginTop:3,fontStyle:"italic"}}>No spell selected — showing generic spell stats.</div>}
+        </div>
+      )}
+
       {hasVers&&(
         <div style={{marginBottom:10}}>
           <Lbl>Grip — {wpn.name}</Lbl>
@@ -4329,9 +4381,17 @@ function AttackPresetsCard({char, setChar, derived}) {
       )}
       {availableEnhancers.length>0&&(
         <div style={{marginBottom:10}}>
-          <Lbl>Attack Enhancers (max {maxEnhM} martial, 2 spell) — {availableEnhancers.length} available</Lbl>
+          <Lbl>{editStance==="spell"||editStance==="touchmagic"
+            ? `Spell & Attack Enhancers — ${availableEnhancers.filter(e=>e.type==="spell"||e.type==="both").length} spell, ${availableEnhancers.filter(e=>e.type==="martial"||e.type==="both").length} martial available`
+            : `Attack Enhancers (max ${maxEnhM} martial, 2 spell) — ${availableEnhancers.length} available`}</Lbl>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4}}>
-            {availableEnhancers.map(enh=>{
+            {[...availableEnhancers].sort((a,b)=>{
+              if(editStance==="spell"||editStance==="touchmagic"){
+                const aS=a.type==="spell"||a.type==="both", bS=b.type==="spell"||b.type==="both";
+                if(aS&&!bS) return -1; if(!aS&&bS) return 1;
+              }
+              return 0;
+            }).map(enh=>{
               const on = editEnhancers.includes(enh.name);
               const typeCol = typeColor[enh.type]||"#4cc8e0";
               const mCnt = editEnhancers.filter(n=>{const e=ATTACK_ENHANCERS_DATA.find(x=>x.name===n);return e&&(e.type==="martial"||e.type==="both");}).length;
@@ -4670,7 +4730,7 @@ function StepSummary({char,setChar,derived,totalSP}){
         const baseWpnDmg   = wpnDmgProp + runeDmgBonus + mithBonus;
         const accDie = hasBrute ? char.stats.Strength : char.stats.Dexterity;
         const dmgDie = hasPrimalMass ? char.stats.Vigor : char.stats.Strength;
-        const spellAccBase = (trainBonuses.SpellAcc||0) + catalystAccBonus + catalystAttunementBonus;
+        const spellAccBase = (trainBonuses.SpellAcc||0) + catalystAccBonus + catalystAttunementBonus + boonOffensive + jewelryAccBonus;
 
         const presetLines = [``, `ATTACK PRESETS:`];
         for(const preset of char.attackPresets){
@@ -5112,8 +5172,8 @@ function StepSummary({char,setChar,derived,totalSP}){
         <Card title="Spell Attack">
           {[
             ["Spell Range", `${finalSpellRange} spaces (2 + ${STAT_CHAIN.indexOf(char.stats.Mind)} Mind + ${STAT_CHAIN.indexOf(char.stats.Willpower)} WIL)`, true],
-            ["Attack Spell Accuracy", fmt(finalSpellAcc)+(enhancerSpellAcc>0?" [+"+enhancerSpellAcc+" enhancers]":"")+" (Mind)", true],
-            ["Attack Spell Power", `${finalSpellPower.die} + Spell Dice${finalSpellPower.bonus+jewelrySpellPowerBonus>0?" (+"+(finalSpellPower.bonus+jewelrySpellPowerBonus)+")":""}`, true],
+            ["Attack Spell Accuracy", fmt(finalSpellAcc)+" (Mind)", true],
+            ["Attack Spell Power", `${finalSpellPower.die} + Spell Dice${finalSpellPower.bonus>0?" (+"+(finalSpellPower.bonus)+")":""}`, true],
             ...(catalystCritBonus>0?[["Spell Crit Bonus", `+${catalystCritBonus}`, true]]:[]),
             ...(finalSecDmg+enhancerSecDmg>0?[["Secondary Damage Bonus", `+${finalSecDmg+enhancerSecDmg}${enhancerSecDmg>0?" (incl. +"+enhancerSecDmg+" enhancer)":""}`, true]]:[]),
             ["CC / Save Spell Stat", `${char.stats.Willpower} (Willpower)${finalCC>0?" (+"+finalCC+" CC)":""}`, true],
