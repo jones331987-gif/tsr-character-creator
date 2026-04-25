@@ -4158,7 +4158,10 @@ function AttackPresetsCard({char, setChar, derived}) {
 
     // ── Build damage total string ────────────────────────────────────────
     const dmgTotalStr = (() => {
-      if(isSpell) return `${finalSpellPower?.die||char.stats.Mind} + Spell Dice${(finalSpellPower?.bonus||0)>0?" (+"+(finalSpellPower?.bonus||0)+")":""}`;
+      if(isSpell) {
+        const pwrBonus = finalSpellPower?.bonus||0;
+        return `${finalSpellPower?.die||char.stats.Mind} + Spell Dice${pwrBonus>0?" (+"+pwrBonus+")":""}`;
+      }
       if(!mh) return "—";
       const raw = mh.dmgFormula;
       const elemM = raw.match(/^(.+?)\s+([A-Z][a-z]+)$/);
@@ -4235,6 +4238,12 @@ function AttackPresetsCard({char, setChar, derived}) {
       const bonusStr = flatBonus!==0 ? (flatBonus>0?" +"+flatBonus:" "+flatBonus) : "";
       return `${diceStr}${bonusStr}`;
     })();
+
+    // Look up the selected spell's definition for display
+    const selectedSpellDef = preset.spell ? SKILL_TREES
+      .filter(t => t.type === "magic")
+      .flatMap(t => Object.values(t.tiers).flatMap(tier => tier?.techniques||[]))
+      .find(tech => tech.name === preset.spell) : null;
 
     const isCollapsed = collapsedPresets.has(idx);
     const toggleCollapse = () => setCollapsedPresets(prev => {
@@ -4329,7 +4338,6 @@ function AttackPresetsCard({char, setChar, derived}) {
                       ...(boonOffensive>0                  ?[{label:"Boon (BOP)",    val:boonOffensive,              color:"#c8a84a"}]:[]),
                       ...(trainBonuses.SpellPower>0        ?[{label:"Training",      val:trainBonuses.SpellPower}]:[]),
                       ...(jewelrySpellPowerBonus>0         ?[{label:"Ring of Mind",  val:jewelrySpellPowerBonus}]:[]),
-                      ...(preset.spell?[{label:preset.spell, val:"+ Spell Dice", isDie:true, color:"#9a70d8"}]:[]),
                     ] : mh ? [
                       ...primRows,
                       ...enhDmgRows,
@@ -4355,7 +4363,12 @@ function AttackPresetsCard({char, setChar, derived}) {
                       <div style={{fontSize:10,color:"var(--text-muted)",lineHeight:1.6}}>
                         {mh&&mh.wpnDmgType&&mh.wpnDmgType!=="Physical"&&<div style={{color:"#9a70d8",fontWeight:600,marginBottom:2}}>Primary Damage Type: {mh.wpnDmgType}</div>}
                         {mh&&mh.wpnAP>0&&<div style={{color:"#4cc8e0",fontWeight:600,marginBottom:2}}>AP {mh.wpnAP} — ignores {mh.wpnAP} Armor</div>}
-                        <div>{stanceDef.desc}</div>
+                        {isSpell&&selectedSpellDef?(
+                          <div>
+                            <div style={{color:"#9a70d8",fontWeight:600,fontSize:10}}>✦ {selectedSpellDef.name} <span style={{fontWeight:400,color:"var(--text-muted)",fontSize:9}}>({selectedSpellDef.cost})</span></div>
+                            <div style={{color:"var(--text-muted)",marginTop:2,lineHeight:1.5}}>{selectedSpellDef.desc}</div>
+                          </div>
+                        ):<div>{stanceDef.desc}</div>}
                         {preset.notes&&<div style={{marginTop:4,color:"var(--text-sub)",fontStyle:"italic"}}>📝 {preset.notes}</div>}
                       </div>
                     </div>
@@ -4372,7 +4385,12 @@ function AttackPresetsCard({char, setChar, derived}) {
                   <div style={{fontSize:10,color:"var(--text-muted)",lineHeight:1.6}}>
                     {mh&&mh.wpnDmgType&&mh.wpnDmgType!=="Physical"&&<div style={{color:"#9a70d8",fontWeight:600,marginBottom:2}}>Primary Damage Type: {mh.wpnDmgType}</div>}
                     {mh&&mh.wpnAP>0&&<div style={{color:"#4cc8e0",fontWeight:600,marginBottom:2}}>AP {mh.wpnAP} — ignores {mh.wpnAP} Armor</div>}
-                    <div>{stanceDef.desc}</div>
+                    {isSpell&&selectedSpellDef?(
+                      <div>
+                        <div style={{color:"#9a70d8",fontWeight:600,fontSize:10}}>✦ {selectedSpellDef.name} <span style={{fontWeight:400,color:"var(--text-muted)",fontSize:9}}>({selectedSpellDef.cost})</span></div>
+                        <div style={{color:"var(--text-muted)",marginTop:2,lineHeight:1.5}}>{selectedSpellDef.desc}</div>
+                      </div>
+                    ):<div>{stanceDef.desc}</div>}
                     {preset.notes&&<div style={{marginTop:4,color:"var(--text-sub)",fontStyle:"italic"}}>📝 {preset.notes}</div>}
                   </div>
                 </div>
