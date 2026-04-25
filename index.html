@@ -1755,7 +1755,8 @@ const ATTACK_ENHANCERS_DATA = [
     name: "Arcane Chains",
     type: "spell",
     cost: "Spell Enhancer",
-    effect: "+2 effective Willpower on CC spells.",
+    effect: "+2 effective Willpower on CC spells (Wil vs Wil rolls).",
+    statBonuses: { ccBonus: 2 },
     req: { skill: { id: "spellcrafting", rank: 2 } },
   },
   {
@@ -3935,7 +3936,7 @@ function AttackPresetsCard({char, setChar, derived}) {
   // ── Stat computation helpers ───────────────────────────────────────────────
   const calcEnhBonuses = (preset) => {
     const mmt = hasMasterMartialTrainingGlobal;
-    let acc=0, dmg=0, spellAcc=0, secDmg=0;
+    let acc=0, dmg=0, spellAcc=0, secDmg=0, ccBonus=0;
     for(const eName of (preset.enhancers||[])){
       const enh=ATTACK_ENHANCERS_DATA.find(e=>e.name===eName);
       if(!enh?.statBonuses) continue;
@@ -3943,8 +3944,9 @@ function AttackPresetsCard({char, setChar, derived}) {
       if(enh.type!=="spell"){ if(b.acc!==undefined)acc+=b.acc+m; if(b.accHigh!==undefined)acc+=b.accHigh+m; if(b.dmg!==undefined)dmg+=b.dmg+m; if(b.dmgHigh!==undefined)dmg+=b.dmgHigh+m; }
       if(enh.type==="spell"||enh.type==="both"){ if(b.acc!==undefined)spellAcc+=b.acc; if(b.accHigh!==undefined)spellAcc+=b.accHigh; }
       if(b.secDmg!==undefined) secDmg+=b.secDmg+m;
+      if(b.ccBonus!==undefined) ccBonus+=b.ccBonus;
     }
-    return {acc,dmg,spellAcc,secDmg};
+    return {acc,dmg,spellAcc,secDmg,ccBonus};
   };
 
   // Compute Acc/PrimDmg bonuses from stances toggled active in a preset
@@ -4276,6 +4278,7 @@ function AttackPresetsCard({char, setChar, derived}) {
                 <span style={{fontSize:9,padding:"1px 6px",background:"rgba(76,200,224,0.08)",border:"1px solid rgba(76,200,224,0.25)",borderRadius:3,color:"#4cc8e0",fontWeight:600}}>Acc {accTotalStr}</span>
                 <span style={{fontSize:9,padding:"1px 6px",background:"rgba(76,200,224,0.08)",border:"1px solid rgba(76,200,224,0.25)",borderRadius:3,color:"#4cc8e0",fontWeight:600}}>Dmg {dmgTotalStr}</span>
                 {mh&&mh.wpnAP>0&&<span style={{fontSize:9,padding:"1px 6px",background:"rgba(76,200,224,0.08)",border:"1px solid rgba(76,200,224,0.25)",borderRadius:3,color:"#4cc8e0",fontWeight:600}}>AP {mh.wpnAP}</span>}
+                {isSpell&&eb.ccBonus>0&&<span style={{fontSize:9,padding:"1px 6px",background:"rgba(154,112,216,0.08)",border:"1px solid rgba(154,112,216,0.3)",borderRadius:3,color:"#9a70d8",fontWeight:600}}>+{eb.ccBonus} CC</span>}
               </>}
             </div>
           </div>
@@ -4316,7 +4319,17 @@ function AttackPresetsCard({char, setChar, derived}) {
                   <span style={{fontSize:9,color:"var(--text-label)",letterSpacing:"0.1em",fontWeight:700}}>SEC DMG</span>
                   <span style={{fontSize:12,fontWeight:700,color:"#c8a84a"}}>+{isSpell?(finalSecDmg||0)+eb.secDmg:eb.secDmg}</span>
                 </div>}
-                {isSpell&&finalCC>0&&<div style={{marginTop:4,fontSize:9,color:"var(--text-muted)"}}>CC: +{finalCC} (Willpower)</div>}
+                {isSpell&&(finalCC>0||eb.ccBonus>0)&&(
+                  <div style={{marginTop:6}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",paddingBottom:3,borderBottom:"1px solid var(--border-row)"}}>
+                      <span style={{fontSize:9,color:"var(--text-label)",letterSpacing:"0.1em",fontWeight:700}}>CC BONUS</span>
+                      <span style={{fontSize:12,fontWeight:700,color:"#9a70d8"}}>+{(finalCC||0)+(eb.ccBonus||0)}</span>
+                    </div>
+                    {finalCC>0&&<div style={{fontSize:9,color:"var(--text-muted)",marginTop:1}}>└ Training  +{finalCC}</div>}
+                    {eb.ccBonus>0&&<div style={{fontSize:9,color:"#9a70d8",marginTop:1}}>└ Arcane Chains  +{eb.ccBonus}</div>}
+                    <div style={{fontSize:9,color:"var(--text-muted)",marginTop:2,fontStyle:"italic"}}>Added to Wil vs Wil rolls</div>
+                  </div>
+                )}
               </div>
 
               {/* Damage — primary only (secondary separated below) */}
@@ -4493,6 +4506,7 @@ function AttackPresetsCard({char, setChar, derived}) {
                 else if(b.dmg!==undefined)p.push(`Dmg +${b.dmg+mmt}`);
                 if(b.secDmg!==undefined)p.push(`SecDmg +${b.secDmg+mmt}`);
                 if(b.crit!==undefined)p.push(`Crit +${b.crit+mmt}`);
+                if(b.ccBonus!==undefined)p.push(`CC (Wil) +${b.ccBonus}`);
                 return p;
               })();
               return (
@@ -5636,6 +5650,7 @@ function StepSummary({char,setChar,derived,totalSP}){
           else if(b.dmg !== undefined) parts.push(`Dmg +${b.dmg+mmt}`);
           if(b.secDmg  !== undefined) parts.push(`SecDmg +${b.secDmg+mmt}`);
           if(b.crit    !== undefined) parts.push(`Crit +${b.crit+mmt}`);
+          if(b.ccBonus !== undefined) parts.push(`CC (Wil) +${b.ccBonus}`);
           return parts.length ? parts.join("  ") : null;
         };
 
