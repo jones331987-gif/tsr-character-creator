@@ -3833,14 +3833,37 @@ function AttackPresetsCard({char, setChar, derived}) {
   const maxEnhM = (() => { const v=char.masterPerks["martial_arts"]; return (Array.isArray(v)?v.includes("Style Master"):v==="Style Master")?3:2; })();
   const hasVers = !!(wpn && isVers(wpn));
 
-  // Purchased spells: all techniques from magic-type trees, grouped by tree
+  // Determine if a technique is an actual castable spell (not a passive/enhancer/reaction)
+  const isCastableSpell = (techName, cost) => {
+    if(!cost) return false;
+    // Explicit exclusions
+    if(techName === "Visualization" || techName === "Spellblade") return false;
+    // Cost-based exclusions
+    const c = cost.toLowerCase();
+    if(c.startsWith("passive")) return false;
+    if(c.includes("spell enhancer")) return false;
+    if(c.includes("attack enhancer")) return false;
+    if(c.includes("enhancer slot")) return false;
+    if(c.startsWith("reaction")) return false;
+    if(c.startsWith("interact action")) return false;
+    return true;
+  };
+
+  // Purchased spells: castable techniques from magic-type trees, grouped by tree
   const purchasedSpellsByTree = SKILL_TREES
     .filter(t => t.type === "magic" && (char.skills[t.id]||0) > 0)
     .map(t => ({
       tree: t,
-      spells: Object.entries(char.techniques[t.id]||{}).flatMap(([tier, arr]) =>
-        arr.map(name => ({name, tier, treeId: t.id, treeName: t.name}))
-      )
+      spells: Object.entries(char.techniques[t.id]||{}).flatMap(([tier, arr]) => {
+        // Look up cost from the tree definition to classify correctly
+        return arr.flatMap(name => {
+          const techDef = [t.tiers.novice,t.tiers.adept,t.tiers.master]
+            .flatMap(tier => tier?.techniques||[])
+            .find(tech => tech.name === name);
+          if(!techDef || !isCastableSpell(name, techDef.cost)) return [];
+          return [{name, tier: Object.entries(char.techniques[t.id]||{}).find(([,arr])=>arr.includes(name))?.[0]||"novice", treeId: t.id, treeName: t.name, cost: techDef.cost}];
+        });
+      })
     }))
     .filter(g => g.spells.length > 0);
   const allPurchasedSpells = purchasedSpellsByTree.flatMap(g => g.spells);
@@ -4350,10 +4373,10 @@ function AttackPresetsCard({char, setChar, derived}) {
                   const sel = editSpell===s.name;
                   return (
                     <div key={s.name} onClick={()=>setEditSpell(sel?null:s.name)}
-                      style={{padding:"5px 8px",border:`1px solid ${sel?"#9a70d8":"var(--border-soft)"}`,borderRadius:3,cursor:"pointer",background:sel?"rgba(154,112,216,0.12)":"var(--bg-panel)",transition:"all 0.12s",display:"flex",justifyContent:"space-between",alignItems:"center",gap:4}}>
-                      <div>
-                        <div style={{fontSize:10,fontWeight:sel?700:400,color:sel?"#9a70d8":"var(--text-head)"}}>{s.name}</div>
-                        <div style={{fontSize:8,color:"var(--text-muted)",textTransform:"capitalize"}}>{s.tier}</div>
+                      style={{padding:"5px 8px",border:`1px solid ${sel?"#9a70d8":"var(--border-soft)"}`,borderRadius:3,cursor:"pointer",background:sel?"rgba(154,112,216,0.12)":"var(--bg-panel)",transition:"all 0.12s",display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:4}}>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:10,fontWeight:sel?700:400,color:sel?"#9a70d8":"var(--text-head)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.name}</div>
+                        <div style={{fontSize:8,color:"var(--text-muted)"}}>{s.cost}</div>
                       </div>
                       {sel&&<span style={{fontSize:8,padding:"1px 5px",borderRadius:2,fontWeight:700,background:"#9a70d8",color:"#fff",flexShrink:0}}>✓</span>}
                     </div>
