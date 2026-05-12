@@ -2109,11 +2109,11 @@ function App() {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".txt,.json";
+    input.style.display = "none";
     document.body.appendChild(input);
     input.onchange = (e) => {
       const file = e.target.files[0];
-      document.body.removeChild(input);
-      if(!file) return;
+      if(!file) { document.body.removeChild(input); return; }
       const reader = new FileReader();
       reader.onload = (ev) => {
         try {
@@ -2122,6 +2122,11 @@ function App() {
           setStep(0);
           flash("Character imported!");
         } catch(err){ flash("Import failed — invalid file."); }
+        document.body.removeChild(input);
+      };
+      reader.onerror = () => {
+        flash("Import failed — could not read file.");
+        document.body.removeChild(input);
       };
       reader.readAsText(file);
     };
