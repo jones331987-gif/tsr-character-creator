@@ -2109,11 +2109,11 @@ function App() {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".txt,.json";
-    input.style.display = "none";
     document.body.appendChild(input);
     input.onchange = (e) => {
       const file = e.target.files[0];
-      if(!file) { document.body.removeChild(input); return; }
+      document.body.removeChild(input);
+      if(!file) return;
       const reader = new FileReader();
       reader.onload = (ev) => {
         try {
@@ -2122,11 +2122,6 @@ function App() {
           setStep(0);
           flash("Character imported!");
         } catch(err){ flash("Import failed — invalid file."); }
-        document.body.removeChild(input);
-      };
-      reader.onerror = () => {
-        flash("Import failed — could not read file.");
-        document.body.removeChild(input);
       };
       reader.readAsText(file);
     };
@@ -2357,7 +2352,12 @@ function App() {
   const armorSizeBonus = parseIntProp(char.equipment.armor?.bonus, "Size");
   const size         = (char.size || 1) + armorSizeBonus;
   const sizeB        = calcSizeBonus(size);
-  const finalArmor    = calcArmor(char.stats.Vigor) + armorBonus + sizeB.armor + boonArmorBonus + (trainBonuses.PhysRes||0) + (slottedTechBonuses.PhysRes||0);
+  // Titan's Grip: granted by CQC Master training — wield Two-Handed in one hand keeping all bonuses
+  const hasTitansGrip = char.purchasedTrainings.has("cqc:master");
+  // Shield Master: add shield's Parry value to Physical Resistance (Armor)
+  const hasShieldMaster = Object.values(char.techniques["cqc"]||{}).flat().includes("Shield Master");
+  const shieldMasterBonus = (hasShieldMaster && char.equipment.offhand?.parry) ? char.equipment.offhand.parry : 0;
+  const finalArmor    = calcArmor(char.stats.Vigor) + armorBonus + sizeB.armor + boonArmorBonus + (trainBonuses.PhysRes||0) + (slottedTechBonuses.PhysRes||0) + shieldMasterBonus;
   const finalSpellRange = calcSpellRange(char.stats.Mind, char.stats.Willpower);
 
   const hasSavageFighting = (() => {
@@ -2467,6 +2467,9 @@ function App() {
     if(hasTech("martial_arts","Master Brawler"))      fx.push("Master Brawler: fists 1d10+STR, Finesse; DEX for CC saves; +1 Acc or Knockback 1 (style choice)");
     else if(hasTech("martial_arts","Adept Brawler"))  fx.push("Adept Brawler: fists 1d8+STR, Finesse; DEX for CC saves");
     else if(hasTech("martial_arts","Novice Brawler")) fx.push("Novice Brawler: fists 1d6+STR, Finesse");
+    // CQC master training feats
+    if(hasTitansGrip) fx.push("Titan's Grip: wield Two-Handed weapon in one hand, keeping all bonuses");
+    if(hasShieldMaster && char.equipment.offhand?.parry) fx.push(`Shield Master: shield Parry (+${char.equipment.offhand.parry}) added to Physical Resistance (Armor)`);
     // CQC master perks
     if(perkIs("cqc","Lethality"))       fx.push("Lethality: melee HP dmg → 2 Bleed (Aggravate on crit)");
     if(perkIs("cqc","Crush Armor"))     fx.push("Crush Armor: 1st melee attack AP=½STR; crits apply Rend");
@@ -2614,7 +2617,7 @@ function App() {
   };
 
   const gunModAmmoBonus = (char.weaponMods||[]).includes("Extended Magazine") ? 6 : 0;
-  const derived = {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,finalFlight,isWinged,isMultiLimbed,hasVacuumSoul,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive,boonArmorBonus,boonWardBonus,weaponCritBonus,offhandCritBonus,jewelryWardBonus,jewelrySpellPowerBonus,armorSizeBonus,weaponParryB,weaponReachB,finalSecDmg,finalCC,finalCritRes,catalystAccBonus,catalystCritBonus,offhandAccBonus,slottedSpellNotes,manaAugParry,catalystAttunementBonus,enhancerAcc,enhancerDmg,enhancerSpellAcc,enhancerSecDmg,versatileGrip,hasMasterMartialTrainingGlobal,unarmoredParryBonus};
+  const derived = {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,finalFlight,isWinged,isMultiLimbed,hasVacuumSoul,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive,boonArmorBonus,boonWardBonus,weaponCritBonus,offhandCritBonus,jewelryWardBonus,jewelrySpellPowerBonus,armorSizeBonus,weaponParryB,weaponReachB,finalSecDmg,finalCC,finalCritRes,catalystAccBonus,catalystCritBonus,offhandAccBonus,slottedSpellNotes,manaAugParry,catalystAttunementBonus,enhancerAcc,enhancerDmg,enhancerSpellAcc,enhancerSecDmg,versatileGrip,hasMasterMartialTrainingGlobal,unarmoredParryBonus,hasTitansGrip,hasShieldMaster,shieldMasterBonus};
 
   return (
     <div style={{minHeight:"100vh",background:"var(--bg-page-grad)",color:"var(--text-body)",fontFamily:"'Palatino Linotype',Palatino,Georgia,serif",display:"flex",flexDirection:"column"}}>
@@ -3818,7 +3821,8 @@ function AttackPresetsCard({char, setChar, derived}) {
   const isFist     = (w) => w && (w.isFist || w.name==="Caestus" || (w.name||"").toLowerCase().includes("fist"));
   const hasFistTech= Object.values(char.techniques["martial_arts"]||{}).flat()
                        .some(t=>["Novice Brawler","Adept Brawler","Master Brawler"].includes(t));
-  const hasDual    = !!(wpn && offhand && isMelee(wpn) && isMelee(offhand));
+  const hasDual    = !!(wpn && offhand && isMelee(wpn) && isMelee(offhand))
+                  || !!(hasTitansGrip && wpn && isTwoHanded(wpn) && offhand && isMelee(offhand));
   const hasCatalyst= !!cat || !!(wpn&&wProps(wpn).includes("Catalytic")) || !!(offhand&&wProps(offhand).includes("Catalytic"));
 
   // ── isPurchased: technique bought OR training autoFeat OR universal ───────
@@ -3852,7 +3856,9 @@ function AttackPresetsCard({char, setChar, derived}) {
     if(wt==="2h-ranged")return isRanged(wpn) && isTwoHanded(wpn);
     if(wt==="dagger")  return isDagger(wpn) || isDagger(offhand);
     if(wt==="dual")    return hasDual;
-    if(wt==="1h-melee-empty-offhand") return (isMelee(wpn) && !isTwoHanded(wpn)) || isVers(wpn);
+    // Titan's Grip: 2H weapon acts as 1H, so empty-offhand and dual checks can pass
+    if(wt==="1h-melee-empty-offhand") return (isMelee(wpn) && (!isTwoHanded(wpn) || hasTitansGrip) && !offhand)
+                                           || (isVers(wpn) && versatileGrip==="1h");
     if(wt==="catalyst")return hasCatalyst;
     return true;
   };
@@ -3970,7 +3976,6 @@ function AttackPresetsCard({char, setChar, derived}) {
 
   const calcWeaponStats = (w, isOffhand) => {
     if(!w) return null;
-    if(!w.dmg) return null; // shields and parry-only offhands have no damage formula
     const isGun = wProps(w).includes("Gun");
     const isRng = isGun||wProps(w).includes("Bow(")||wProps(w).includes("Trigger(")||wProps(w).includes("Throwing(");
     const accDie = (!isOffhand && hasBrute) ? char.stats.Strength : char.stats.Dexterity;
@@ -4657,7 +4662,7 @@ function AttackPresetsCard({char, setChar, derived}) {
 
 // ─── STEP SUMMARY ─────────────────────────────────────────────────────────────
 function StepSummary({char,setChar,derived,totalSP}){
-  const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,finalFlight,isWinged,isMultiLimbed,hasVacuumSoul,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive,boonArmorBonus,boonWardBonus,weaponCritBonus,offhandCritBonus,jewelryWardBonus,jewelrySpellPowerBonus,armorSizeBonus,weaponParryB,weaponReachB,finalSecDmg,finalCC,finalCritRes,catalystAccBonus,catalystCritBonus,offhandAccBonus,slottedSpellNotes,manaAugParry,catalystAttunementBonus,enhancerAcc,enhancerDmg,enhancerSpellAcc,enhancerSecDmg,versatileGrip,hasMasterMartialTrainingGlobal,unarmoredParryBonus}=derived;
+  const {finalHP,finalStamina,finalMana,finalParry,finalWard,finalArmor,finalDmgShield,finalSpellRange,finalMeleeAcc,finalMeleeDmg,finalSpellAcc,finalSpellPower,finalReach,size,sizeB,trainBonuses,moneyLeft,dmgBonus,hasBrute,hasEagleEye,hasPrimalMass,hasPunishingDraw,meleeDmgDie,passiveOnHitEffects,finalMove,finalFlight,isWinged,isMultiLimbed,hasVacuumSoul,slottedTechBonuses,totalTechSlots,slotsUsed,bonusTechSlots,totalSpellSlots,spellSlotsUsed,bonusSpellSlots,gunModRangeBonus,gunModAmmoBonus,jewelryAccBonus,jewelryDmgBonus,savageFightingBonus,boonOffensive,boonArmorBonus,boonWardBonus,weaponCritBonus,offhandCritBonus,jewelryWardBonus,jewelrySpellPowerBonus,armorSizeBonus,weaponParryB,weaponReachB,finalSecDmg,finalCC,finalCritRes,catalystAccBonus,catalystCritBonus,offhandAccBonus,slottedSpellNotes,manaAugParry,catalystAttunementBonus,enhancerAcc,enhancerDmg,enhancerSpellAcc,enhancerSecDmg,versatileGrip,hasMasterMartialTrainingGlobal,unarmoredParryBonus,hasTitansGrip,hasShieldMaster,shieldMasterBonus}=derived;
   const fmt = ({die,bonus}) => bonus>0?`${die} (+${bonus})`:bonus<0?`${die} (${bonus})`:die;
   const RANK_LABELS=["","Novice","Adept","Master"];
   const TIERS=["novice","adept","master"];
@@ -4931,7 +4936,8 @@ function StepSummary({char,setChar,derived,totalSP}){
               const isGun = (wpn.props||"").includes("Gun");
               const isRanged = isGun || (wpn.props||"").includes("Bow(") || (wpn.props||"").includes("Trigger(") || (wpn.props||"").includes("Throwing(");
               if(isRanged) return null; // ranged weapons go in Ranged Attack card
-              if(!wpn.dmg) return null; // shield/parry-only offhand — no attack stats
+
+              // Acc: die from DEX (or STR if Brute on main), modifier breakdown
               const accDie = (!ohSlot && hasBrute) ? char.stats.Strength : char.stats.Dexterity;
               // weapon-specific acc bonus (from props + mithril + runes)
               const wpnAccBase = wpn.props?.match(/Acc\+(\d+)/);
@@ -5088,7 +5094,7 @@ function StepSummary({char,setChar,derived,totalSP}){
               {[
                 ["Reach", `${finalReach} space${finalReach>1?"s":""}${weaponReachB>0?` (+${weaponReachB})`:""}${size>=2?" (size 2+)":""}`],
                 ["Parry", `${finalParry}`+(weaponParryB>0?` (+${weaponParryB} wpn)`:"")+(size>1?` (${sizeB.parry} size)`:"")+((char.equipment.offhand?.parry)?` (+${char.equipment.offhand.parry} shield)`:"")+(unarmoredParryBonus>0?` (+${unarmoredParryBonus} unarmored)`:""), true],
-                ["Armor", `${finalArmor}`+(size>1?` (+${sizeB.armor} size)`:""), true],
+                ["Armor", `${finalArmor}`+(size>1?` (+${sizeB.armor} size)`:""  )+(shieldMasterBonus>0?` (+${shieldMasterBonus} shield master)`:""), true],
                 ...(finalCritRes>0?[["Crit Resistance", `+${finalCritRes}`, true]]:[]),
                 ["Ward",  `${finalWard}`+(jewelryWardBonus>0?` (+${jewelryWardBonus})`:""), true],
                 ...(weaponCritBonus>0?[["Crit Bonus", `+${weaponCritBonus}`, true]]:[] ),
@@ -5555,8 +5561,9 @@ function StepSummary({char,setChar,derived,totalSP}){
         const isFistWeapon = (w) => w && (w.isFist || w.name==="Caestus" || (w.name||"").toLowerCase().includes("fist"));
         const hasFistTech = Object.values(char.techniques["martial_arts"]||{}).flat()
           .some(t=>["Novice Brawler","Adept Brawler","Master Brawler"].includes(t));
-        const hasDual  = wpn && offhand && isMelee(wpn) && isMelee(offhand);
-        const has1hMeleeEmptyOH = (wpn && isMelee(wpn) && !isTwoHanded(wpn) && !offhand)
+        const hasDual  = (wpn && offhand && isMelee(wpn) && isMelee(offhand))
+                        || (hasTitansGrip && wpn && isTwoHanded(wpn) && offhand && isMelee(offhand));
+        const has1hMeleeEmptyOH = (wpn && isMelee(wpn) && (!isTwoHanded(wpn) || hasTitansGrip) && !offhand)
                                 || (wpn && isVersatile(wpn) && versatileGrip==="1h");
 
         // Soul perks
