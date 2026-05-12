@@ -3797,7 +3797,7 @@ function AttackPresetsCard({char, setChar, derived}) {
          sizeB, savageFightingBonus, finalReach, size, catalystAccBonus, catalystAttunementBonus,
          hasBrute, hasEagleEye, hasPrimalMass, hasMasterMartialTrainingGlobal,
          finalSpellAcc, finalSpellPower, finalSpellRange, finalSecDmg, finalCC,
-         jewelrySpellPowerBonus, enhancerSpellAcc, versatileGrip, hasTitansGrip} = derived;
+         jewelrySpellPowerBonus, enhancerSpellAcc, versatileGrip, hasTitansGrip, hasShieldMaster} = derived;
 
   const wpn     = char.equipment.weapon;
   const offhand = char.equipment.offhand;
@@ -3862,8 +3862,12 @@ function AttackPresetsCard({char, setChar, derived}) {
     if(wt==="dagger")  return isDagger(wpn) || isDagger(offhand);
     if(wt==="dual")    return hasDual;
     // Titan's Grip: 2H weapon acts as 1H — satisfies 1h-empty-offhand when offhand is free
-    if(wt==="1h-melee-empty-offhand") return (isMelee(wpn) && (!isTwoHanded(wpn) || hasTitansGrip) && !offhand)
-                                           || (isVers(wpn) && versatileGrip==="1h");
+    if(wt==="1h-melee-empty-offhand") {
+      // Shield Master: shield in offhand counts as free hand
+      const ohFree = !offhand || (hasShieldMaster && offhand.parry && !offhand.dmg);
+      return (isMelee(wpn) && (!isTwoHanded(wpn) || hasTitansGrip) && ohFree)
+          || (isVers(wpn) && versatileGrip==="1h" && ohFree);
+    }
     if(wt==="catalyst")return hasCatalyst;
     return true;
   };
@@ -5570,8 +5574,9 @@ function StepSummary({char,setChar,derived,totalSP}){
           .some(t=>["Novice Brawler","Adept Brawler","Master Brawler"].includes(t));
         const hasDual  = (wpn && offhand && isMelee(wpn) && isMelee(offhand))
                         || (hasTitansGrip && wpn && isTwoHanded(wpn) && offhand && isMelee(offhand));
-        const has1hMeleeEmptyOH = (wpn && isMelee(wpn) && (!isTwoHanded(wpn) || hasTitansGrip) && !offhand)
-                                || (wpn && isVersatile(wpn) && versatileGrip==="1h");
+        const ohFree = !offhand || (hasShieldMaster && offhand.parry && !offhand.dmg);
+        const has1hMeleeEmptyOH = (wpn && isMelee(wpn) && (!isTwoHanded(wpn) || hasTitansGrip) && ohFree)
+                                || (wpn && isVersatile(wpn) && versatileGrip==="1h" && ohFree);
 
         // Soul perks
         const hasSoulPerk = (name) => {
