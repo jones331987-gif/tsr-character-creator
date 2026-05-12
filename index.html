@@ -5336,7 +5336,7 @@ function StepSummary({char,setChar,derived,totalSP}){
             for(const techName of techs) {
               // Find tech cost to check if passive
               const techDef = (tree.tiers[tier]?.techniques||[]).find(t=>t.name===techName);
-              if(!techDef || isPassiveTech(techDef.cost)) continue;
+              if(!techDef) continue;
               slottable.push({skillId:tree.id, skillName:tree.name, tier, techName, cost:techDef.cost, desc:techDef.desc, slotCost:TIER_SLOT_COST[tier]});
             }
           }
@@ -5369,7 +5369,7 @@ function StepSummary({char,setChar,derived,totalSP}){
               <div style={{fontSize:10,color:"var(--text-muted)"}}>Novice=2 · Adept=3 · Master=4 slots</div>
             </div>
             {slottable.length===0
-              ? <div style={{fontSize:11,color:"var(--text-muted)",fontStyle:"italic"}}>No slottable physical techniques purchased. Passive techniques are always active once purchased.</div>
+              ? <div style={{fontSize:11,color:"var(--text-muted)",fontStyle:"italic"}}>No physical techniques purchased yet.</div>
               : <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                   {slottable.map(({skillId,skillName,tier,techName,cost,desc,slotCost})=>{
                     const key=`${skillId}||${techName}`;
