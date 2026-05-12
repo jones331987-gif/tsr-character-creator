@@ -1236,7 +1236,7 @@ const getWeaponHandedness = (w) => {
 // ─── ATTACK ENHANCERS ────────────────────────────────────────────────────────
 // type: "martial" | "spell" | "both"
 // req: null = no requirement. Object with optional fields:
-//   weaponType: "fist" | "1h-melee-empty-offhand" | "2h" | "catalyst" | "throwing"
+//   weaponType: "fist" | "1h-melee-empty-offhand" | "2h" | "2h-ranged" | "dual" | "melee" | "ranged" | "throwing" | "dagger" | "catalyst"
 //   skill: {id, rank} = requires that skill at that rank
 // statBonuses: {acc, dmg, secDmg, crit} — structured numbers used to apply the
 //   Master Martial Training +1 bonus. Fields present only where relevant.
@@ -3861,7 +3861,7 @@ function AttackPresetsCard({char, setChar, derived}) {
     if(wt==="2h-ranged")return isRanged(wpn) && isTwoHanded(wpn);
     if(wt==="dagger")  return isDagger(wpn) || isDagger(offhand);
     if(wt==="dual")    return hasDual;
-    // Titan's Grip: 2H weapon acts as 1H, so empty-offhand and dual checks can pass
+    // Titan's Grip: 2H weapon acts as 1H — satisfies 1h-empty-offhand when offhand is free
     if(wt==="1h-melee-empty-offhand") return (isMelee(wpn) && (!isTwoHanded(wpn) || hasTitansGrip) && !offhand)
                                            || (isVers(wpn) && versatileGrip==="1h");
     if(wt==="catalyst")return hasCatalyst;
