@@ -3970,6 +3970,7 @@ function AttackPresetsCard({char, setChar, derived}) {
 
   const calcWeaponStats = (w, isOffhand) => {
     if(!w) return null;
+    if(!w.dmg) return null; // shields and parry-only offhands have no damage formula
     const isGun = wProps(w).includes("Gun");
     const isRng = isGun||wProps(w).includes("Bow(")||wProps(w).includes("Trigger(")||wProps(w).includes("Throwing(");
     const accDie = (!isOffhand && hasBrute) ? char.stats.Strength : char.stats.Dexterity;
@@ -4930,8 +4931,7 @@ function StepSummary({char,setChar,derived,totalSP}){
               const isGun = (wpn.props||"").includes("Gun");
               const isRanged = isGun || (wpn.props||"").includes("Bow(") || (wpn.props||"").includes("Trigger(") || (wpn.props||"").includes("Throwing(");
               if(isRanged) return null; // ranged weapons go in Ranged Attack card
-
-              // Acc: die from DEX (or STR if Brute on main), modifier breakdown
+              if(!wpn.dmg) return null; // shield/parry-only offhand — no attack stats
               const accDie = (!ohSlot && hasBrute) ? char.stats.Strength : char.stats.Dexterity;
               // weapon-specific acc bonus (from props + mithril + runes)
               const wpnAccBase = wpn.props?.match(/Acc\+(\d+)/);
